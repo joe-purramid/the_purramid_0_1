@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="goldenrod">#FFDAA520</color>
+    <color name="teal">#FF03DAC5</color>
+    <color name="light_blue">#FFADD8E6</color>
+    <color name="violet">#FFEE82EE</color>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+
+    <color name="intent_background">#F0F0F0</color>
+    <color name="intent_border">#D0D0D0</color>
+</resources>

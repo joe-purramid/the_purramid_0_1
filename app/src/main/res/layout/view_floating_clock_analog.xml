@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@android:color/transparent">
+
+    <FrameLayout
+        android:layout_width="150dp"
+        android:layout_height="150dp">
+
+        <ImageView
+            android:id="@+id/clockFaceImageView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:src="@drawable/clock_face"
+            android:scaleType="fitCenter" />
+
+        <ImageView
+            android:id="@+id/hourHandImageView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:src="@drawable/hour_hand"
+            android:scaleType="fitCenter" />
+
+        <ImageView
+            android:id="@+id/minuteHandImageView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:src="@drawable/minute_hand"
+            android:scaleType="fitCenter" />
+
+        <ImageView
+            android:id="@+id/secondHandImageView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:src="@drawable/second_hand"
+            android:scaleType="fitCenter" />
+
+    </FrameLayout>
+
+</LinearLayout>

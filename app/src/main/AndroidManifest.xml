@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    package="com.example.thepurramid0_1">
+
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+
+    <application
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.ThePurramid0_1"
+        tools:targetApi="33">
+
+        <activity android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <service android:name=".ClockOverlayService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="dataSync">
+            <intent-filter>
+                <action android:name="com.example.thepurramid.ClockOverlayService" />
+            </intent-filter> 
+        </service>
+
+        <activity android:name=".ClockSettingsActivity"
+            android:exported="false"
+            android:label="@string/clock_settings_title"
+            android:parentActivityName=".MainActivity" />
+
+        <activity android:name=".RandomizersActivity"
+            android:exported="false" />
+
+        <activity android:name=".ScreenShadeActivity"
+            android:exported="false" />
+        <service android:name=".ScreenShadeService"
+            android:enabled="true"
+            android:exported="false" />
+
+        <activity android:name=".SpotlightActivity"
+            android:exported="false" />
+        <service android:name=".SpotlightService"
+            android:enabled="true"
+            android:exported="false" />
+
+        <activity android:name=".TimersActivity"
+            android:exported="false" />
+        <service android:name=".TimerService"
+            android:enabled="true"
+            android:exported="false" />
+
+        <activity android:name=".TimeZoneImageActivity"
+            android:exported="false"
+            android:label="@string/set_time_zone"
+            android:parentActivityName=".ClockSettingsActivity" />
+
+        <activity android:name=".TrafficLightActivity"
+            android:exported="false" />
+
+    </application>
+
+</manifest>

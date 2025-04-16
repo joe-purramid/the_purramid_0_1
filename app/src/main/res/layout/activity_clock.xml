@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center">
+
+    <com.example.thepurramid0_1.ClockView
+        android:id="@+id/clockView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="16dp">
+
+        <Button
+            android:id="@+id/playButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Play" />
+
+        <Button
+            android:id="@+id/pauseButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Pause"
+            android:layout_marginStart="8dp" />
+
+        <Button
+            android:id="@+id/resetButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Reset"
+            android:layout_marginStart="8dp" />
+
+        <ImageView
+            android:id="@+id/settingsButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="16dp"
+            android:src="@drawable/ic_settings"
+            android:clickable="true"
+            android:focusable="true" />
+
+    </LinearLayout>
+
+    <com.caverock.androidsvg.SVGImageView
+        android:id="@+id/clockFaceImageView"
+        android:layout_width="150dp"
+        android:layout_height="150dp"
+        android:scaleType="fitCenter"
+        android:visibility="gone" />
+    <com.caverock.androidsvg.SVGImageView
+        android:id="@+id/hourHandImageView"
+        android:layout_width="150dp"
+        android:layout_height="150dp"
+        android:src="@drawable/hour_hand"
+        android:scaleType="fitCenter"
+        android:visibility="gone" />
+    <com.caverock.androidsvg.SVGImageView
+        android:id="@+id/minuteHandImageView"
+        android:layout_width="150dp"
+        android:layout_height="150dp"
+        android:src="@drawable/minute_hand"
+        android:scaleType="fitCenter"
+        android:visibility="gone" />
+    <com.caverock.androidsvg.SVGImageView
+        android:id="@+id/secondHandImageView"
+        android:layout_width="150dp"
+        android:layout_height="150dp"
+        android:src="@drawable/second_hand"
+        android:scaleType="fitCenter"
+        android:visibility="gone" />
+    </LinearLayout>
