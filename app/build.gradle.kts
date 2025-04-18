@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    kotlin("kapt")
 }
 
 android {
@@ -27,6 +28,7 @@ android {
             )
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -41,6 +43,7 @@ android {
 
 dependencies {
 
+    // annotationProcessor(libs.glide.compiler)
     implementation(libs.activity.ktx)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidsvg)
@@ -54,6 +57,7 @@ dependencies {
     implementation(libs.appcompat)
     implementation(libs.cardview)
     implementation(libs.constraintlayout)
+    implementation(libs.glide.core)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -61,4 +65,5 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+    kapt(libs.glide.compiler)
 }

@@ -20,20 +20,20 @@
             android:id="@+id/playButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Play" />
+            android:text="@string/play" />
 
         <Button
             android:id="@+id/pauseButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Pause"
+            android:text="@string/pause"
             android:layout_marginStart="8dp" />
 
         <Button
             android:id="@+id/resetButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Reset"
+            android:text="@string/reset"
             android:layout_marginStart="8dp" />
 
         <ImageView
@@ -42,8 +42,31 @@
             android:layout_height="48dp"
             android:layout_marginStart="16dp"
             android:src="@drawable/ic_settings"
+            android:text="@string/settings"
             android:clickable="true"
             android:focusable="true" />
+
+<!--        <ImageView
+            android:id="@+id/btnAdd"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@android:drawable/ic_add_circle"
+            android:layout_marginEnd="24dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:contentDescription="@string/add_another_clock" /> -->
+
+        <TextView
+            android:id="@+id/btnClose"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="\u274C"
+            android:textSize="24sp"
+            android:clickable="true"
+            android:focusable="true"
+            android:layout_marginStart="24dp"
+            android:layout_marginEnd="24dp"
+            android:contentDescription="@string/close" />
 
     </LinearLayout>
 

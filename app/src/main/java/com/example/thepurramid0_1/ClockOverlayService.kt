@@ -69,6 +69,147 @@ class ClockOverlayService : Service() {
         return null
     }
 
+    private fun createNewClockInstance(
+        id: Int,
+        mode: String,
+        color: Int,
+        timeZoneId: String,
+        displaySeconds: Boolean,
+        isNested: Boolean,
+        initialLayoutParams: WindowManager.LayoutParams
+    ) {
+        android.util.Log.d(TAG, "createNewClockInstance called for ID: $id")
+
+        // Keep your logic for inflating the layout:
+        val inflater = LayoutInflater.from(this)
+        val newClockRootView = if (mode == "analog") {
+            inflater.inflate(R.layout.view_floating_clock_analog, null) as ViewGroup
+        } else {
+            inflater.inflate(R.layout.view_floating_clock_digital, null) as ViewGroup
+        }
+
+        val clockView = newClockRootView.findViewById<ClockView>(if (mode == "analog") R.id.analogClockViewContainer else R.id.digitalClockView)
+        clockView?.setClockId(id)
+        clockViews[id] = clockView
+        // clockView?.updateSettings() // Apply initial settings
+        clockView?.updateSettings(ClockConfig(mode, color, timeZoneId, displaySeconds, isNested, initialLayoutParams)) // Apply loaded settings
+
+        if (mode == "analog") {
+            val clockFace = newClockRootView.findViewById<com.caverock.androidsvg.SVGImageView>(R.id.clockFaceImageView)
+            val hourHand = newClockRootView.findViewById<com.caverock.androidsvg.SVGImageView>(R.id.hourHandImageView)
+            val minuteHand = newClockRootView.findViewById<com.caverock.androidsvg.SVGImageView>(R.id.minuteHandImageView)
+            val secondHand = newClockRootView.findViewById<com.caverock.androidsvg.SVGImageView>(R.id.secondHandImageView)
+            clockView?.setAnalogImageViews(clockFace, hourHand, minuteHand, secondHand)
+        }
+
+        clockLayouts[id] = initialLayoutParams
+        activeClocks.add(Pair(id, newClockRootView))
+        windowManager.addView(newClockRootView, initialLayoutParams)
+
+        setupTouchListener(id, newClockRootView)
+        setupLongClickListener(id, newClockRootView)
+
+        // Create and add the close button
+        val closeButtonSizePx = (25f * resources.displayMetrics.density).toInt()
+        val closeButtonMarginPx = (5f * resources.displayMetrics.density).toInt()
+        val closeButton = TextView(this).apply {
+            text = "\u274C" // Close symbol
+            setTextColor(Color.WHITE)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+            gravity = Gravity.CENTER
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(Color.DKGRAY) // Dark gray for the close button
+                setSize(closeButtonSizePx, closeButtonSizePx)
+            }
+            setOnClickListener {
+                removeClock(clockId, newClockRootView)
+            }
+        }
+
+        val closeButtonLayoutParams = FrameLayout.LayoutParams(closeButtonSizePx, closeButtonSizePx).apply {
+            gravity = Gravity.TOP or Gravity.END
+            setMargins(closeButtonMarginPx, closeButtonMarginPx, closeButtonMarginPx, closeButtonMarginPx)
+        }
+
+        if (newClockRootView is FrameLayout) {
+            newClockRootView.addView(closeButton, closeButtonLayoutParams)
+        } else if (newClockRootView is LinearLayout) {
+            val frameLayoutWrapper = FrameLayout(this).apply {
+                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            }
+            val existingLayoutParams = newClockRootView.layoutParams
+            newClockRootView.layoutParams = LinearLayout.LayoutParams(existingLayoutParams.width, existingLayoutParams.height)
+            frameLayoutWrapper.addView(newClockRootView)
+            frameLayoutWrapper.addView(closeButton, closeButtonLayoutParams)
+            // Replace the LinearLayout with the FrameLayout wrapper in activeClocks and WindowManager
+            val index = activeClocks.indexOfFirst { it.first == clockId }
+            if (index != -1) {
+                activeClocks[index] = Pair(clockId, frameLayoutWrapper)
+            }
+            windowManager.removeView(newClockRootView)
+            windowManager.addView(frameLayoutWrapper, initialLayoutParams)
+        } else {
+            Toast.makeText(this, "Unsupported layout for Close button.", Toast.LENGTH_SHORT).show()
+        }
+
+        updateActiveClockCount()
+
+        // Save the new clock ID and settings
+        val currentIds = sharedPreferences.getStringSet("active_clock_ids", mutableSetOf()) ?: mutableSetOf()
+        currentIds.add(clockId.toString())
+        sharedPreferences.edit().putStringSet("active_clock_ids", currentIds).apply()
+        saveClockSettings(clockId, mode, color, timeZoneId, displaySeconds, isNested, initialLayoutParams.x, initialLayoutParams.y, initialLayoutParams.width, initialLayoutParams.height)
+    }
+
+    private fun createNewClock(
+        mode: String,
+        color: Int,
+        timeZoneId: String,
+        displaySeconds: Boolean,
+        isNested: Boolean,
+    ) {
+        if (activeClocks.size >= 4) return
+        val clockId = clockCounter.incrementAndGet()
+
+        // Initial position at center with offset
+        val displayMetrics = resources.displayMetrics
+        val screenWidth = displayMetrics.widthPixels
+        val screenHeight = displayMetrics.heightPixels
+        val offsetX = 20 * activeClocks.size // Simple offset based on the number of clocks
+        val offsetY = 20 * activeClocks.size
+
+        val initialLayoutParams = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY else WindowManager.LayoutParams.TYPE_PHONE,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+            PixelFormat.TRANSPARENT
+        ).apply {
+            gravity = Gravity.TOP or Gravity.START
+            x = (screenWidth / 2) - (WindowManager.LayoutParams.WRAP_CONTENT / 2) + offsetX
+            y = (screenHeight / 2) - (WindowManager.LayoutParams.WRAP_CONTENT / 2) + offsetY
+        }
+
+        val clockConfig = ClockConfig(mode, color, timeZoneId, displaySeconds, isNested, initialLayoutParams)
+        clockSettings[clockId] = clockConfig
+
+        // Call createNewClockInstance to handle view creation and setup
+        createNewClockInstance(
+            clockId,
+            mode,
+            color,
+            timeZoneId,
+            displaySeconds,
+            isNested,
+            initialLayoutParams
+        )
+
+        saveActiveClocks()
+        saveClockSettings(clockId, mode, color, timeZoneId, displaySeconds, isNested, initialLayoutParams.x, initialLayoutParams.y, initialLayoutParams.width, initialLayoutParams.height)
+        updateActiveClockCount()
+    }
+
     override fun onCreate() {
         super.onCreate()
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
@@ -79,18 +220,55 @@ class ClockOverlayService : Service() {
 
         // Load initial clock if none exist
         if (sharedPreferences.getStringSet("active_clock_ids", emptySet())?.isEmpty() == true) {
+            val defaultLayoutParams = WindowManager.LayoutParams(
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                PixelFormat.TRANSLUCENT
+            ).apply {
+                gravity = Gravity.TOP or Gravity.START
+                x = 100 // Example initial X position (adjust as needed)
+                y = 100 // Example initial Y position (adjust as needed)
+            }
             createNewClock(
                 sharedPreferences.getString("clock_mode", "digital") ?: "digital",
                 sharedPreferences.getInt("clock_color", Color.BLACK),
                 sharedPreferences.getString("time_zone_id", TimeZone.getDefault().id) ?: TimeZone.getDefault().id,
                 sharedPreferences.getBoolean("display_seconds", false),
-                sharedPreferences.getBoolean("nest_clock", false)
+                sharedPreferences.getBoolean("nest_clock", false),
+                defaultLayoutParams // Passing the default layout parameters
             )
         // Keep track of clock count
         updateActiveClockCount()
     }
 
-    private fun addClock(clockId: Int, initialX: Int = 100, initialY: Int = 100) {
+        // Create a notification for foreground service
+        val notificationId = 1
+        val channelId = "clock_overlay_channel"
+        val channelName = "Clock Overlay Service"
+        val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(channelId, channelName, NotificationManager.IMPORTANCE_DEFAULT)
+            notificationManager.createNotificationChannel(channel)
+        }
+
+        val notificationBuilder = NotificationCompat.Builder(this, channelId)
+            .setSmallIcon(R.drawable.ic_notification_clock) // Replace with your icon
+            .setContentTitle("Floating Clock")
+            .setContentText("Clock overlay is running")
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+
+        val notification = notificationBuilder.build()
+
+        // Start the service in the foreground
+        startForeground(notificationId, notification)
+
+        updateActiveClockCount()
+    }
+
+    private fun addClock(clockId: Int, rootView: ViewGroup, initialX: Int, initialY: Int) {
         val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
@@ -102,7 +280,6 @@ class ClockOverlayService : Service() {
             x = initialX
             y = initialY
         }
-        clockLayouts[clockId] = params
 
         val inflater = LayoutInflater.from(this)
         val rootView: ViewGroup
@@ -138,31 +315,6 @@ class ClockOverlayService : Service() {
         windowManager.addView(rootView, params)
         activeClockIds.add(clockId)
         saveActiveClocks()
-    }
-
-        // Create a notification for foreground service
-        val notificationId = 1
-        val channelId = "clock_overlay_channel"
-        val channelName = "Clock Overlay Service"
-        val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(channelId, channelName, NotificationManager.IMPORTANCE_DEFAULT)
-            notificationManager.createNotificationChannel(channel)
-        }
-
-        val notificationBuilder = NotificationCompat.Builder(this, channelId)
-            .setSmallIcon(R.drawable.ic_notification_clock) // Replace with your icon
-            .setContentTitle("Floating Clock")
-            .setContentText("Clock overlay is running")
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-
-        val notification = notificationBuilder.build()
-
-        // Start the service in the foreground
-        startForeground(notificationId, notification)
-
-        updateActiveClockCount()
     }
 
     private fun updateActiveClockCount() {
@@ -205,6 +357,7 @@ class ClockOverlayService : Service() {
         }
         // After loading all clocks, ensure the nested positions are consistent
         repositionNestedClocks()
+        updateActiveClockCount()
     }
                 
     private fun getInitialLayoutParams(index: Int): WindowManager.LayoutParams {
@@ -275,65 +428,7 @@ class ClockOverlayService : Service() {
         return START_STICKY
     }
 
-    override fun onDestroy() {
-    super.onDestroy()
-    if (::windowManager.isInitialized && ::clockView.isInitialized && clockView.isAttachedToWindow) {
-        windowManager.removeView(clockView)
-    }
-    handler.removeCallbacksAndMessages(null)
-    }
-
-    private fun createNewClock(mode: String, color: Int, timeZoneId: String, displaySeconds: Boolean, isNested: Boolean, initialLayoutParams: WindowManager.LayoutParams) {
-    if (activeClocks.size >= 4) return
-
-    val clockId = clockCounter.incrementAndGet()
-    val inflater = LayoutInflater.from(this)
-    val newClockRootView = if (mode == "analog") {
-        inflater.inflate(R.layout.view_floating_clock_analog, null) as ViewGroup
-    } else {
-        inflater.inflate(R.layout.view_floating_clock_digital, null) as ViewGroup
-    }
-
-    val clockView = newClockRootView.findViewById<ClockView>(if (mode == "analog") R.id.analogClockView else R.id.digitalClockView)
-    clockView?.setClockId(clockId)
-    clockView?.updateSettings() // Apply initial settings
-
-    if (mode == "analog") {
-        val clockFace = newClockRootView.findViewById<com.caverock.androidsvg.SVGImageView>(R.id.clockFaceImageView)
-        val hourHand = newClockRootView.findViewById<com.caverock.androidsvg.SVGImageView>(R.id.hourHandImageView)
-        val minuteHand = newClockRootView.findViewById<com.caverock.androidsvg.SVGImageView>(R.id.minuteHandImageView)
-        val secondHand = newClockRootView.findViewById<com.caverock.androidsvg.SVGImageView>(R.id.secondHandImageView)
-        clockView?.setAnalogImageViews(clockFace, hourHand, minuteHand, secondHand)
-    }
-
-    // Initial position at center with offset
-    val displayMetrics = resources.displayMetrics
-    val screenWidth = displayMetrics.widthPixels
-    val screenHeight = displayMetrics.heightPixels
-    val offsetX = 20 * activeClocks.size // Simple offset based on the number of clocks
-    val offsetY = 20 * activeClocks.size
-
-    val initialLayoutParams = WindowManager.LayoutParams(
-        WindowManager.LayoutParams.WRAP_CONTENT,
-        WindowManager.LayoutParams.WRAP_CONTENT,
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY else WindowManager.LayoutParams.TYPE_PHONE,
-        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
-        PixelFormat.TRANSPARENT
-    ).apply {
-        gravity = Gravity.TOP or Gravity.START
-        x = (screenWidth / 2) - (WindowManager.LayoutParams.WRAP_CONTENT / 2) + offsetX
-        y = (screenHeight / 2) - (WindowManager.LayoutParams.WRAP_CONTENT / 2) + offsetY
-    }
-
-    clockSettings[clockId] = ClockConfig(mode, color, timeZoneId, displaySeconds, isNested, initialLayoutParams)
-    activeClocks.add(Pair(clockId, newClockRootView))
-    windowManager.addView(newClockRootView, initialLayoutParams)
-
-    applyNestingToClockOnCreation(clockId, newClockRootView, isNested)
-    setupTouchListener(clockId, newClockRootView)
-    setupLongClickListener(clockId, newClockRootView)
-
-        // Create and add the close button
+    private fun addCloseButton(clockId: Int, rootView: ViewGroup) {
         val closeButtonSizePx = (25f * resources.displayMetrics.density).toInt()
         val closeButtonMarginPx = (5f * resources.displayMetrics.density).toInt()
         val closeButton = TextView(this).apply {
@@ -347,7 +442,7 @@ class ClockOverlayService : Service() {
                 setSize(closeButtonSizePx, closeButtonSizePx)
             }
             setOnClickListener {
-                removeClock(clockId, newClockRootView)
+                removeClock(clockId, rootView)
             }
         }
 
@@ -356,34 +451,40 @@ class ClockOverlayService : Service() {
             setMargins(closeButtonMarginPx, closeButtonMarginPx, closeButtonMarginPx, closeButtonMarginPx)
         }
 
-        if (newClockRootView is FrameLayout) {
-            newClockRootView.addView(closeButton, closeButtonLayoutParams)
-        } else if (newClockRootView is LinearLayout) {
+        if (rootView is FrameLayout) {
+            rootView.addView(closeButton, closeButtonLayoutParams)
+        } else if (rootView is LinearLayout) {
             val frameLayoutWrapper = FrameLayout(this).apply {
                 layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
             }
-            val existingLayoutParams = newClockRootView.layoutParams
-            newClockRootView.layoutParams = LinearLayout.LayoutParams(existingLayoutParams.width, existingLayoutParams.height)
-            frameLayoutWrapper.addView(newClockRootView)
+            val existingLayoutParams = rootView.layoutParams
+            rootView.layoutParams = LinearLayout.LayoutParams(existingLayoutParams.width, existingLayoutParams.height)
+            frameLayoutWrapper.addView(rootView)
             frameLayoutWrapper.addView(closeButton, closeButtonLayoutParams)
-            // Replace the LinearLayout with the FrameLayout wrapper in activeClocks and WindowManager
+            // Update activeClocks to hold the FrameLayout wrapper
             val index = activeClocks.indexOfFirst { it.first == clockId }
             if (index != -1) {
                 activeClocks[index] = Pair(clockId, frameLayoutWrapper)
             }
-            windowManager.removeView(newClockRootView)
-            windowManager.addView(frameLayoutWrapper, initialLayoutParams)
+            windowManager.removeView(rootView)
+            windowManager.addView(frameLayoutWrapper, clockLayouts[clockId]) // Use the stored layout params
         } else {
             Toast.makeText(this, "Unsupported layout for Close button.", Toast.LENGTH_SHORT).show()
         }
-    
-    updateActiveClockCount()
+    }
 
-    // Save the new clock ID and settings
-    val currentIds = sharedPreferences.getStringSet("active_clock_ids", mutableSetOf()) ?: mutableSetOf()
-    currentIds.add(clockId.toString())
-    sharedPreferences.edit().putStringSet("active_clock_ids", currentIds).apply()
-    saveClockSettings(clockId, mode, color, timeZoneId, displaySeconds, isNested, initialLayoutParams.x, initialLayoutParams.y, initialLayoutParams.width, initialLayoutParams.height)
+    override fun onDestroy() {
+    super.onDestroy()
+    if (::windowManager.isInitialized && ::clockView.isInitialized && clockView.isAttachedToWindow) {
+        windowManager.removeView(clockView)
+    }
+    handler.removeCallbacksAndMessages(null)
+    }
+
+    private fun saveActiveClocks() {
+        val currentIds = activeClocks.map { it.first.toString() }.toSet()
+        sharedPreferences.edit().putStringSet("active_clock_ids", currentIds).apply()
+        android.util.Log.d(TAG, "saveActiveClocks called. Active IDs: $currentIds")
     }
 
     private fun removeClock(clockIdToRemove: Int, rootViewToRemove: View) {
@@ -686,6 +787,13 @@ private fun resetClockDimming() {
     }
 }
 
+    private fun setupLongClickListener(clockId: Int, rootView: View) {
+        rootView.setOnLongClickListener { view ->
+            showClockActionsTooltip(clockId, view)
+            true // Consume the long click event
+        }
+    }
+
     private fun setupTouchListener(clockId: Int, rootView: View) {
         val touchListener = object : View.OnTouchListener {
             private var initialX: Int = 0
@@ -760,7 +868,7 @@ private fun resetClockDimming() {
         }
     }
 
-    private fun applyNestMode(clockId: Int, clockRootView: ViewGroup, isNested: Boolean) {
+    private fun applyNestMode(nestedId: Int, nestedView: ViewGroup?) {
         val config = clockSettings[clockId] ?: return
 
         val displayMetrics = resources.displayMetrics

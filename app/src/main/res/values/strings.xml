@@ -16,6 +16,7 @@
     <string name="play">Start</string>
     <string name="reset">Reset</string>
     <string name="settings">Settings</string>
+    <string name="close">Close</string>
     <string name="on">On</string>
     <string name="off">Off</string>
     <string name="app_color">Color</string>
@@ -42,15 +43,22 @@
     <string name="display_seconds">Display Seconds</string>
     <string name="set_alarm">Set Alarm</string>
     <string name="nest_clock">Nest Clock</string>
-    <string name="add_another_clock">Add Another Clock</string>
+    <string name="add_another_clock">Add another Clock</string>
 
     '' RANDOMIZERS APP ''
 
 
     '' SCREEN SHADE APP ''
+    <string name="add_another_screen">Add Another Screen Shade</string>
+    <string name="lock_unlock">Lock/Unlock this screen shade</string>
+    <string name="lock_unlock_all">Lock/Unlock all screen shades</string>
+    <string name="billboard">Billboard</string>
 
 
     '' SPOTLIGHT APP ''
+    <string name="change_shape_circle">Change shape to Circle</string>
+    <string name="change_shape_square">Change shape to Square</string>
+    <string name="add_another_spotlight">Add another Spotlight</string>
 
 
     '' TIMERS APP ''

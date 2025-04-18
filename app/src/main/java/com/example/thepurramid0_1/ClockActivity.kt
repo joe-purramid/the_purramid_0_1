@@ -6,13 +6,13 @@ import android.os.Bundle
 import android.provider.Settings
 import android.view.View
 import android.widget.Button
-import android.widget.ImageView
 import android.widget.Toast
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
+import com.caverock.androidsvg.SVGImageView
 
 class ClockActivity : AppCompatActivity() {
 
@@ -62,10 +62,10 @@ class ClockActivity : AppCompatActivity() {
         currentClockId = intent.getIntExtra("clock_id", -1) // Example: Getting from Intent
 
         clockView = findViewById(R.id.clockView)
-        clockFaceSVGImageView = findViewById(R.id.clockFaceImageView) as SVGImageView
-        hourHandSVGImageView = findViewById(R.id.hourHandImageView) as SVGImageView
-        minuteHandSVGImageView = findViewById(R.id.minuteHandImageView) as SVGImageView
-        secondHandSVGImageView = findViewById(R.id.secondHandImageView) as SVGImageView
+        clockFaceSVGImageView = findViewById(R.id.clockFaceImageView)
+        hourHandSVGImageView = findViewById(R.id.hourHandImageView)
+        minuteHandSVGImageView = findViewById(R.id.minuteHandImageView)
+        secondHandSVGImageView = findViewById(R.id.secondHandImageView)
         playButton = findViewById(R.id.playButton)
         pauseButton = findViewById(R.id.pauseButton)
         resetButton = findViewById(R.id.resetButton)
@@ -94,16 +94,16 @@ class ClockActivity : AppCompatActivity() {
         val isDigital = sharedPreferences.getString("clock_mode", "digital") == "digital"
 
         if (!isDigital) {
-            clockView.setAnalogImageViews(clockFaceImageView, hourHandImageView, minuteHandImageView, secondHandImageView)
-            clockFaceImageView?.visibility = View.VISIBLE
-            hourHandImageView?.visibility = View.VISIBLE
-            minuteHandImageView?.visibility = View.VISIBLE
-            secondHandImageView?.visibility = View.VISIBLE
+            clockView.setAnalogImageViews(clockFaceSVGImageView, hourHandSVGImageView, minuteHandSVGImageView, secondHandSVGImageView)
+            clockFaceSVGImageView.visibility = View.VISIBLE
+            hourHandSVGImageView.visibility = View.VISIBLE
+            minuteHandSVGImageView.visibility = View.VISIBLE
+            secondHandSVGImageView.visibility = View.VISIBLE
         } else {
-            clockFaceImageView?.visibility = View.GONE
-            hourHandImageView?.visibility = View.GONE
-            minuteHandImageView?.visibility = View.GONE
-            secondHandImageView?.visibility = View.GONE
+            clockFaceSVGImageView.visibility = View.GONE
+            hourHandSVGImageView.visibility = View.GONE
+            minuteHandSVGImageView.visibility = View.GONE
+            secondHandSVGImageView.visibility = View.GONE
         }
 
         // Start the background clock overlay service
