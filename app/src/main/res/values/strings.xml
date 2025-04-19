@@ -12,19 +12,29 @@
     <string name="about">About this App</string>
 
     '' UNIVERSAL TERMS ''
-    <string name="pause">Pause</string>
+    <string name="pause">Pause Button</string>
+    <string name="pause_accessible">A Pause button to temporarily stop time.</string>
     <string name="play">Start</string>
-    <string name="reset">Reset</string>
+    <string name="play_accessible">A Start button to begin time</string>
+    <string name="reset">Reset Button</string>
+    <string name="reset_accessible">A Reset button to return time to its default</string>
     <string name="settings">Settings</string>
+    <string name="settings_accessible">A Settings button to open a customization window</string>
     <string name="on">On</string>
     <string name="off">Off</string>
     <string name="app_color">Color</string>
     <string name="color_white">White</string>
+    <string name="color_white_accessible">Make your clock background white</string>
     <string name="color_black">Black</string>
+    <string name="color_black_accessible">Make your clock background black</string>
     <string name="color_goldenrod">Goldenrod</string>
+    <string name="color_goldenrode_accessible">Make your clock background goldenrod</string>
     <string name="color_teal">Teal</string>
+    <string name="color_teal_accessible">Make your clock background teal</string>
     <string name="color_lightblue">Light Blue</string>
+    <string name="color_lightblue_accessible">Make your clock background light blue</string>
     <string name="color_violet">Violet</string>
+    <string name="color_violet_accessible">Make your clock background violet</string>
     
     '' CLOCK APP ''    
     <string name="clock_settings_title">Clock Settings</string>
