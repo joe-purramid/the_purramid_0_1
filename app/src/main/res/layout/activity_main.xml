@@ -37,17 +37,18 @@
 
     </FrameLayout>
 
-    <LinearLayout
-        android:id="@+id/intentsContainer"
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/intentsRecyclerView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
-        android:alpha="0"
         android:background="@drawable/rounded_background"
-        android:orientation="vertical"
         android:padding="16dp"
         android:visibility="gone"
-        tools:visibility="visible">
-        </LinearLayout>
+        android:alpha="0"
+        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+        android:orientation="vertical"
+        tools:listitem="@layout/item_app_intent"
+        tools:visibility="visible" />
 
 </FrameLayout>

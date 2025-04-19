@@ -16,7 +16,6 @@
     <string name="play">Start</string>
     <string name="reset">Reset</string>
     <string name="settings">Settings</string>
-    <string name="close">Close</string>
     <string name="on">On</string>
     <string name="off">Off</string>
     <string name="app_color">Color</string>
@@ -26,8 +25,6 @@
     <string name="color_teal">Teal</string>
     <string name="color_lightblue">Light Blue</string>
     <string name="color_violet">Violet</string>
-    <string name="set_alarm">Set Alarm</string>
-    <string name="nest_clock">Nest Time</string>
     
     '' CLOCK APP ''    
     <string name="clock_settings_title">Clock Settings</string>
@@ -43,31 +40,21 @@
     <string name="error_loading_texture">Unable to load texture: %1$s</string>
     <string name="error_creating_texture">Unable to create texture: %1$s</string>
     <string name="display_seconds">Display Seconds</string>
-    <string name="add_another_clock">Add another Clock</string>
+    <string name="set_alarm">Set Alarm</string>
+    <string name="nest_clock">Nest Clock</string>
+    <string name="add_another_clock">Add Another Clock</string>
 
     '' RANDOMIZERS APP ''
 
 
     '' SCREEN SHADE APP ''
-    <string name="add_another_screen">Add Another Screen Shade</string>
-    <string name="lock_unlock">Lock/Unlock this screen shade</string>
-    <string name="lock_unlock_all">Lock/Unlock all screen shades</string>
-    <string name="billboard">Billboard</string>
 
 
     '' SPOTLIGHT APP ''
-    <string name="change_shape_circle">Change shape to Circle</string>
-    <string name="change_shape_square">Change shape to Square</string>
-    <string name="add_another_spotlight">Add another Spotlight</string>
 
 
     '' TIMERS APP ''
-    <string name="countdown">Countdown Timer</string>
-    <string name="set_time">Set Time</string>
-    <string name="hundredths">Hundredths</string>
-    <string name="play_music">Play Music</string>
-    <string name="sequence">Sequence</string>
-    <string name="no_laps_recorded">No laps recorded</string>
+
 
     '' TRAFFIC LIGHT APP ''
 
@@ -75,11 +62,11 @@
     '' ABOUT THIS APP ''
     <string name="version_number">Version 0.1</string> '' in dev ''
 
-    <string name="purramid_copyright_title">The Purramid</string>
-    <string name="purramid_copyright_text">Copyright © 2025 Purramid Learning®, Inc. All rights reserved.</string>
-
     <string name="balsamiq_sans_title">Balsamiq Sans Font</string>
     <string name="balsamiq_sans_license_text">Copyright © 2011 The Balsamiq Sans Project Authors (https://github.com/balsamiq/balsamiqsans)\nThis Font Software is licensed under the SIL Open Font License, Version 1.1 .\nThis license is copied below, and is also available with a FAQ at: https://openfontlicense.org\n\nSIL OPEN FONT LICENSE Version 1.1 - 26 February 2007</string>
+
+    <string name="purramid_copyright_title">The Purramid</string>
+    <string name="purramid_copyright_text">Copyright © 2025 Purramid Learning®, Inc. All rights reserved.</string>
 
     <string name="sphere_title">3D Sphere</string>
     <string name="sphere_attribution_text">"sphere-gltf-example" (https://skfb.ly/6XGzq) by rawwerks is licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).</string>
