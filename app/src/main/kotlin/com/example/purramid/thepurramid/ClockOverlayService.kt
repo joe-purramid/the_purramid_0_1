@@ -26,7 +26,6 @@ import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.FrameLayout
 import android.widget.ImageButton // Added for new buttons
-import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
@@ -34,17 +33,17 @@ import androidx.appcompat.app.AlertDialog
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.caverock.androidsvg.SVGImageView // If using SVG approach
+import com.example.purramid.thepurramid.ClockView
 import java.time.LocalTime
 import java.time.ZoneId
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap // Use ConcurrentHashMap for thread safety
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sqrt
 
-class ClockOverlayService : Service() {
+class ClockOverlayService : Service(), ClockView.ClockInteractionListener {
 
     private lateinit var windowManager: WindowManager
     private lateinit var sharedPreferences: SharedPreferences
@@ -111,7 +110,7 @@ class ClockOverlayService : Service() {
         updateActiveClockCountInPrefs()
     }
 
-    // --- Central Ticker Logic (Remains the same) ---
+    // --- Central Ticker Logic ---
     private val tickerRunnable = object : Runnable {
         override fun run() {
             if (clockStates.isEmpty()) {
@@ -121,12 +120,16 @@ class ClockOverlayService : Service() {
             clockStates.forEach { (id, state) ->
                 if (!state.isPaused) {
                     try {
-                        val newTime = LocalTime.now(state.timeZoneId)
+                        val newTime = state.currentTime.plusSeconds(1)
                         state.currentTime = newTime
+
+                        // Find the view and update its display
                         clockViewInstances[id]?.updateDisplayTime(newTime)
                     } catch (e: Exception) { Log.e(TAG, "Error updating time for clock $id", e) }
                 }
+                // Else: If paused, do nothing, time remains as it was (potentially manually set)
             }
+            // Schedule the next tick
             handler.postDelayed(this, TICK_INTERVAL_MS)
         }
     }
@@ -198,9 +201,7 @@ class ClockOverlayService : Service() {
         nestedClockPositions.clear()
     }
 
-
     // --- Action Handling Methods ---
-
     private fun handleAddNewClock(intent: Intent?) {
          if (clockStates.size >= 4) { Toast.makeText(this, "Maximum of 4 clocks reached.", Toast.LENGTH_SHORT).show(); return }
          createNewClock(intent)
@@ -210,32 +211,80 @@ class ClockOverlayService : Service() {
         val clockId = intent?.getIntExtra(EXTRA_CLOCK_ID, -1) ?: -1
         val settingType = intent?.getStringExtra(EXTRA_SETTING_TYPE)
         val state = clockStates[clockId]
-        val view = clockViewInstances[clockId]
 
-        if (clockId == -1 || state == null || view == null || settingType == null) {
-            Log.e(TAG, "Invalid data for ACTION_UPDATE_CLOCK_SETTING: clockId=$clockId, type=$settingType")
-            return
-        }
-        Log.d(TAG, "Updating setting '$settingType' for clock $clockId")
-        // ... (when block to update state and call view setters - remains the same) ...
         when (settingType) {
             "mode" -> {
-                val mode = intent.getStringExtra(EXTRA_SETTING_VALUE) ?: state.mode
-                state.mode = mode
-                view.setClockMode(mode == "analog")
-                Log.w(TAG,"Clock mode change might require view re-inflation - currently not implemented.")
+                val newMode = intent.getStringExtra(EXTRA_SETTING_VALUE) ?: state.mode
+                if (newMode != state.mode) {
+                    Log.d(TAG, "Mode changed for clock $clockId to $newMode. Re-inflating view.")
+
+                    // --- Apply Rule: Reset time before changing mode ---
+                    try {
+                        state.currentTime = LocalTime.now(state.timeZoneId)
+                        state.isPaused = false // Ensure not paused after mode change
+                    } catch (e: Exception) { Log.e(TAG, "Error getting time on mode change reset", e) }
+                    // --- End Reset ---
+
+                    state.mode = newMode // Update state
+
+                    // Get references needed to remove the old view and add the new one
+                    val currentRootView = activeClockViews[clockId]
+                    val currentParams = clockLayoutParams[clockId]
+                    if (currentRootView == null || currentParams == null) {
+                        Log.e(TAG, "Cannot re-inflate, missing current view or params for clock $clockId")
+                        return // Exit if something is wrong
+                    }
+                }
+
+                // --- Re-inflation Logic ---
+                // 1. Remove the old view
+                try {
+                    windowManager.removeView(currentRootView)
+                    Log.d(TAG, "Removed old view for clock $clockId")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error removing old view during mode change for $clockId", e)
+                }
+                activeClockViews.remove(clockId)
+                clockViewInstances.remove(clockId)
+
+                // 2. Inflate and set up the new view using the helper
+                val newViewPair = inflateAndSetupClockView(clockId, state, currentParams)
+
+                if (newViewPair != null) {
+                    val (newRootView, newClockView) = newViewPair
+
+                // 3. Add the new view
+                try {
+                    windowManager.addView(newRootView, currentParams)
+                    Log.d(TAG, "Added new view for clock $clockId")
+                    // 4. Update maps with new references
+                    activeClockViews[clockId] = newRootView
+                    clockViewInstances[clockId] = newClockView
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error adding new view during mode change for $clockId", e)
+                    removeClockInternal(clockId, null, true) // Attempt cleanup
+                    }
+                } else {
+                    Log.e(TAG, "Failed to inflate/setup new view for clock $clockId during mode change.")
+                    removeClockInternal(clockId, null, true) // Attempt cleanup
+                }
+                // --- End Re-inflation Logic ---
             }
+
             "color" -> {
+                val view = clockViewInstances[clockId] ?: return
                 val color = intent.getIntExtra(EXTRA_SETTING_VALUE, state.clockColor)
                 state.clockColor = color
                 view.setClockColor(color)
             }
             "24hour" -> {
+                val view = clockViewInstances[clockId] ?: return
                 val is24Hour = intent.getBooleanExtra(EXTRA_SETTING_VALUE, state.is24Hour)
                 state.is24Hour = is24Hour
                 view.setIs24HourFormat(is24Hour)
             }
             "time_zone" -> {
+                 val view = clockViewInstances[clockId] ?: return
                  val zoneIdString = intent.getStringExtra(EXTRA_SETTING_VALUE) ?: state.timeZoneId.id
                  try {
                      val zoneId = ZoneId.of(zoneIdString)
@@ -248,6 +297,7 @@ class ClockOverlayService : Service() {
                  } catch (e: Exception) { Log.e(TAG, "Invalid Zone ID: $zoneIdString", e) }
             }
             "seconds" -> {
+                val view = clockViewInstances[clockId] ?: return
                 val displaySeconds = intent.getBooleanExtra(EXTRA_SETTING_VALUE, state.displaySeconds)
                 state.displaySeconds = displaySeconds
                 view.setDisplaySeconds(displaySeconds)
@@ -256,6 +306,7 @@ class ClockOverlayService : Service() {
         }
         saveSpecificClockSetting(clockId, settingType, intent)
     }
+
     private fun handleNestClock(intent: Intent?) {
         val clockId = intent?.getIntExtra(EXTRA_CLOCK_ID, -1) ?: -1
         val shouldBeNested = intent?.getBooleanExtra(EXTRA_NEST_STATE, false) ?: false
@@ -290,11 +341,6 @@ class ClockOverlayService : Service() {
             if (it.isPaused) {
                 it.isPaused = false
                 Log.d(TAG, "Playing clock $clockId")
-                try {
-                    val now = LocalTime.now(it.timeZoneId)
-                    it.currentTime = now
-                    clockViewInstances[clockId]?.updateDisplayTime(now)
-                } catch (e: Exception) { Log.e(TAG, "Error getting time on play", e) }
                 updatePlayPauseButton(clockId)
             }
         }
@@ -317,81 +363,25 @@ class ClockOverlayService : Service() {
 
     private fun handleOpenSettings(intent: Intent?) {
         val clockId = intent?.getIntExtra(EXTRA_CLOCK_ID, -1) ?: -1
-        val settingType = intent?.getStringExtra(EXTRA_SETTING_TYPE)
-        val state = clockStates[clockId]
+        if (clockId != -1) {
+            Log.d(TAG, "Opening settings for clock $clockId")
+            // Optional: Could add highlight/dimming here if desired before opening settings
+            // highlightClock(clockId)
+            // dimOtherClocks(clockId)
 
-        if (clockId == -1 || state == null || settingType == null) {
-            Log.e(TAG, "Invalid data for ACTION_UPDATE_CLOCK_SETTING: clockId=$clockId, type=$settingType")
-            return
-        }
-        Log.d(TAG, "Updating setting '$settingType' for clock $clockId")
-
-        val view = clockViewInstances[clockId] // Get current view reference
-
-        when (settingType) {
-            "mode" -> {
-                val newMode = intent.getStringExtra(EXTRA_SETTING_VALUE) ?: state.mode
-                if (newMode != state.mode) {
-                    Log.d(TAG, "Mode changed for clock $clockId to $newMode. Re-inflating view.")
-                    state.mode = newMode // Update state first
-
-                    // --- Re-inflation Logic ---
-                    val currentRootView = activeClockViews[clockId]
-                    val currentParams = clockLayoutParams[clockId]
-
-                    if (currentRootView == null || currentParams == null) {
-                        Log.e(TAG, "Cannot re-inflate, missing current view or params for clock $clockId")
-                        return // Exit if something is wrong
-                    }
-
-                    // 1. Remove the old view
-                    try {
-                        windowManager.removeView(currentRootView)
-                        Log.d(TAG, "Removed old view for clock $clockId")
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Error removing old view during mode change for $clockId", e)
-                        // Attempt to continue, but state might be inconsistent
-                    }
-                    activeClockViews.remove(clockId) // Remove from map regardless of exception
-                    clockViewInstances.remove(clockId)
-
-                    // 2. Inflate and set up the new view using the helper
-                    val newViewPair = inflateAndSetupClockView(clockId, state, currentParams)
-
-                    if (newViewPair != null) {
-                        val (newRootView, newClockView) = newViewPair
-                        // 3. Add the new view
-                        try {
-                            windowManager.addView(newRootView, currentParams)
-                            Log.d(TAG, "Added new view for clock $clockId")
-                            // 4. Update maps with new references
-                            activeClockViews[clockId] = newRootView
-                            clockViewInstances[clockId] = newClockView
-                        } catch (e: Exception) {
-                             Log.e(TAG, "Error adding new view during mode change for $clockId", e)
-                             // Failed to add new view, state is inconsistent. Maybe try removing entirely?
-                             removeClockInternal(clockId, null, true) // Attempt cleanup
-                        }
-                    } else {
-                         Log.e(TAG, "Failed to inflate/setup new view for clock $clockId during mode change.")
-                         // State is inconsistent. Attempt cleanup.
-                         removeClockInternal(clockId, null, true)
-                    }
-                    // --- End Re-inflation Logic ---
-                }
+            // Create intent to launch ClockSettingsActivity
+            val settingsIntent = Intent(this, ClockSettingsActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK) // Ensure a fresh instance
+                putExtra(ClockSettingsActivity.EXTRA_CLOCK_ID, clockId) // Pass the specific clock ID
             }
-            "color" -> { /* ... update state, call view.setClockColor ... */ }
-            "24hour" -> { /* ... update state, call view.setIs24HourFormat ... */ }
-            "time_zone" -> { /* ... update state, call view.setClockTimeZone ... */ }
-            "seconds" -> { /* ... update state, call view.setDisplaySeconds ... */ }
-            else -> Log.w(TAG, "Unknown setting type: $settingType")
-        }
-        // Save the setting change (except for mode, which rebuilds the view based on saved state)
-        if(settingType != "mode") {
-            saveSpecificClockSetting(clockId, settingType, intent)
+            try {
+                startActivity(settingsIntent)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error starting ClockSettingsActivity", e)
+                Toast.makeText(this, "Could not open settings.", Toast.LENGTH_SHORT).show()
+            }
         } else {
-            // Save the new mode state specifically after successful re-inflation might be safer
-             saveSpecificClockSetting(clockId, settingType, intent)
+            Log.e(TAG, "Invalid clockId received for ACTION_OPEN_SETTINGS")
         }
     }
 
@@ -414,18 +404,9 @@ class ClockOverlayService : Service() {
             clockViewInstances[clockId] = clockView
             clockLayoutParams[clockId] = params
 
-        // Configure ClockView instance
-        // ... (call setters on clockView) ...
-        // clockView.updateDisplayTime(initialState.currentTime)
-
             // Add to Window Manager
             try { windowManager.addView(rootView, params); Log.d(TAG,"Added clock $clockId view.") }
             catch (e: Exception) { /* ... handle error, cleanup ... */ return }
-
-        // Setup interactions
-        // setupActionButtons(clockId, rootView) // Setup NEW buttons
-        // updatePlayPauseButton(clockId)        // Set initial NEW button state
-        // setupWindowTouchListener(clockId, rootView) // Keep window drag/resize listener
 
             // Apply nesting visuals if needed
             if (initialState.isNested) { /* ... */ }
@@ -592,6 +573,7 @@ class ClockOverlayService : Service() {
             }
 
             // Configure the ClockView instance
+            clockView.setClockId(clockId)
             clockView.setClockMode(state.mode == "analog")
             clockView.setClockColor(state.clockColor)
             clockView.setIs24HourFormat(state.is24Hour)
@@ -599,6 +581,8 @@ class ClockOverlayService : Service() {
             clockView.setDisplaySeconds(state.displaySeconds)
             // Update its display immediately (use current state time, not system time)
             clockView.updateDisplayTime(state.currentTime)
+
+            clockView.interactionListener = this // Set the listener
 
             // Setup interactions
             setupActionButtons(clockId, rootView)
@@ -613,8 +597,42 @@ class ClockOverlayService : Service() {
         }
     }
 
-    // --- Interaction Handling ---
+    // --- Implementation for ClockInteractionListener Methods ---
 
+    override fun onTimeManuallySet(clockId: Int, newTime: LocalTime) {
+        clockStates[clockId]?.let { state ->
+            if (!state.isPaused) { // Only allow setting time if not paused? Or allow always? Let's allow always.
+                Log.d(TAG, "Manual time set for clock $clockId to $newTime")
+                state.currentTime = newTime // Update the authoritative time state
+                // Optionally save this manually set time? For now, it persists until reset/mode/zone change.
+                // We could add a flag 'isManuallySet' to ClockState if needed.
+            } else {
+                Log.d(TAG, "Manual time set ignored for clock $clockId because it is paused.")
+            }
+        }
+    }
+
+    override fun onDragStateChanged(clockId: Int, isDragging: Boolean) {
+        clockStates[clockId]?.let { state ->
+            if (isDragging) {
+                if (!state.isPaused) {
+                    Log.d(TAG, "Pausing clock $clockId due to hand drag.")
+                    state.isPaused = true
+                    updatePlayPauseButton(clockId)
+                }
+            } else { // Drag finished
+                if (state.isPaused) {
+                    // Should we automatically resume after drag? Let's assume yes for now.
+                    Log.d(TAG, "Resuming clock $clockId after hand drag.")
+                    state.isPaused = false
+                    updatePlayPauseButton(clockId)
+                    // Ticker will automatically resume incrementing from the manually set time
+                }
+            }
+        }
+    }
+
+    // --- Interaction Handling ---
     private fun setupWindowTouchListener(clockId: Int, rootView: View) {
         rootView.setOnTouchListener(object : View.OnTouchListener {
             // Variables for drag/resize logic
