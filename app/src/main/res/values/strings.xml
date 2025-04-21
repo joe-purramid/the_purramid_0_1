@@ -3,7 +3,7 @@
 
 <resources>
     '' MAIN APP VIEW ''
-    <string name="app_name">The Purramid</string>
+    <string name="app_name" translatable="false">The Purramid</string>
     <string name="enable_overlay">Enable Overlay</string>
     <string name="overlay_permission_denied">Overlay permission denied</string>
     <string name="clock_title">Clock</string>

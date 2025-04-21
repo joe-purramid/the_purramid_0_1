@@ -1,6 +1,8 @@
 // SpinDialView.kt
 package com.example.purramid.thepurramid
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
@@ -55,6 +57,8 @@ class SpinDialView : View {
     private var centerX = 0f
     private var centerY = 0f
     private var rotation = 0f // Current rotation of the dial
+
+    private val imageCache = mutableMapOf<String, Bitmap>() // Cache loaded images
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
@@ -197,5 +201,57 @@ class SpinDialView : View {
             textPaint.getTextBounds(text, 0, text.length, textBounds)
         }
         return textPaint.textSize
+    }
+
+    private fun drawItemContent(canvas: Canvas, item: SpinItem, middleAngle: Float, sweepAngle: Float) {
+        val itemX = centerX + (dialRadius * 0.7 * cos(Math.toRadians(middleAngle.toDouble()))).toFloat()
+        val itemY = centerY + (dialRadius * 0.7 * sin(Math.toRadians(middleAngle.toDouble()))).toFloat()
+
+        when (item.type) {
+            SpinItemType.TEXT -> {
+                textPaint.textSize = calculateTextSize(item.content, sweepAngle)
+                canvas.drawText(item.content, itemX, itemY + textPaint.textSize / 2, textPaint)
+            }
+            SpinItemType.IMAGE -> {
+                val bitmap = loadImage(item.content)
+                if (bitmap != null) {
+                    val scaledBitmap = scaleBitmapToFit(bitmap, sweepAngle)
+                    val imageRect = RectF(
+                        itemX - scaledBitmap.width / 2f,
+                        itemY - scaledBitmap.height / 2f,
+                        itemX + scaledBitmap.width / 2f,
+                        itemY + scaledBitmap.height / 2f
+                    )
+                    canvas.drawBitmap(scaledBitmap, null, imageRect, null)
+                }
+            }
+            SpinItemType.EMOJI -> {
+                // TODO: Draw Emoji
+            }
+        }
+    }
+
+    private fun loadImage(path: String): Bitmap? {
+        return imageCache.getOrPut(path) {
+            try {
+                BitmapFactory.decodeFile(path)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                null
+            }
+        }
+    }
+
+    private fun scaleBitmapToFit(bitmap: Bitmap, sweepAngle: Float): Bitmap {
+        val maxImageSize = (dialRadius * 0.6 * sin(Math.toRadians(sweepAngle / 2.0))).toFloat() * 2 // Max width/height
+        val width = bitmap.width.toFloat()
+        val height = bitmap.height.toFloat()
+
+        val scale = min(maxImageSize / width, maxImageSize / height)
+
+        val newWidth = (width * scale).toInt()
+        val newHeight = (height * scale).toInt()
+
+        return Bitmap.createScaledBitmap(bitmap, newWidth, newHeight, true)
     }
 }

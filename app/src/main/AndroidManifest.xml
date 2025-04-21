@@ -27,7 +27,13 @@
         <activity android:name=".ClockActivity"
             android:exported="false"
             android:label="@string/clock_title"
-            android:parentActivityName=".MainActivity" />
+            android:parentActivityName=".MainActivity"
+            android:resizeableActivity="true"
+            android:windowLayoutInDisplayCutoutMode="shortEdges">
+            <layout android:defaultWidth="420dp"
+                android:defaultHeight="300dp"
+                android:gravity="center" />
+        </activity>
 
         <service android:name=".ClockOverlayService"
             android:enabled="true"
@@ -41,37 +47,92 @@
         <activity android:name=".ClockSettingsActivity"
             android:exported="false"
             android:label="@string/clock_settings_title"
-            android:parentActivityName=".MainActivity" />
+            android:parentActivityName=".MainActivity"
+            android:resizeableActivity="true"
+            android:windowLayoutInDisplayCutoutMode="shortEdges">
+            <layout android:defaultWidth="350dp"
+                android:defaultHeight="275dp"
+                android:gravity="center" />
+        </activity>
 
         <activity android:name=".RandomizersActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:label="@string/randomizers_title"
+            android:parentActivityName=".MainActivity"
+            android:resizeableActivity="true"
+            android:windowLayoutInDisplayCutoutMode="shortEdges">
+            <layout android:defaultWidth="420dp"
+                android:defaultHeight="300dp"
+                android:gravity="center" />
+    </activity>
 
         <activity android:name=".ScreenShadeActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:label="@string/screen_shade_title"
+            android:parentActivityName=".MainActivity"
+            android:resizeableActivity="true"
+            android:windowLayoutInDisplayCutoutMode="shortEdges">
+            <layout android:defaultWidth="420dp"
+                android:defaultHeight="300dp"
+                android:gravity="center" />
+        </activity>
+
+
         <service android:name=".ScreenShadeService"
             android:enabled="true"
             android:exported="false" />
 
         <activity android:name=".SpotlightActivity"
-            android:exported="true" />
+            android:exported="true"
+            android:label="@string/spotlight_title"
+            android:parentActivityName=".MainActivity"
+            android:resizeableActivity="true"
+            android:windowLayoutInDisplayCutoutMode="shortEdges">
+            <layout android:defaultWidth="420dp"
+                android:defaultHeight="300dp"
+                android:gravity="center" />
+        </activity>
+
+
 <!--        <service android:name=".SpotlightService"
             android:enabled="true"
             android:exported="false" /> -->
 
         <activity android:name=".TimersActivity"
-            android:exported="false" />
-<!--        <service android:name=".TimerService"
-            android:enabled="true"
-            android:exported="false" /> -->
+            android:exported="false"
+            android:label="@string/timers_title"
+            android:parentActivityName=".MainActivity"
+            android:resizeableActivity="true"
+            android:windowLayoutInDisplayCutoutMode="shortEdges">
+            <layout android:defaultWidth="420dp"
+                android:defaultHeight="300dp"
+                android:gravity="center" />
+        </activity>
+
+    <!--        <service android:name=".TimerService"
+                android:enabled="true"
+                android:exported="false" /> -->
 
         <activity android:name=".TimeZoneGlobeActivity"
             android:exported="false"
             android:label="@string/set_time_zone"
-            android:parentActivityName=".ClockSettingsActivity" />
+            android:parentActivityName=".ClockSettingsActivity"
+            android:resizeableActivity="true"
+            android:windowLayoutInDisplayCutoutMode="shortEdges">
+            <layout android:defaultWidth="1000dp"
+                android:defaultHeight="750dp"
+                android:gravity="center" />
+        </activity>
 
         <activity android:name=".TrafficLightActivity"
             android:exported="false"
-            android:label="@string/traffic_light_title" />
+            android:label="@string/traffic_light_title"
+            android:resizeableActivity="true"
+            android:windowLayoutInDisplayCutoutMode="shortEdges">
+            <layout android:defaultWidth="420dp"
+                android:defaultHeight="300dp"
+                android:gravity="center" />
+        </activity>
 
     </application>
 
