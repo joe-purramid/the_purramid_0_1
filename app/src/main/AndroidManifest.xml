@@ -14,7 +14,7 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.ThePurramid0_1">
+        android:theme="@style/Theme.ThePurramid">
 
         <activity android:name=".MainActivity"
             android:exported="true">
@@ -64,7 +64,7 @@
             android:enabled="true"
             android:exported="false" /> -->
 
-        <activity android:name=".TimeZoneImageActivity"
+        <activity android:name=".TimeZoneGlobeActivity"
             android:exported="false"
             android:label="@string/set_time_zone"
             android:parentActivityName=".ClockSettingsActivity" />

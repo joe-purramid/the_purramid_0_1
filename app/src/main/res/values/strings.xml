@@ -1,3 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- <xmlns="http://www.w3.org/1999/XSL/Transform"> -->
+
 <resources>
     '' MAIN APP VIEW ''
     <string name="app_name">The Purramid</string>
@@ -35,7 +38,8 @@
     <string name="color_lightblue_accessible">Make your clock background light blue</string>
     <string name="color_violet">Violet</string>
     <string name="color_violet_accessible">Make your clock background violet</string>
-    
+    <string name="close">Close</string>
+
     '' CLOCK APP ''    
     <string name="clock_settings_title">Clock Settings</string>
     <string name="enable_floating_clock">Enable Floating Clock</string>
@@ -52,7 +56,7 @@
     <string name="display_seconds">Display Seconds</string>
     <string name="set_alarm">Set Alarm</string>
     <string name="nest_clock">Nest Clock</string>
-    <string name="add_another_clock">Add Another Clock</string>
+    <string name="add_another_clock">Add another Clock</string>
 
     '' RANDOMIZERS APP ''
 
@@ -61,10 +65,17 @@
 
 
     '' SPOTLIGHT APP ''
+    <string name="add_another_spotlight">Add another Spotlight</string>
+    <string name="change_shape_square">Change spotlight shape</string>
 
 
     '' TIMERS APP ''
-
+    <string name="set_time">Set Time</string>
+    <string name="hundredths">Hundredths</string>
+    <string name="play_music">Play music</string>
+    <string name="lap">Lap times</string>
+    <string name="no_laps_recorded">No laps recorded</string>
+    <string name="sounds">Stopwatch sounds</string>
 
     '' TRAFFIC LIGHT APP ''
 

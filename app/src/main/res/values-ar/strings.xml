@@ -22,7 +22,7 @@
     <string name="digital">رقمي</string>
     <string name="am_designator">صباحًا</string>
     <string name="pm_designator">مساءً</string>
-    <string name="clock_color">لون</string>
+    <string name="app_color">لون</string>
     <string name="color_white">أبيض</string>
     <string name="color_black">أسود</string>
     <string name="color_goldenrod">عصا الذهب</string>

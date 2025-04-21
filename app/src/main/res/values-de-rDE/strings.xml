@@ -22,7 +22,7 @@
     <string name="digital">Digital</string>
     <string name="am_designator">vorm.</string>
     <string name="pm_designator">nachm.</string>
-    <string name="clock_color">Farbe</string>
+    <string name="app_color">Farbe</string>
     <string name="color_white">Weiß</string>
     <string name="color_black">Schwarz</string>
     <string name="color_goldenrod">Goldrute</string>
