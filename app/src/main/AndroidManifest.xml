@@ -64,7 +64,17 @@
             <layout android:defaultWidth="420dp"
                 android:defaultHeight="300dp"
                 android:gravity="center" />
-    </activity>
+        </activity>
+
+        <activity
+            android:name=".RandomizerSettingsActivity"
+            android:exported="false"
+            android:label="@string/settings" android:parentActivityName=".MainActivity" android:resizeableActivity="true"
+            android:windowLayoutInDisplayCutoutMode="shortEdges" >
+            <layout android:defaultWidth="350dp"
+                android:defaultHeight="275dp"
+                android:gravity="center" />
+        </activity>
 
         <activity android:name=".ScreenShadeActivity"
             android:exported="false"
@@ -76,7 +86,6 @@
                 android:defaultHeight="300dp"
                 android:gravity="center" />
         </activity>
-
 
         <service android:name=".ScreenShadeService"
             android:enabled="true"
@@ -92,7 +101,6 @@
                 android:defaultHeight="300dp"
                 android:gravity="center" />
         </activity>
-
 
 <!--        <service android:name=".SpotlightService"
             android:enabled="true"

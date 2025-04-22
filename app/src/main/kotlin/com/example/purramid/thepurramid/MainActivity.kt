@@ -25,11 +25,15 @@ import android.widget.ImageView
 import android.widget.TextView
 // import androidx.activity.result.ActivityResultLauncher
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope // For launching coroutines
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.window.layout.WindowMetricsCalculator
 import com.example.purramid.thepurramid.databinding.ActivityMainBinding // Import generated binding class
+import com.example.purramid.thepurramid.data.db.PurramidDatabase // Import Database
+import com.example.purramid.thepurramid.managers.RandomizerInstanceManager // Import Manager
+import kotlinx.coroutines.launch // For coroutines
 
 // --- Define simple Enums for Size Classes (for XML Views context) ---
 // Based on Material Design breakpoints: https://m3.material.io/foundations/layout/applying-layout/window-size-classes
@@ -112,6 +116,7 @@ class MainActivity : AppCompatActivity() {
         binding.appIconImageView.setImageDrawable(ContextCompat.getDrawable(this, R.mipmap.ic_launcher_foreground))
 
         // Define Intents
+        allIntents.clear() // Clear if adding dynamically
         allIntents.addAll(
             listOf(
                 AppIntent(
@@ -122,7 +127,7 @@ class MainActivity : AppCompatActivity() {
                 AppIntent(
                     title = getString(R.string.randomizers_title),
                     icon = ContextCompat.getDrawable(this, R.drawable.ic_random),
-                    action = { startActivity(Intent(this, RandomizersActivity::class.java)) }
+                    action = { launchNewRandomizer() }
                 ),
                 AppIntent(
                     title = getString(R.string.screen_shade_title),
@@ -193,7 +198,47 @@ class MainActivity : AppCompatActivity() {
         setInitialFreeformWindowSize()
     }
 
-    // Helper Function for Touch Handling
+    // *** Add Restoration Logic ***
+    restoreRandomizerInstances()
+}
+
+// --- Restoration Logic ---
+private fun restoreRandomizerInstances() {
+    lifecycleScope.launch { // Use lifecycleScope for coroutine
+        val database = PurramidDatabase.getDatabase(applicationContext)
+        // Get instances saved in DB (excluding the default settings record ID)
+        val instancesToRestore = database.randomizerDao().getAllNonDefaultInstances()
+
+        if (instancesToRestore.isNotEmpty()) {
+            // Re-register these instances with the manager
+            instancesToRestore.forEach { instanceEntity ->
+                RandomizerInstanceManager.registerInstance(instanceEntity.instanceId)
+                // Launch activity for each instance
+                launchExistingRandomizer(instanceEntity.instanceId)
+            }
+        }
+        // Else: No instances to restore, normal startup
+    }
+}
+
+    // --- Launching Randomizers ---
+
+    /** Launches a brand new Randomizer instance (loads default settings). */
+    private fun launchNewRandomizer() {
+        val intent = Intent(this, RandomizersActivity::class.java)
+        // Do NOT pass an instance ID - ViewModel will create a new one
+        startActivity(intent)
+    }
+
+    /** Launches a Randomizer activity for a specific existing/restored instance. */
+    private fun launchExistingRandomizer(instanceId: UUID) {
+        val intent = Intent(this, RandomizersActivity::class.java).apply {
+            putExtra(RandomizersActivity.EXTRA_INSTANCE_ID, instanceId.toString())
+        }
+        startActivity(intent)
+    }
+
+// Helper Function for Touch Handling
     private fun isTouchInsideView(rawX: Float, rawY: Float, view: View): Boolean {
         if (!view.isShown) {
             return false

@@ -1,5 +1,5 @@
 // SpinItemType.kt
-package com.example.purramid.thepuramid
+package com.example.purramid.thepurramid
 
 enum class SpinItemType {
     TEXT,

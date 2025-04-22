@@ -11,25 +11,43 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible // KTX for easy visibility toggling
 import com.example.purramid.thepurramid.data.db.SpinListEntity // Import entity if needed for adapter
 import com.example.purramid.thepurramid.databinding.ActivityRandomizersBinding // Import View Binding class
+import com.example.purramid.thepurramid.managers.RandomizerInstanceManager
+import java.util.UUID
 
 class RandomizersActivity : AppCompatActivity() {
 
     // Use View Binding for layout inflation and view access
     private lateinit var binding: ActivityRandomizersBinding
+    private var instanceId: UUID? = null // To hold the ID passed via Intent
 
     // Initialize the ViewModel using the activity-ktx delegate
-    private val viewModel: RandomizerViewModel by viewModels()
+    private val viewModel: RandomizerViewModel by viewModels() {
+        // Get instanceId from Intent extras if it exists
+        instanceId = intent.getStringExtra(EXTRA_INSTANCE_ID)?.let { UUID.fromString(it) }
+        RandomizerViewModelFactory.create(application, instanceId)
+    }
+
 
     // Adapter for the list dropdown
     private lateinit var listDropdownAdapter: ArrayAdapter<String>
     private var listEntities: List<SpinListEntity> = emptyList() // To map displayed title back to ID
 
+    companion object {
+        const val EXTRA_INSTANCE_ID = "com.example.purramid.INSTANCE_ID"
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        // Inflate the layout using View Binding
         binding = ActivityRandomizersBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        // Register instance with the manager
+        // viewModel.instanceId is initialized within the 'by viewModels' block
+        // We need access to the definite ID used/created by the viewmodel
+        viewModel.viewModelScope.launch { // Access instanceId after VM init potentially
+            val idToRegister = viewModel.instanceId // Access the ID from VM
+            RandomizerInstanceManager.registerInstance(idToRegister)
+        }
 
         // --- Initial Setup ---
         setupDropdown()
@@ -55,10 +73,20 @@ class RandomizersActivity : AppCompatActivity() {
         }
     }
 
+    override fun onDestroy() {
+        // Unregister instance when Activity is destroyed
+        viewModel.viewModelScope.launch { // Access instanceId safely
+            val idToUnregister = viewModel.instanceId
+            RandomizerInstanceManager.unregisterInstance(idToUnregister)
+        }
+        super.onDestroy()
+    }
+
     private fun setupUIListeners() {
         // Set up listeners for buttons (Close, Settings, Spin, Marquee)
         binding.closeButton.setOnClickListener {
-            // TODO: Maybe save state explicitly before closing? ViewModel handles some via SavedStateHandle.
+            // *** Manually closing the window ***
+            viewModel.handleManualClose() // Trigger deletion/default save logic
             finish() // Close this instance
         }
 
@@ -121,29 +149,46 @@ class RandomizersActivity : AppCompatActivity() {
             }
         }
 
-        // Handle the result of a spin
+        // Observe the result of a spin OR the signal to start spinning
         viewModel.spinResult.observe(this) { resultItem ->
-            if (resultItem != null) {
-                // A result has been determined
-                val spinEnabled = viewModel.spinDialData.value?.settings?.isSpinEnabled ?: true
-                if (spinEnabled) {
-                    // TODO: Spin was enabled, animation should have finished.
-                    // Handle Announce/Celebrate/Sequence logic here based on settings.
-                    Toast.makeText(this, "Selected: ${resultItem.content}", Toast.LENGTH_SHORT).show() // Temporary feedback
-                } else {
-                    // Spin was disabled, result was immediate. UI updated via spinDialData observer.
-                     Toast.makeText(this, "Selected (No Spin): ${resultItem.content}", Toast.LENGTH_SHORT).show() // Temporary feedback
+            // Get the current spin enabled state (default to true if settings aren't loaded yet)
+            val spinEnabled = viewModel.spinDialData.value?.settings?.isSpinEnabled ?: true
+
+            if (resultItem == null && spinEnabled) {
+                // --- Case 1: spinResult is null AND spin is enabled ---
+                // This is our signal from the ViewModel to START the animation.
+                if (::binding.isInitialized) { // Check binding initialization just in case
+                    binding.spinDialView.spin { resultFromView ->
+                        // This lambda is the CALLBACK from SpinDialView when its animation finishes.
+                        // 'resultFromView' is the SpinItemEntity determined by the SpinDialView.
+                        // Now, we tell the ViewModel the final result.
+                        viewModel.setSpinResult(resultFromView) // New method needed in ViewModel
+                    }
                 }
-                 // Reset spinResult in ViewModel?
-                 // viewModel.clearSpinResult()
-            } else {
-                // spinResult is null, potentially meaning a spin animation should start
-                val spinEnabled = viewModel.spinDialData.value?.settings?.isSpinEnabled ?: true
-                 if (spinEnabled && ::binding.isInitialized) { // Check binding initialization
-                    // TODO: Trigger the spin animation on binding.spinDialView
-                    // binding.spinDialView.spin { /* Animation end callback if needed */ }
-                 }
+            } else if (resultItem != null) {
+                // --- Case 2: spinResult has a value ---
+                // This means a result has been finalized, either because:
+                //   a) Spin was disabled and the result was immediate.
+                //   b) Spin was enabled, the animation finished, and setSpinResult() was called.
+
+                // TODO: Handle Announce/Celebrate/Sequence logic here based on settings and resultItem.
+                if (spinEnabled) {
+                    // Feedback for when spin was enabled
+                    Toast.makeText(this, "Spin Finished! Selected: ${resultItem.content}", Toast.LENGTH_SHORT).show()
+                } else {
+                    // Feedback for when spin was disabled
+                    Toast.makeText(this, "Selected (No Spin): ${resultItem.content}", Toast.LENGTH_SHORT).show()
+                }
+
+                // It's good practice to clear the result in the ViewModel now that we've handled it,
+                // preventing this block from re-triggering on configuration changes etc.
+                viewModel.clearSpinResult() // New method needed in ViewModel
+
             }
+            // --- Case 3: spinResult is null AND spin is DISABLED ---
+            // This case shouldn't ideally happen with the current ViewModel logic,
+            // as handleSpinRequest should set resultItem directly if spin is disabled.
+            // No action needed here, but good to be aware of.
         }
     }
 
