@@ -13,7 +13,6 @@ import android.graphics.drawable.Drawable
 import android.graphics.Rect
 import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import android.util.TypedValue
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.view.LayoutInflater
@@ -30,9 +29,16 @@ import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.window.layout.WindowMetricsCalculator
+import com.example.purramid.thepurramid.clock.ClockActivity
 import com.example.purramid.thepurramid.databinding.ActivityMainBinding // Import generated binding class
 import com.example.purramid.thepurramid.data.db.PurramidDatabase // Import Database
-import com.example.purramid.thepurramid.managers.RandomizerInstanceManager // Import Manager
+import com.example.purramid.thepurramid.randomizers.RandomizerInstanceManager // Import Manager
+import com.example.purramid.thepurramid.randomizers.RandomizersActivity
+import com.example.purramid.thepurramid.screen_shade.ScreenShadeActivity
+import com.example.purramid.thepurramid.spotlight.SpotlightActivity
+import com.example.purramid.thepurramid.timers.TimersActivity
+import com.example.purramid.thepurramid.traffic_light.TrafficLightActivity
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch // For coroutines
 
 // --- Define simple Enums for Size Classes (for XML Views context) ---
@@ -68,6 +74,7 @@ class IntentAdapter(private val intents: List<AppIntent>, private val onItemClic
     override fun getItemCount() = intents.size
 }
 
+@AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding

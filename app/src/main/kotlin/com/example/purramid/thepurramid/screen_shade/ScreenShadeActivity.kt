@@ -1,5 +1,5 @@
 // ScreenShadeActivity.kt
-package com.example.purramid.thepurramid
+package com.example.purramid.thepurramid.screen_shade
 
 import android.app.Activity
 import android.content.BroadcastReceiver
@@ -9,8 +9,7 @@ import android.content.IntentFilter
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.result.ActivityResultLauncher
-import android.widget.Toast
+import com.example.purramid.thepurramid.R
 
 class ScreenShadeActivity : Activity() {
 
@@ -27,7 +26,9 @@ class ScreenShadeActivity : Activity() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == ScreenShadeService.ACTION_LAUNCH_IMAGE_CHOOSER) {
                 Log.d("ScreenShadeActivity", "Received ACTION_LAUNCH_IMAGE_CHOOSER")
-                val pendingIntent = intent.getParcelableExtra<android.app.PendingIntent>(ScreenShadeService.EXTRA_PENDING_INTENT)
+                val pendingIntent = intent.getParcelableExtra<android.app.PendingIntent>(
+                    ScreenShadeService.EXTRA_PENDING_INTENT
+                )
                 try {
                     pendingIntent?.send()
                 } catch (e: android.app.PendingIntent.CanceledException) {

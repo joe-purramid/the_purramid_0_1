@@ -1,5 +1,5 @@
 // SpotlightView.kt
-package com.example.purramid.thepurramid
+package com.example.purramid.thepurramid.spotlight
 
 import android.content.Context
 import android.graphics.Canvas

@@ -1,7 +1,6 @@
 // ScreenShadeService.kt
-package com.example.purramid.thepurramid
+package com.example.purramid.thepurramid.screen_shade
 
-import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
@@ -9,8 +8,6 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.PixelFormat
-import android.graphics.Point
-import android.graphics.Rect
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.IBinder
@@ -20,11 +17,11 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
-import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
+import com.example.purramid.thepurramid.R
 
 class ScreenShadeService : Service() {
 

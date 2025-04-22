@@ -1,26 +1,20 @@
 // ClockView.kt (Refactored - Step 2: Time State/Ticking Logic Removed)
-package com.example.purramid.thepurramid // Use your package name
+package com.example.purramid.thepurramid.clock // Use your package name
 
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
-import android.graphics.PorterDuff
 import android.graphics.Rect
-import android.graphics.drawable.Drawable
-import android.os.Build
 import android.util.AttributeSet
 import android.util.Log
 import android.util.TypedValue
 import android.view.MotionEvent
 import android.view.View
-import androidx.core.graphics.drawable.DrawableCompat
-import androidx.vectordrawable.graphics.drawable.VectorDrawableCompat
 import com.caverock.androidsvg.SVGImageView
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
 import java.util.Locale
 import kotlin.math.*
 

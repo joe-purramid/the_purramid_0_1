@@ -1,5 +1,5 @@
 // SpinList.kt
-package com.example.purramid.thepurramid
+package com.example.purramid.thepurramid.randomizers
 
 import java.util.UUID
 

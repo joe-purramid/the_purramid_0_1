@@ -1,32 +1,33 @@
 // RandomizersActivity.kt
-package com.example.purramid.thepurramid
+package com.example.purramid.thepurramid.randomizers
 
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
+import android.animation.AnimatorSet
+import android.animation.ObjectAnimator
 import android.os.Bundle
+import android.view.animation.AccelerateDecelerateInterpolator
 import android.view.View
 import android.widget.ArrayAdapter // Needed for the list dropdown
-import android.widget.ListView
 import android.widget.Toast // For temporary feedback
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.isVisible // KTX for easy visibility toggling
+import com.example.purramid.thepurramid.R
 import com.example.purramid.thepurramid.data.db.SpinListEntity // Import entity if needed for adapter
 import com.example.purramid.thepurramid.databinding.ActivityRandomizersBinding // Import View Binding class
-import com.example.purramid.thepurramid.managers.RandomizerInstanceManager
+import dagger.hilt.android.AndroidEntryPoint
 import java.util.UUID
 
+@AndroidEntryPoint
 class RandomizersActivity : AppCompatActivity() {
 
     // Use View Binding for layout inflation and view access
     private lateinit var binding: ActivityRandomizersBinding
-    private var instanceId: UUID? = null // To hold the ID passed via Intent
-
     // Initialize the ViewModel using the activity-ktx delegate
-    private val viewModel: RandomizerViewModel by viewModels() {
-        // Get instanceId from Intent extras if it exists
-        instanceId = intent.getStringExtra(EXTRA_INSTANCE_ID)?.let { UUID.fromString(it) }
-        RandomizerViewModelFactory.create(application, instanceId)
-    }
+    private val viewModel: RandomizerViewModel by viewModels()
 
+    // --- Animation Constants ---
+    private val dropdownAnimationDuration = 300L // milliseconds
 
     // Adapter for the list dropdown
     private lateinit var listDropdownAdapter: ArrayAdapter<String>
@@ -116,7 +117,6 @@ class RandomizersActivity : AppCompatActivity() {
 
     private fun observeViewModel() {
         // Observe LiveData from the ViewModel to update the UI
-
         // Update the marquee title
         viewModel.currentListTitle.observe(this) { title ->
             binding.listTitleTextView.text = title ?: getString(R.string.select_list) // Use string resource
@@ -124,20 +124,28 @@ class RandomizersActivity : AppCompatActivity() {
 
         // Show/Hide the list dropdown
         viewModel.isDropdownVisible.observe(this) { isVisible ->
-            // TODO: Add animation for dropdown visibility change
-            binding.listDropdownCardView.isVisible = isVisible
-            // Update caret icon direction
+            if (isVisible) {
+                animateDropdownOpen()
+            } else {
+                // Only animate close if it's currently somewhat visible
+                if (binding.listDropdownCardView.visibility == View.VISIBLE) {
+                    animateDropdownClose()
+                } else {
+                    // Ensure it's hidden if already hidden (e.g., initial state)
+                     binding.listDropdownCardView.visibility = View.GONE
+                }
+            }
+            // Update caret icon direction (can happen immediately)
             val caretDrawable = if (isVisible) R.drawable.ic_caret_up else R.drawable.ic_caret_down
             binding.listTitleCaret.setImageResource(caretDrawable)
         }
 
         // Update the list of available lists in the dropdown
-        viewModel.allSpinLists.observe(this) { lists ->
-            listEntities = lists ?: emptyList()
-            val listTitles = listEntities.map { it.title }
+        viewModel.displayedListOrder.observe(this) { sortedLists -> // OBSERVE NEW LIVEDATA
+            listEntities = sortedLists ?: emptyList()
+            val listTitles = listEntities.map { it.title } // Get titles from sorted list
             listDropdownAdapter.clear()
             listDropdownAdapter.addAll(listTitles)
-            // TODO: Add "Add New List..." option to dropdown if desired
             listDropdownAdapter.notifyDataSetChanged()
         }
 
@@ -192,6 +200,51 @@ class RandomizersActivity : AppCompatActivity() {
         }
     }
 
+    private fun animateDropdownOpen() {
+        binding.listDropdownCardView.apply {
+            // Prepare for animation
+            visibility = View.VISIBLE
+            alpha = 0f
+            translationY = -height.toFloat() / 4 // Start slightly above final position
+
+            // Create animators
+            val alphaAnimator = ObjectAnimator.ofFloat(this, View.ALPHA, 0f, 1f)
+            val translationYAnimator = ObjectAnimator.ofFloat(this, View.TRANSLATION_Y, translationY, 0f)
+
+            // Combine and run
+            AnimatorSet().apply {
+                playTogether(alphaAnimator, translationYAnimator)
+                duration = dropdownAnimationDuration
+                interpolator = AccelerateDecelerateInterpolator()
+                start()
+            }
+        }
+    }
+
+    private fun animateDropdownClose() {
+        binding.listDropdownCardView.apply {
+            // Create animators
+            val alphaAnimator = ObjectAnimator.ofFloat(this, View.ALPHA, alpha, 0f)
+            val translationYAnimator = ObjectAnimator.ofFloat(this, View.TRANSLATION_Y, translationY, -height.toFloat() / 4)
+
+            // Combine and run
+            AnimatorSet().apply {
+                playTogether(alphaAnimator, translationYAnimator)
+                duration = dropdownAnimationDuration
+                interpolator = AccelerateDecelerateInterpolator()
+                addListener(object : AnimatorListenerAdapter() {
+                    override fun onAnimationEnd(animation: Animator) {
+                        // Hide view after animation completes
+                        visibility = View.GONE
+                        // Reset translationY for next open animation
+                        translationY = 0f
+                    }
+                })
+                start()
+            }
+        }
+    }
+    
     // TODO: Handle saving/restoring state beyond ViewModel (e.g., window position/size if needed)
     // TODO: Implement navigation to/from Settings
     // TODO: Implement Announce/Celebrate/Sequence features based on ViewModel state/settings

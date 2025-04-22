@@ -7,6 +7,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
     <application
+        android:name=".PurramidApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -24,7 +25,7 @@
             </intent-filter>
         </activity>
 
-        <activity android:name=".ClockActivity"
+        <activity android:name=".clock.ClockActivity"
             android:exported="false"
             android:label="@string/clock_title"
             android:parentActivityName=".MainActivity"
@@ -35,7 +36,7 @@
                 android:gravity="center" />
         </activity>
 
-        <service android:name=".ClockOverlayService"
+        <service android:name=".clock.ClockOverlayService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="dataSync">
@@ -44,7 +45,7 @@
             </intent-filter> 
         </service>
 
-        <activity android:name=".ClockSettingsActivity"
+        <activity android:name=".clock.ClockSettingsActivity"
             android:exported="false"
             android:label="@string/clock_settings_title"
             android:parentActivityName=".MainActivity"
@@ -55,7 +56,7 @@
                 android:gravity="center" />
         </activity>
 
-        <activity android:name=".RandomizersActivity"
+        <activity android:name=".randomizers.RandomizersActivity"
             android:exported="false"
             android:label="@string/randomizers_title"
             android:parentActivityName=".MainActivity"
@@ -67,7 +68,7 @@
         </activity>
 
         <activity
-            android:name=".RandomizerSettingsActivity"
+            android:name=".randomizers.RandomizerSettingsActivity"
             android:exported="false"
             android:label="@string/settings" android:parentActivityName=".MainActivity" android:resizeableActivity="true"
             android:windowLayoutInDisplayCutoutMode="shortEdges" >
@@ -76,7 +77,17 @@
                 android:gravity="center" />
         </activity>
 
-        <activity android:name=".ScreenShadeActivity"
+        <activity
+            android:name=".randomizers.ListEditorActivity"
+            android:exported="false"
+            android:label="@string/list_editor" android:parentActivityName=".randomizers.RandomizerSettingsActivity" android:resizeableActivity="true"
+            android:windowLayoutInDisplayCutoutMode="shortEdges" >
+            <layout android:defaultWidth="700dp"
+                android:defaultHeight="600dp"
+                android:gravity="center" />
+        </activity>
+
+        <activity android:name=".screen_shade.ScreenShadeActivity"
             android:exported="false"
             android:label="@string/screen_shade_title"
             android:parentActivityName=".MainActivity"
@@ -87,11 +98,11 @@
                 android:gravity="center" />
         </activity>
 
-        <service android:name=".ScreenShadeService"
+        <service android:name=".screen_shade.ScreenShadeService"
             android:enabled="true"
             android:exported="false" />
 
-        <activity android:name=".SpotlightActivity"
+        <activity android:name=".spotlight.SpotlightActivity"
             android:exported="true"
             android:label="@string/spotlight_title"
             android:parentActivityName=".MainActivity"
@@ -106,7 +117,7 @@
             android:enabled="true"
             android:exported="false" /> -->
 
-        <activity android:name=".TimersActivity"
+        <activity android:name=".timers.TimersActivity"
             android:exported="false"
             android:label="@string/timers_title"
             android:parentActivityName=".MainActivity"
@@ -121,10 +132,10 @@
                 android:enabled="true"
                 android:exported="false" /> -->
 
-        <activity android:name=".TimeZoneGlobeActivity"
+        <activity android:name=".clock.TimeZoneGlobeActivity"
             android:exported="false"
             android:label="@string/set_time_zone"
-            android:parentActivityName=".ClockSettingsActivity"
+            android:parentActivityName=".clock.ClockSettingsActivity"
             android:resizeableActivity="true"
             android:windowLayoutInDisplayCutoutMode="shortEdges">
             <layout android:defaultWidth="1000dp"
@@ -132,7 +143,7 @@
                 android:gravity="center" />
         </activity>
 
-        <activity android:name=".TrafficLightActivity"
+        <activity android:name=".traffic_light.TrafficLightActivity"
             android:exported="false"
             android:label="@string/traffic_light_title"
             android:resizeableActivity="true"

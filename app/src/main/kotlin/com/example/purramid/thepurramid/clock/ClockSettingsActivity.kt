@@ -1,5 +1,5 @@
 // ClockSettingsActivity.kt
-package com.example.purramid.thepurramid
+package com.example.purramid.thepurramid.clock
 
 import android.content.Context
 import android.content.Intent
@@ -21,6 +21,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.children
+import com.example.purramid.thepurramid.R
 
 class ClockSettingsActivity : AppCompatActivity() {
 

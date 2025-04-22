@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.android.application)
+    alias(libs.plugins.hilt.gradle)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
@@ -42,16 +43,16 @@ android {
     }
 
     // If using Room with KSP, you might need to configure sourcesets
-    // sourceSets.configureEach { // <- Potentially needed for KSP + Room
-    //     kotlin.srcDir("build/generated/ksp/$name/kotlin")
-    // }
+   sourceSets.configureEach { // <- Potentially needed for KSP + Room
+        kotlin.srcDir("build/generated/ksp/$name/kotlin")
+   }
 }
 
 dependencies {
 
     // annotationProcessor(libs.glide.compiler)
-    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:...") // Version from your TOML or define one
-    implementation("androidx.lifecycle:lifecycle-livedata-ktx:...") // Version from your TOML or define one
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx")
+    implementation("androidx.lifecycle:lifecycle-livedata-ktx")
     implementation(libs.activity.ktx)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidsvg)
@@ -71,6 +72,8 @@ dependencies {
     implementation(libs.constraintlayout)
     implementation(libs.glide.core)
     implementation(libs.gson)
+    implementation(libs.hilt.android)
+    implementation(libs.hilt.navigation.compose)
     testImplementation(libs.junit)
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
@@ -81,6 +84,7 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
     ksp(libs.glide.compiler)
+    ksp(libs.hilt.compiler)
     ksp(libs.room.compiler)
     testImplementation(libs.junit)
 }

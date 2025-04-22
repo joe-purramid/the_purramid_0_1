@@ -39,6 +39,8 @@
     <string name="color_violet">Violet</string>
     <string name="color_violet_accessible">Make your clock background violet</string>
     <string name="close">Close</string>
+    <string name="cancel">Cancel</string>
+    <string name="delete">Delete</string>
 
     '' CLOCK APP ''    
     <string name="clock_settings_title">Clock Settings</string>
@@ -59,6 +61,16 @@
     <string name="add_another_clock">Add another Clock</string>
 
     '' RANDOMIZERS APP ''
+    <string name="randomizer_mode">Randomizer Type</string>
+    <string name="list_editor">List Editor</string>
+    <string name="setting_spin_animation">Spin Animation</string>
+    <string name="setting_announce">Announce Result</string>
+    <string name="setting_celebrate">Celebrate Result</string>
+    <string name="setting_sequence">Sequence Results</string>
+    <string name="add_new_list">Add New List</string>
+    <string name="delete_list">Delete List</string>
+    <string name="delete_list_title">Delete List?</string>
+    <string name="delete_list_confirmation">Are you sure you want to delete \'%1$s\'? This cannot be undone.</string>
 
 
     '' SCREEN SHADE APP ''
@@ -70,6 +82,7 @@
 
 
     '' TIMERS APP ''
+    <string name="timer_mode">Timer Type</string>
     <string name="set_time">Set Time</string>
     <string name="hundredths">Hundredths</string>
     <string name="play_music">Play music</string>

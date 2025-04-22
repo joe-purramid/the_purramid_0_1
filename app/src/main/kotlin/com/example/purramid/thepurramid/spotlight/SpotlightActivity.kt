@@ -1,10 +1,11 @@
 // SpotlightActivity.kt
-package com.example.purramid.thepurramid
+package com.example.purramid.thepurramid.spotlight
 
 import android.os.Bundle
 import android.widget.ImageView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.example.purramid.thepurramid.R
 import com.example.thepurramid0_1.SpotlightView.Spotlight
 
 class SpotlightActivity : AppCompatActivity() {

@@ -1,5 +1,5 @@
 // ClockOverlayService.kt (Refactored - Step 2b: Handle Button Row)
-package com.example.purramid.thepurramid // Use your package name (Alphabetized Imports)
+package com.example.purramid.thepurramid.clock // Use your package name (Alphabetized Imports)
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -29,11 +29,11 @@ import android.widget.ImageButton // Added for new buttons
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.caverock.androidsvg.SVGImageView // If using SVG approach
-import com.example.purramid.thepurramid.ClockView
+import com.example.purramid.thepurramid.MainActivity
+import com.example.purramid.thepurramid.R
 import java.time.LocalTime
 import java.time.ZoneId
 import java.util.*
@@ -477,7 +477,7 @@ class ClockOverlayService : Service(), ClockView.ClockInteractionListener {
      }
 
      // --- Persistence Functions ---
-     private fun saveNewClockToPrefs(clockId: Int, state: ClockState, params: WindowManager.LayoutParams) { 
+     private fun saveNewClockToPrefs(clockId: Int, state: ClockState, params: WindowManager.LayoutParams) {
          val currentIds = sharedPreferences.getStringSet("active_clock_ids", emptySet())?.toMutableSet() ?: mutableSetOf()
         currentIds.add(clockId.toString())
 
@@ -502,11 +502,18 @@ class ClockOverlayService : Service(), ClockView.ClockInteractionListener {
      private fun saveSpecificClockSetting(clockId: Int, settingType: String, intent: Intent?) { 
         val editor = sharedPreferences.edit()
         when (settingType) {
-            "mode" -> editor.putString("clock_${clockId}_mode", intent?.getStringExtra(EXTRA_SETTING_VALUE))
-            "color" -> editor.putInt("clock_${clockId}_color", intent?.getIntExtra(EXTRA_SETTING_VALUE, Color.WHITE) ?: Color.WHITE)
-            "24hour" -> editor.putBoolean("clock_${clockId}_24hour", intent?.getBooleanExtra(EXTRA_SETTING_VALUE, false) ?: false)
-            "time_zone" -> editor.putString("clock_${clockId}_time_zone_id", intent?.getStringExtra(EXTRA_SETTING_VALUE))
-            "seconds" -> editor.putBoolean("clock_${clockId}_display_seconds", intent?.getBooleanExtra(EXTRA_SETTING_VALUE, true) ?: true)
+            "mode" -> editor.putString("clock_${clockId}_mode", intent?.getStringExtra(
+                EXTRA_SETTING_VALUE
+            ))
+            "color" -> editor.putInt("clock_${clockId}_color", intent?.getIntExtra(
+                EXTRA_SETTING_VALUE, Color.WHITE) ?: Color.WHITE)
+            "24hour" -> editor.putBoolean("clock_${clockId}_24hour", intent?.getBooleanExtra(
+                EXTRA_SETTING_VALUE, false) ?: false)
+            "time_zone" -> editor.putString("clock_${clockId}_time_zone_id", intent?.getStringExtra(
+                EXTRA_SETTING_VALUE
+            ))
+            "seconds" -> editor.putBoolean("clock_${clockId}_display_seconds", intent?.getBooleanExtra(
+                EXTRA_SETTING_VALUE, true) ?: true)
             // Nest state is saved separately in handleNestClock
         }
         editor.apply()
@@ -1080,7 +1087,9 @@ class ClockOverlayService : Service(), ClockView.ClockInteractionListener {
             // Apply a temporary highlight effect
             // Example: Using foreground requires API 23+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                val highlightDrawable = ContextCompat.getDrawable(this, R.drawable.clock_highlight_border)
+                val highlightDrawable = ContextCompat.getDrawable(this,
+                    R.drawable.clock_highlight_border
+                )
                 view.foreground = highlightDrawable
             }
             // Consider a fallback for older APIs if needed
