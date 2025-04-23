@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- <xmlns="http://www.w3.org/1999/XSL/Transform"> -->
 
-<resources>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     '' MAIN APP VIEW ''
-    <string name="app_name" translatable="false">The Purramid</string>
+    <string name="app_name">The <xliff:g translatable="false">Purramid</xliff:g></string>
     <string name="enable_overlay">Enable Overlay</string>
     <string name="overlay_permission_denied">Overlay permission denied</string>
     <string name="clock_title">Clock</string>
@@ -96,36 +96,47 @@
     <string name="sounds">Stopwatch sounds</string>
 
     '' TRAFFIC LIGHT APP ''
-
+    <string name="setting_mode">Mode</string>
+    <string name="setting_mode_manual">Manual Change</string>
+    <string name="setting_mode_responsive">Responsive Change (Requires Microphone)</string>
+    <string name="setting_mode_timed">Timed Change</string>
+    <string name="setting_orientation">Horizontal Orientation</string> <string name="setting_blinking">Enable Blinking Effects</string>
+    <string name="setting_adjust_values">Adjust Responsive Values</string>
+    <string name="setting_add_messages">Add/Edit Messages</string>
+    <string name="setting_edit_sequence">Edit Timed Sequence</string>
+    <string name="setting_show_time_remaining">Show Time Remaining (Timed Mode)</string>
+    <string name="setting_show_timeline">Show Timeline (Timed Mode)</string>
+    <string name="setting_add_another">Add Another Traffic Light</string>
+    <string name="dialog_close">Close</string>
 
     '' ABOUT THIS APP ''
     <string name="version_number">Version 0.1</string> '' in dev ''
 
     <string name="balsamiq_sans_title">Balsamiq Sans Font</string>
-    <string name="balsamiq_sans_license_text">Copyright © 2011 The Balsamiq Sans Project Authors (https://github.com/balsamiq/balsamiqsans)\nThis Font Software is licensed under the SIL Open Font License, Version 1.1 .\nThis license is copied below, and is also available with a FAQ at: https://openfontlicense.org\n\nSIL OPEN FONT LICENSE Version 1.1 - 26 February 2007</string>
+    <string name="balsamiq_sans_license_text">Copyright © 2011 The <xliff:g translatable="false">Balsamiq Sans Project Authors</xliff:g> (https://github.com/balsamiq/balsamiqsans)\nThis Font Software is licensed under the SIL Open Font License, Version 1.1 .\nThis license is copied below, and is also available with a FAQ at: https://openfontlicense.org\n\nSIL OPEN FONT LICENSE Version 1.1 - 26 February 2007</string>
 
-    <string name="purramid_copyright_title">The Purramid</string>
-    <string name="purramid_copyright_text">Copyright © 2025 Purramid Learning®, Inc. All rights reserved.</string>
+    <string name="purramid_copyright_title">The <xliff:g translatable="false">Purramid</xliff:g></string>
+    <string name="purramid_copyright_text">Copyright © 2025 <xliff:g translatable="false">Purramid Learning®, Inc.</xliff:g> All rights reserved.</string>
 
     <string name="sphere_title">3D Sphere</string>
-    <string name="sphere_attribution_text">"sphere-gltf-example" (https://skfb.ly/6XGzq) by rawwerks is licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).</string>
+    <string name="sphere_attribution_text">"sphere-gltf-example" (https://skfb.ly/6XGzq) by <xliff:g translatable="false">rawwerks</xliff:g> is licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).</string>
 
     <string name="data_privacy_title">Data Privacy (USA &amp; EU)</string>
-    <string name="data_privacy_statement">At Purramid Learning, Inc., we are committed to your privacy. This application, Purramid, does not collect, share, or transmit any personal data away from the device on which it is installed. All data generated and used within the application remains solely on your device.</string>
+    <string name="data_privacy_statement">At <xliff:g translatable="false">Purramid Learning, Inc.</xliff:g>, we are committed to your privacy. This application, The <xliff:g translatable="false">Purramid</xliff:g>, does not collect, share, or transmit any personal data away from the device on which it is installed. All data generated and used within the application remains solely on your device.</string>
 
     <string name="best_practices_title">Best Practices for Responsible Use</string>
-    <string name="best_practices_content">While the Purramid application is designed to operate locally and does not collect or transmit personal data, we encourage users to adopt responsible practices when using the application, especially in educational or collaborative settings. We recommend the following:
+    <string name="best_practices_content">While The <xliff:g translatable="false">Purramid</xliff:g> application is designed to operate locally and does not collect or transmit personal data, we encourage users to adopt responsible practices when using the application, especially in educational or collaborative settings. We recommend the following:
         \n\n* Avoid Storing Identifiable Information: To further safeguard privacy, we advise against directly storing personally identifiable information (PII) such as full names, specific addresses, or other sensitive details within the application\'s content or file names. Consider using anonymized labels or codes if necessary for your workflow.
-        \n* Mindful Sharing (If Applicable): If you choose to share files or content created with the Purramid application, be mindful of the information contained within them and ensure they do not inadvertently include sensitive personal data.
+        \n* Mindful Sharing (If Applicable): If you choose to share files or content created with The <xliff:g translatable="false">Purramid</xliff:g> application, be mindful of the information contained within them and ensure they do not inadvertently include sensitive personal data.
         \n* Secure Your Device: As all application data is stored locally on your device, ensure your device itself is secured with appropriate measures such as strong passwords or biometric authentication to prevent unauthorized access.
         \n* Regular Backups: While not related to privacy, regularly backing up your application data is a good practice to prevent data loss.</string>
 
     <string name="acknowledgements_title">Acknowledgements</string>
-    <string name="acknowledgements_content">The development of the Purramid application involved the use of advanced artificial intelligence models, including Gemini, for code generation and assistance. We leveraged these tools to enhance the efficiency of our development process.
-        \n\nWe also want to explicitly acknowledge that all visual art and assets included within the Purramid application were created by human artists who were fairly compensated for their work. We believe in supporting the creative community and ensuring ethical practices in the creation of our application\'s design.</string>
+    <string name="acknowledgements_content">The development of The <xliff:g translatable="false">Purramid</xliff:g> application involved the use of advanced artificial intelligence models, including <xliff:g translatable="false">Gemini</xliff:g>, for code generation and assistance. We leveraged these tools to enhance the efficiency of our development process.
+        \n\nWe also want to explicitly acknowledge that all visual art and assets included within The <xliff:g translatable="false">Purramid</xliff:g> application were created by human artists who were fairly compensated for their work. We believe in supporting the creative community and ensuring ethical practices in the creation of our application\'s design.</string>
 
     <string name="eula_title">End User License Agreement</string>
-    <string name="eula_content">IMPORTANT - READ CAREFULLY: This End User License Agreement ("EULA") is a legal agreement between you (the "User") and Purramid Learning, Inc. ("Licensor") for the Purramid application (the "Application").
+    <string name="eula_content">IMPORTANT - READ CAREFULLY: This End User License Agreement ("EULA") is a legal agreement between you (the "User") and <xliff:g translatable="false">Purramid Learning, Inc.</xliff:g> ("Licensor") for The <xliff:g translatable="false">Purramid</xliff:g> application (the "Application").
         \n\nBy installing, copying, or otherwise using the Application, the User agrees to be bound by the terms of this EULA. If the User does not agree to the terms of this EULA, do not install or use the Application.
         \n\n1. License Grant: The Licensor grants the User a non-exclusive, non-transferable, limited license to use the Application solely for the User\'s personal, non-commercial use on a single device.
         \n\n2. Ownership: The Application is owned by the Licensor and is protected by copyright laws and international treaty provisions. The Licensor retains all rights, title, and interest in and to the Application.
@@ -141,7 +152,7 @@
         \n\n8. Entire Agreement: This EULA constitutes the entire agreement between the User and the Licensor concerning the Application and supersedes all prior or contemporaneous communications and proposals, whether oral or written, between the User and the Licensor with respect to the Application.</string>
 
     <string name="contact_information_title">Contact Information</string>
-    <string name="contact_information">Purramid Learning, Inc.</string>
+    <xliff:g name="contact_information" translatable="false">Purramid Learning, Inc.</xliff:g>
 
 
 </resources>
