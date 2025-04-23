@@ -5,25 +5,32 @@ import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
+import android.content.Intent
 import android.os.Bundle
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.view.View
-import android.widget.ArrayAdapter // Needed for the list dropdown
+import android.widget.ArrayAdapter // For the list dropdown
+import android.widget.TextView
 import android.widget.Toast // For temporary feedback
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.isVisible
+import androidx.lifecycle.Observer
+import androidx.lifecycle.viewModelScope
 import com.example.purramid.thepurramid.R
-import com.example.purramid.thepurramid.data.db.SpinListEntity // Import entity if needed for adapter
-import com.example.purramid.thepurramid.databinding.ActivityRandomizersBinding // Import View Binding class
+import com.example.purramid.thepurramid.data.db.SpinItemEntity
+import com.example.purramid.thepurramid.data.db.SpinListEntity
+import com.example.purramid.thepurramid.databinding.ActivityRandomizersBinding
+import com.example.purramid.thepurramid.managers.RandomizerInstanceManager
 import dagger.hilt.android.AndroidEntryPoint
 import java.util.UUID
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class RandomizersActivity : AppCompatActivity() {
 
     // Use View Binding for layout inflation and view access
     private lateinit var binding: ActivityRandomizersBinding
-    // Initialize the ViewModel using the activity-ktx delegate
     private val viewModel: RandomizerViewModel by viewModels()
 
     // --- Animation Constants ---
@@ -37,18 +44,51 @@ class RandomizersActivity : AppCompatActivity() {
         const val EXTRA_INSTANCE_ID = "com.example.purramid.INSTANCE_ID"
     }
 
+    // --- Animation Constants ---
+    private val dropdownAnimationDuration = 300L
+
+    // --- Views for Sequence Display ---
+    // Group views for easier show/hide/update
+    private lateinit var sequenceTextViews: List<TextView>
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityRandomizersBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Register instance with the manager
-        // viewModel.instanceId is initialized within the 'by viewModels' block
-        // We need access to the definite ID used/created by the viewmodel
-        viewModel.viewModelScope.launch { // Access instanceId after VM init potentially
-            val idToRegister = viewModel.instanceId // Access the ID from VM
-            RandomizerInstanceManager.registerInstance(idToRegister)
-        }
+        // Initialize sequence views list
+        sequenceTextViews = listOf(
+            // Update current item text
+            binding.textSequenceCurrent.text = getItemContent(index)
+            binding.textSequenceCurrent.visibility = View.VISIBLE
+
+                    // Update previous items (up to 4)
+            binding.textSequencePrev1.text = getItemContent(index - 1)
+            binding.textSequencePrev1.visibility = if (index > 0) View.VISIBLE else View.GONE
+            binding.textSequencePrev2.text = getItemContent(index - 2)
+            binding.textSequencePrev2.visibility = if (index > 1) View.VISIBLE else View.GONE
+            binding.textSequencePrev3.text = getItemContent(index - 3)
+            binding.textSequencePrev3.visibility = if (index > 2) View.VISIBLE else View.GONE
+            binding.textSequencePrev4.text = getItemContent(index - 4)
+            binding.textSequencePrev4.visibility = if (index > 3) View.VISIBLE else View.GONE
+
+            // Update next items (up to 4)
+            binding.textSequenceNext1.text = getItemContent(index + 1)
+            binding.textSequenceNext1.visibility = if (index < sequence.size - 1) View.VISIBLE else View.GONE
+            binding.textSequenceNext2.text = getItemContent(index + 2)
+            binding.textSequenceNext2.visibility = if (index < sequence.size - 2) View.VISIBLE else View.GONE
+            binding.textSequenceNext3.text = getItemContent(index + 3)
+            binding.textSequenceNext3.visibility = if (index < sequence.size - 3) View.VISIBLE else View.GONE
+            binding.textSequenceNext4.text = getItemContent(index + 4)
+            binding.textSequenceNext4.visibility = if (index < sequence.size - 4) View.VISIBLE else View.GONE
+
+            // Update button enabled state
+            binding.buttonSequenceUp.isEnabled = index > 0
+            binding.buttonSequenceDown.isEnabled = index < sequence.size - 1
+        )
+
+        // Register instance
+        RandomizerInstanceManager.registerInstance(viewModel.instanceId)
 
         // --- Initial Setup ---
         setupDropdown()
@@ -57,6 +97,11 @@ class RandomizersActivity : AppCompatActivity() {
 
         // TODO: Add logic for freeform window drag/resize listeners if needed beyond system defaults
         // TODO: Handle multiple instance positioning (offsetting) if launched via "add another"
+    }
+
+    override fun onDestroy() {
+        RandomizerInstanceManager.unregisterInstance(viewModel.instanceId)
+        super.onDestroy()
     }
 
     private fun setupDropdown() {
@@ -70,31 +115,20 @@ class RandomizersActivity : AppCompatActivity() {
                 val selectedListId = listEntities[position].id
                 viewModel.selectList(selectedListId)
             }
-            // Consider adding an "Add New List..." item later which would navigate elsewhere
         }
-    }
-
-    override fun onDestroy() {
-        // Unregister instance when Activity is destroyed
-        viewModel.viewModelScope.launch { // Access instanceId safely
-            val idToUnregister = viewModel.instanceId
-            RandomizerInstanceManager.unregisterInstance(idToUnregister)
-        }
-        super.onDestroy()
     }
 
     private fun setupUIListeners() {
         // Set up listeners for buttons (Close, Settings, Spin, Marquee)
         binding.closeButton.setOnClickListener {
-            // *** Manually closing the window ***
             viewModel.handleManualClose() // Trigger deletion/default save logic
-            finish() // Close this instance
+            finish()
         }
 
         binding.settingsButton.setOnClickListener {
-            // TODO: Implement navigation to SettingsActivity/Fragment
-            // Need to pass the viewModel.instanceId to the settings screen
-            Toast.makeText(this, "Settings Clicked (Not Implemented)", Toast.LENGTH_SHORT).show()
+            val intent = Intent(this, RandomizerSettingsActivity::class.java) // Use correct Settings activity name
+            intent.putExtra(RandomizerSettingsActivity.EXTRA_INSTANCE_ID, viewModel.instanceId.toString())
+            startActivity(intent)
         }
 
         binding.spinButton.setOnClickListener {
@@ -107,12 +141,13 @@ class RandomizersActivity : AppCompatActivity() {
             viewModel.toggleListDropdown() // Delegate logic to ViewModel
         }
 
-        // Add listener to root to potentially close dropdown when clicking outside
-        // binding.root.setOnClickListener { // Be careful not to interfere with other clicks
-        //     if (binding.listDropdownCardView.isVisible) {
-        //          viewModel.toggleListDropdown()
-        //     }
-        // }
+        // *** Sequence Button Listeners ***
+        binding.buttonSequenceUp.setOnClickListener {
+            viewModel.showPreviousSequenceItem()
+        }
+        binding.buttonSequenceDown.setOnClickListener {
+            viewModel.showNextSequenceItem()
+        }
     }
 
     private fun observeViewModel() {
@@ -132,12 +167,11 @@ class RandomizersActivity : AppCompatActivity() {
                     animateDropdownClose()
                 } else {
                     // Ensure it's hidden if already hidden (e.g., initial state)
-                     binding.listDropdownCardView.visibility = View.GONE
+                    binding.listDropdownCardView.visibility = View.GONE
+                    // Ensure caret is reset if closed instantly
+                    binding.listTitleCaret.rotation = 0f
                 }
             }
-            // Update caret icon direction (can happen immediately)
-            val caretDrawable = if (isVisible) R.drawable.ic_caret_up else R.drawable.ic_caret_down
-            binding.listTitleCaret.setImageResource(caretDrawable)
         }
 
         // Update the list of available lists in the dropdown
@@ -159,45 +193,63 @@ class RandomizersActivity : AppCompatActivity() {
 
         // Observe the result of a spin OR the signal to start spinning
         viewModel.spinResult.observe(this) { resultItem ->
+            val settings = viewModel.spinDialData.value?.settings
             // Get the current spin enabled state (default to true if settings aren't loaded yet)
             val spinEnabled = viewModel.spinDialData.value?.settings?.isSpinEnabled ?: true
 
-            if (resultItem == null && spinEnabled) {
-                // --- Case 1: spinResult is null AND spin is enabled ---
-                // This is our signal from the ViewModel to START the animation.
-                if (::binding.isInitialized) { // Check binding initialization just in case
+            if (resultItem == null && spinEnabled && settings?.isSequenceEnabled == false) {
+                // Start spin animation (if not sequence mode)
+                if (::binding.isInitialized) {
                     binding.spinDialView.spin { resultFromView ->
-                        // This lambda is the CALLBACK from SpinDialView when its animation finishes.
-                        // 'resultFromView' is the SpinItemEntity determined by the SpinDialView.
-                        // Now, we tell the ViewModel the final result.
-                        viewModel.setSpinResult(resultFromView) // New method needed in ViewModel
+                        viewModel.setSpinResult(resultFromView)
                     }
                 }
             } else if (resultItem != null) {
-                // --- Case 2: spinResult has a value ---
-                // This means a result has been finalized, either because:
-                //   a) Spin was disabled and the result was immediate.
-                //   b) Spin was enabled, the animation finished, and setSpinResult() was called.
-
-                // TODO: Handle Announce/Celebrate/Sequence logic here based on settings and resultItem.
-                if (spinEnabled) {
-                    // Feedback for when spin was enabled
-                    Toast.makeText(this, "Spin Finished! Selected: ${resultItem.content}", Toast.LENGTH_SHORT).show()
+                // Handle finalized result
+                if (settings?.isSequenceEnabled == true) {
+                    // Sequence mode handled by sequenceList observer, just clear result
                 } else {
-                    // Feedback for when spin was disabled
-                    Toast.makeText(this, "Selected (No Spin): ${resultItem.content}", Toast.LENGTH_SHORT).show()
+                    // Announce/Celebrate Logic would go here
+                    Toast.makeText(this, "Selected: ${resultItem.content}", Toast.LENGTH_SHORT)
+                        .show() // Placeholder
                 }
-
-                // It's good practice to clear the result in the ViewModel now that we've handled it,
-                // preventing this block from re-triggering on configuration changes etc.
-                viewModel.clearSpinResult() // New method needed in ViewModel
-
+                viewModel.clearSpinResult()
             }
-            // --- Case 3: spinResult is null AND spin is DISABLED ---
-            // This case shouldn't ideally happen with the current ViewModel logic,
-            // as handleSpinRequest should set resultItem directly if spin is disabled.
-            // No action needed here, but good to be aware of.
         }
+        // --- Sequence Observers ---
+        viewModel.sequenceList.observe(this) { sequence ->
+            updateSequenceVisibility() // Update visibility when list changes
+            updateSequenceDisplay() // Update text views
+        }
+
+        viewModel.sequenceIndex.observe(this) { index ->
+            updateSequenceDisplay() // Update text views when index changes
+        }
+
+    }
+
+    /** Updates the TextViews in the sequence display based on current list and index */
+    private fun updateSequenceDisplay() {
+        val sequence = viewModel.sequenceList.value
+        val index = viewModel.sequenceIndex.value ?: 0
+
+        if (sequence == null || !binding.sequenceDisplayContainer.isVisible) {
+            // Ensure all are hidden if sequence not active or container is hidden
+            sequenceTextViews.forEach { it.visibility = View.GONE }
+            return
+        }
+
+    // Helper to safely get item text or empty string
+    fun getItemContent(idx: Int): String {
+        return sequence.getOrNull(idx)?.content ?: ""
+    }
+
+    /** Shows or hides the sequence display container based on settings and state */
+    private fun updateSequenceVisibility() {
+        val settings = viewModel.spinDialData.value?.settings
+        val sequenceActive = viewModel.sequenceList.value != null
+
+        binding.sequenceDisplayContainer.isVisible = settings?.isSequenceEnabled == true && sequenceActive
     }
 
     private fun animateDropdownOpen() {
@@ -211,9 +263,12 @@ class RandomizersActivity : AppCompatActivity() {
             val alphaAnimator = ObjectAnimator.ofFloat(this, View.ALPHA, 0f, 1f)
             val translationYAnimator = ObjectAnimator.ofFloat(this, View.TRANSLATION_Y, translationY, 0f)
 
+            // Caret Rotation Animator (0 to 180 degrees)
+            val caretAnimator = ObjectAnimator.ofFloat(binding.listTitleCaret, View.ROTATION, 0f, 180f)
+
             // Combine and run
             AnimatorSet().apply {
-                playTogether(alphaAnimator, translationYAnimator)
+                playTogether(alphaAnimator, translationYAnimator, caretAnimator)
                 duration = dropdownAnimationDuration
                 interpolator = AccelerateDecelerateInterpolator()
                 start()
@@ -227,9 +282,12 @@ class RandomizersActivity : AppCompatActivity() {
             val alphaAnimator = ObjectAnimator.ofFloat(this, View.ALPHA, alpha, 0f)
             val translationYAnimator = ObjectAnimator.ofFloat(this, View.TRANSLATION_Y, translationY, -height.toFloat() / 4)
 
+            // Animate from current rotation back to 0 in case animation was interrupted
+            val caretAnimator = ObjectAnimator.ofFloat(binding.listTitleCaret, View.ROTATION, binding.listTitleCaret.rotation, 0f)
+
             // Combine and run
             AnimatorSet().apply {
-                playTogether(alphaAnimator, translationYAnimator)
+                playTogether(alphaAnimator, translationYAnimator, caretAnimator)
                 duration = dropdownAnimationDuration
                 interpolator = AccelerateDecelerateInterpolator()
                 addListener(object : AnimatorListenerAdapter() {
@@ -238,6 +296,14 @@ class RandomizersActivity : AppCompatActivity() {
                         visibility = View.GONE
                         // Reset translationY for next open animation
                         translationY = 0f
+                        // Optional: Ensure rotation is exactly 0 if animation glitches
+                        binding.listTitleCaret.rotation = 0f
+                    }
+                    // Reset rotation if animation is cancelled
+                    override fun onAnimationCancel(animation: Animator) {
+                        visibility = View.GONE
+                        translationY = 0f
+                        binding.listTitleCaret.rotation = 0f
                     }
                 })
                 start()

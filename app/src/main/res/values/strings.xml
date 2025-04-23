@@ -61,6 +61,9 @@
     <string name="add_another_clock">Add another Clock</string>
 
     '' RANDOMIZERS APP ''
+    <string name="spin">Spin</string>
+    <string name="select_list">Choose a List</string>
+    <string name="show_lists">Open a drop-down menu to select a list</string>
     <string name="randomizer_mode">Randomizer Type</string>
     <string name="list_editor">List Editor</string>
     <string name="setting_spin_animation">Spin Animation</string>
@@ -71,6 +74,8 @@
     <string name="delete_list">Delete List</string>
     <string name="delete_list_title">Delete List?</string>
     <string name="delete_list_confirmation">Are you sure you want to delete \'%1$s\'? This cannot be undone.</string>
+    <string name="sequence_up">Previous sequence item</string>
+    <string name="sequence_down">Next sequence item</string>
 
 
     '' SCREEN SHADE APP ''

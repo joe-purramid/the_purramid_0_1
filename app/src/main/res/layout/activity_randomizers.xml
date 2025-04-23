@@ -1,146 +1,186 @@
+<?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#F0F0F0"
-    tools:context=".randomizers.RandomizersActivity">
-
-    <ImageView
-        android:id="@+id/closeButton"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:src="@drawable/ic_close"
-        android:contentDescription="@string/close"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginTop="8dp"
-        android:layout_marginEnd="8dp"
-        android:background="?attr/selectableItemBackgroundBorderless"
-        android:clickable="true"
-        android:focusable="true" />
+    tools:context=".randomizers.RandomizersActivity"> <ImageView
+    android:id="@+id/closeButton"
+    android:layout_width="48dp"
+    android:layout_height="48dp"
+    android:layout_marginTop="8dp"
+    android:layout_marginEnd="8dp"
+    android:background="?attr/selectableItemBackgroundBorderless"
+    android:clickable="true"
+    android:contentDescription="@string/close"
+    android:focusable="true"
+    android:src="@drawable/ic_close"
+    app:layout_constraintEnd_toEndOf="parent"
+    app:layout_constraintTop_toTopOf="parent" />
 
     <ImageView
         android:id="@+id/settingsButton"
         android:layout_width="48dp"
         android:layout_height="48dp"
-        android:src="@drawable/ic_settings"
-        android:contentDescription="@string/settings"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintEnd_toStartOf="@id/closeButton"
         android:layout_marginTop="8dp"
         android:layout_marginEnd="8dp"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:clickable="true"
-        android:focusable="true" />
+        android:contentDescription="@string/settings"
+        android:focusable="true"
+        android:src="@drawable/ic_settings"
+        app:layout_constraintEnd_toStartOf="@id/closeButton"
+        app:layout_constraintTop_toTopOf="parent" />
 
     <androidx.cardview.widget.CardView
         android:id="@+id/listTitleMarquee"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="16dp"
         app:cardCornerRadius="8dp"
         app:cardElevation="4dp"
-        app:layout_constraintTop_toBottomOf="@id/closeButton"
-        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
-        android:layout_marginTop="16dp">
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/closeButton">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:padding="8dp"
-            android:gravity="center_vertical">
+            android:padding="8dp">
 
             <TextView
                 android:id="@+id/listTitleTextView"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="@string/select_list"
-                android:textSize="20sp"
                 android:ellipsize="marquee"
                 android:marqueeRepeatLimit="marquee_forever"
-                android:singleLine="true" />
+                android:singleLine="true"
+                android:text="@string/select_list"
+                android:textSize="20sp" />
 
             <ImageView
                 android:id="@+id/listTitleCaret"
                 android:layout_width="24dp"
                 android:layout_height="24dp"
-                android:src="@drawable/ic_caret_down"
-                android:contentDescription="@string/show_lists" />
+                android:contentDescription="@string/show_lists"
+                android:src="@drawable/ic_arrow_drop_down" />
 
         </LinearLayout>
 
     </androidx.cardview.widget.CardView>
 
-    <com.example.purramid.thepurramid.SpinDialView
+    <com.example.purramid.thepurramid.randomizers.SpinDialView
         android:id="@+id/spinDialView"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        app:layout_constraintTop_toBottomOf="@id/listTitleMarquee"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintBottom_toTopOf="@id/spinButton"
-        android:layout_marginTop="16dp"
         android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
-        android:layout_marginBottom="16dp" />
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginBottom="16dp"
+        app:layout_constraintBottom_toTopOf="@id/spinButton"
+        app:layout_constraintEnd_toStartOf="@+id/guideline_vertical_split"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/listTitleMarquee" />
 
-    <Button
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guideline_vertical_split"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent="0.6" /> <Button
         android:id="@+id/spinButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
         android:text="@string/spin"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        android:layout_marginBottom="16dp" />
+        app:layout_constraintEnd_toStartOf="@+id/guideline_vertical_split"
+        app:layout_constraintStart_toStartOf="parent" />
 
     <TextView
         android:id="@+id/announcementTextView"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:textSize="36sp"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="16dp"
+        android:gravity="center"
         android:text=""
+        android:textSize="36sp"
         android:visibility="gone"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toEndOf="@id/spinDialView"
-        android:layout_marginStart="16dp" />
+        app:layout_constraintBottom_toBottomOf="@+id/spinDialView"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/guideline_vertical_split"
+        app:layout_constraintTop_toTopOf="@+id/spinDialView"
+        tools:visibility="visible" />
 
     <FrameLayout
         android:id="@+id/fireworksContainer"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:visibility="gone"
-        app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintTop_toTopOf="parent" />
 
     <androidx.cardview.widget.CardView
         android:id="@+id/listDropdownCardView"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        app:cardCornerRadius="8dp"
-        app:cardElevation="8dp"
-        android:visibility="gone"
-        app:layout_constraintTop_toBottomOf="@id/listTitleMarquee"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
         android:layout_marginStart="16dp"
+        android:layout_marginTop="8dp"
         android:layout_marginEnd="16dp"
-        android:layout_marginTop="8dp">
+        android:visibility="gone" />
 
-        <ListView
-            android:id="@+id/listDropdownListView"
-            android:layout_width="match_parent"
+    <TextView
+        android:id="@+id/textSequenceCurrent"
+        style="@style/TextAppearance.AppCompat.Medium"
+        android:background="@drawable/sequence_current_background" android:padding="8dp" <FrameLayout
+        android:id="@+id/frameLayoutPrev4"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toTopOf="@+id/textSequencePrev3"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <TextView
+            android:id="@+id/textSequencePrev4"
+            style="@style/TextAppearance.AppCompat.Small"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:maxHeight="250dp" />
+            tools:text="Prev 4" />
 
-    </androidx.cardview.widget.CardView>
+        <View
+            android:id="@+id/fadeOverlayPrev4"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_gravity="top" android:background="@drawable/fade_to_top" /> </FrameLayout>
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+    <FrameLayout
+    <!-- Note:Adjust the constraints for  `FrameLayout`s to position them correctly where the original TextViews were. -->
+        android:id="@+id/frameLayoutNext4"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@+id/textSequenceNext3"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <TextView
+            android:id="@+id/textSequenceNext4"
+            style="@style/TextAppearance.AppCompat.Small"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            tools:text="Next 4" />
+
+        <View
+            android:id="@+id/fadeOverlayNext4"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_gravity="bottom" android:background="@drawable/fade_to_bottom" />
+    </FrameLayout>
