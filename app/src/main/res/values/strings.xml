@@ -4,6 +4,7 @@
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     '' MAIN APP VIEW ''
     <string name="app_name">The <xliff:g translatable="false">Purramid</xliff:g></string>
+    <string name="app_widget_description">Launch a Purramid class management tool</string>
     <string name="enable_overlay">Enable Overlay</string>
     <string name="overlay_permission_denied">Overlay permission denied</string>
     <string name="clock_title">Clock</string>
