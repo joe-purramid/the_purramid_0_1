@@ -306,6 +306,12 @@ class RandomizerViewModel @Inject constructor(
                     isCelebrateEnabled = false
                 )
             }
+            else if (!settingsToModify.isAnnounceEnabled) {
+                 settingsToModify = settingsToModify.copy(
+                     isCelebrateEnabled = false
+                 )
+            }
+            
             // Save the potentially modified settings
             randomizerDao.saveSettings(settingsToModify)
             // Update LiveData on main thread
