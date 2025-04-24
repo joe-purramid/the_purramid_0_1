@@ -256,10 +256,29 @@ class RandomizersActivity : AppCompatActivity() {
         binding.announcementTextView.text = item.content // Display text for now
         binding.announcementTextView.visibility = View.VISIBLE
 
-        // TODO: Implement enlargement animation
-        // Placeholder: Simple fade-in
-        binding.announcementTextView.alpha = 0f
-        binding.announcementTextView.animate().alpha(1f).setDuration(300).start()
+        // --- Animation ---
+        binding.announcementTextView.apply {
+            // 1. Set initial state (small and transparent)
+            scaleX = 0.2f // Start small
+            scaleY = 0.2f // Start small
+            alpha = 0f
+            visibility = View.VISIBLE // Make it visible before animating
+
+            // 2. Create animators for scale and fade
+            val scaleXAnimator = ObjectAnimator.ofFloat(this, View.SCALE_X, 0.2f, 1.0f)
+            val scaleYAnimator = ObjectAnimator.ofFloat(this, View.SCALE_Y, 0.2f, 1.0f)
+            val alphaAnimator = ObjectAnimator.ofFloat(this, View.ALPHA, 0f, 1.0f)
+
+            // 3. Combine animators in a set
+            AnimatorSet().apply {
+                playTogether(scaleXAnimator, scaleYAnimator, alphaAnimator)
+                duration = 500L // Adjust duration as needed (milliseconds)
+                // Optional: Add an interpolator for effect (e.g., bounce)
+                // interpolator = android.view.animation.OvershootInterpolator(1.5f)
+                interpolator = AccelerateDecelerateInterpolator() // Standard smooth start/end
+                start() // Run the animation
+            }
+        }
     }
 
     /** Starts the celebration (fireworks) animation */
@@ -284,11 +303,13 @@ class RandomizersActivity : AppCompatActivity() {
 
     /** Hides both Announcement and Celebration UI */
     private fun clearAnnounceCelebrate() {
+         binding.announcementTextView.animate().cancel() // Cancel any ongoing animation
          binding.announcementTextView.visibility = View.GONE
-         binding.announcementTextView.text = "" // Clear text
-         binding.announcementTextView.alpha = 1f // Reset alpha if using fade
-         binding.announcementTextView.scaleX = 1f // Reset scale if using scale anim
-         binding.announcementTextView.scaleY = 1f // Reset scale if using scale anim
+         binding.announcementTextView.text = ""
+         // Reset properties modified by animation
+         binding.announcementTextView.alpha = 1f
+         binding.announcementTextView.scaleX = 1f
+         binding.announcementTextView.scaleY = 1f
          stopCelebration()
     }
 
