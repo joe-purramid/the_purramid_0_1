@@ -132,9 +132,9 @@ class RandomizersActivity : AppCompatActivity() {
         }
 
         binding.spinButton.setOnClickListener {
-            viewModel.handleSpinRequest() // Delegate logic to ViewModel
-            // If spin animation is enabled, the Activity might observe spinResult
-            // being null to trigger the animation on the SpinDialView here.
+            // Clear previous announce/celebrate when starting new spin
+            clearAnnounceCelebrate()
+            viewModel.handleSpinRequest()
         }
 
         binding.listTitleMarquee.setOnClickListener {
@@ -194,28 +194,48 @@ class RandomizersActivity : AppCompatActivity() {
         // Observe the result of a spin OR the signal to start spinning
         viewModel.spinResult.observe(this) { resultItem ->
             val settings = viewModel.spinDialData.value?.settings
-            // Get the current spin enabled state (default to true if settings aren't loaded yet)
-            val spinEnabled = viewModel.spinDialData.value?.settings?.isSpinEnabled ?: true
+            val spinEnabled = settings?.isSpinEnabled ?: true // Needed for context below
 
-            if (resultItem == null && spinEnabled && settings?.isSequenceEnabled == false) {
-                // Start spin animation (if not sequence mode)
-                if (::binding.isInitialized) {
-                    binding.spinDialView.spin { resultFromView ->
-                        viewModel.setSpinResult(resultFromView)
+            if (resultItem != null) {
+                // --- A result is available ---
+
+                // Check if Sequence mode is OFF (Announce/Celebrate only run if Sequence is OFF)
+                if (settings?.isSequenceEnabled == false) {
+                    // Check if Announce is ON
+                    if (settings.isAnnounceEnabled) {
+                        displayAnnouncement(resultItem) // Call helper to show/animate announcement
+
+                        // Check if Celebrate is ON (only possible if Announce is ON)
+                        if (settings.isCelebrateEnabled) {
+                            startCelebration() // Call helper to show/animate fireworks
+                        }
+                    } else {
+                        // Announce is OFF, ensure UI is hidden
+                         clearAnnounceCelebrate()
+                    }
+                } else {
+                     // Sequence mode is ON, ensure Announce/Celebrate UI is hidden
+                     clearAnnounceCelebrate()
+                }
+
+                // Clear the result signal in the ViewModel
+                viewModel.clearSpinResult()
+
+            } else {
+                 // Result is null - potentially start spin animation (if enabled and NOT sequence)
+                 if (spinEnabled && settings?.isSequenceEnabled == false) {
+                    if (::binding.isInitialized) {
+                        // Clear previous announce/celebrate before starting animation
+                        clearAnnounceCelebrate()
+                        binding.spinDialView.spin { resultFromView ->
+                            viewModel.setSpinResult(resultFromView)
+                        }
                     }
                 }
-            } else if (resultItem != null) {
-                // Handle finalized result
-                if (settings?.isSequenceEnabled == true) {
-                    // Sequence mode handled by sequenceList observer, just clear result
-                } else {
-                    // Announce/Celebrate Logic would go here
-                    Toast.makeText(this, "Selected: ${resultItem.content}", Toast.LENGTH_SHORT)
-                        .show() // Placeholder
-                }
-                viewModel.clearSpinResult()
+                 // If spin disabled or sequence on, result is set directly by VM, handled by resultItem != null block
             }
         }
+        
         // --- Sequence Observers ---
         viewModel.sequenceList.observe(this) { sequence ->
             updateSequenceVisibility() // Update visibility when list changes
@@ -226,6 +246,50 @@ class RandomizersActivity : AppCompatActivity() {
             updateSequenceDisplay() // Update text views when index changes
         }
 
+    }
+
+    // --- NEW: Helper Functions for Announce/Celebrate ---
+
+    /** Displays the announcement UI for the given item */
+    private fun displayAnnouncement(item: SpinItemEntity) {
+        // TODO: Handle displaying Image/Emoji content appropriately
+        binding.announcementTextView.text = item.content // Display text for now
+        binding.announcementTextView.visibility = View.VISIBLE
+
+        // TODO: Implement enlargement animation
+        // Placeholder: Simple fade-in
+        binding.announcementTextView.alpha = 0f
+        binding.announcementTextView.animate().alpha(1f).setDuration(300).start()
+    }
+
+    /** Starts the celebration (fireworks) animation */
+    private fun startCelebration() {
+        binding.fireworksContainer.visibility = View.VISIBLE
+        // TODO: Implement actual fireworks animation (e.g., using a library or custom drawable animation)
+        // Placeholder: Just show a color temporarily
+        binding.fireworksContainer.setBackgroundColor(getColor(R.color.purple_200)) // Example color
+
+        // Stop celebration after 3 seconds
+        binding.fireworksContainer.postDelayed({
+            stopCelebration()
+        }, 3000) // 3 seconds
+    }
+
+    /** Hides the celebration UI */
+    private fun stopCelebration() {
+         // TODO: Stop actual fireworks animation
+         binding.fireworksContainer.setBackgroundColor(Color.TRANSPARENT) // Reset placeholder
+         binding.fireworksContainer.visibility = View.GONE
+    }
+
+    /** Hides both Announcement and Celebration UI */
+    private fun clearAnnounceCelebrate() {
+         binding.announcementTextView.visibility = View.GONE
+         binding.announcementTextView.text = "" // Clear text
+         binding.announcementTextView.alpha = 1f // Reset alpha if using fade
+         binding.announcementTextView.scaleX = 1f // Reset scale if using scale anim
+         binding.announcementTextView.scaleY = 1f // Reset scale if using scale anim
+         stopCelebration()
     }
 
     /** Updates the TextViews in the sequence display based on current list and index */
