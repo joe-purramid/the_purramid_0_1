@@ -233,15 +233,67 @@ class RandomizersActivity : AppCompatActivity() {
         val sequence = viewModel.sequenceList.value
         val index = viewModel.sequenceIndex.value ?: 0
 
+        // Check if sequence is active and container is visible
         if (sequence == null || !binding.sequenceDisplayContainer.isVisible) {
-            // Ensure all are hidden if sequence not active or container is hidden
+            // Ensure all sequence text views and overlays are hidden if sequence not active
             sequenceTextViews.forEach { it.visibility = View.GONE }
+            binding.fadeOverlayPrev4.visibility = View.GONE // Also hide overlays
+            binding.fadeOverlayNext4.visibility = View.GONE
+            // Also hide buttons if container isn't visible (optional, could be handled by container visibility)
+            binding.buttonSequenceUp.visibility = View.GONE
+            binding.buttonSequenceDown.visibility = View.GONE
             return
         }
 
-    // Helper to safely get item text or empty string
-    fun getItemContent(idx: Int): String {
-        return sequence.getOrNull(idx)?.content ?: ""
+        // Make sure buttons are visible if container is visible
+        binding.buttonSequenceUp.visibility = View.VISIBLE
+        binding.buttonSequenceDown.visibility = View.VISIBLE
+
+        // Helper to safely get item text or empty string
+        fun getItemContent(idx: Int): String {
+            // Only return content if the item actually exists in the list
+            return sequence.getOrNull(idx)?.content ?: ""
+        }
+
+        // --- Update Text and Visibility for each TextView ---
+
+        // Current item
+        binding.textSequenceCurrent.text = getItemContent(index)
+        binding.textSequenceCurrent.visibility = View.VISIBLE // Always visible if sequence is active
+
+        // Previous items
+        binding.textSequencePrev1.text = getItemContent(index - 1)
+        binding.textSequencePrev1.visibility = if (index > 0) View.VISIBLE else View.GONE
+        binding.textSequencePrev2.text = getItemContent(index - 2)
+        binding.textSequencePrev2.visibility = if (index > 1) View.VISIBLE else View.GONE
+        binding.textSequencePrev3.text = getItemContent(index - 3)
+        binding.textSequencePrev3.visibility = if (index > 2) View.VISIBLE else View.GONE
+        binding.textSequencePrev4.text = getItemContent(index - 4)
+        binding.textSequencePrev4.visibility = if (index > 3) View.VISIBLE else View.GONE
+
+        // Next items
+        binding.textSequenceNext1.text = getItemContent(index + 1)
+        binding.textSequenceNext1.visibility = if (index < sequence.size - 1) View.VISIBLE else View.GONE
+        binding.textSequenceNext2.text = getItemContent(index + 2)
+        binding.textSequenceNext2.visibility = if (index < sequence.size - 2) View.VISIBLE else View.GONE
+        binding.textSequenceNext3.text = getItemContent(index + 3)
+        binding.textSequenceNext3.visibility = if (index < sequence.size - 3) View.VISIBLE else View.GONE
+        binding.textSequenceNext4.text = getItemContent(index + 4)
+        binding.textSequenceNext4.visibility = if (index < sequence.size - 4) View.VISIBLE else View.GONE
+
+
+        // --- ADDED: Control Fade Overlay Visibility ---
+        // Show top fade only if textSequencePrev4 is visible AND there's at least one more item *before* it (index > 4)
+        binding.fadeOverlayPrev4.isVisible = (index > 4)
+
+        // Show bottom fade only if textSequenceNext4 is visible AND there's at least one more item *after* it (index < sequence.size - 5)
+        binding.fadeOverlayNext4.isVisible = (index < sequence.size - 5)
+        // --- End of Added Code ---
+
+
+        // Update button enabled state
+        binding.buttonSequenceUp.isEnabled = index > 0
+        binding.buttonSequenceDown.isEnabled = index < sequence.size - 1
     }
 
     /** Shows or hides the sequence display container based on settings and state */
