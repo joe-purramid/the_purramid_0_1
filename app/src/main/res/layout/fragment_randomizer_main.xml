@@ -5,19 +5,19 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#F0F0F0"
-    tools:context=".randomizers.RandomizersActivity"> <ImageView
-    android:id="@+id/closeButton"
-    android:layout_width="48dp"
-    android:layout_height="48dp"
-    android:layout_marginTop="8dp"
-    android:layout_marginEnd="8dp"
-    android:background="?attr/selectableItemBackgroundBorderless"
-    android:clickable="true"
-    android:contentDescription="@string/close"
-    android:focusable="true"
-    android:src="@drawable/ic_close"
-    app:layout_constraintEnd_toEndOf="parent"
-    app:layout_constraintTop_toTopOf="parent" />
+    tools:context=".randomizers.RandomizerMainFragment"> <ImageView
+        android:id="@+id/closeButton"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="8dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:clickable="true"
+        android:contentDescription="@string/close"
+        android:focusable="true"
+        android:src="@drawable/ic_close"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
 
     <ImageView
         android:id="@+id/settingsButton"
@@ -91,7 +91,9 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        app:layout_constraintGuide_percent="0.6" /> <Button
+        app:layout_constraintGuide_percent="0.6" />
+
+    <Button
         android:id="@+id/spinButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -161,7 +163,6 @@
 
     </androidx.cardview.widget.CardView>
 
-
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/sequenceDisplayContainer"
         android:layout_width="0dp"
@@ -173,30 +174,29 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toEndOf="@+id/guideline_vertical_split"
         app:layout_constraintTop_toTopOf="@+id/spinDialView"
-        tools:visibility="visible"> <FrameLayout
-        android:id="@+id/frameLayoutPrev4"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        app:layout_constraintBottom_toTopOf="@+id/textSequencePrev3"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent">
+        tools:visibility="visible">
 
-        <TextView
-            android:id="@+id/textSequencePrev4"
-            style="@style/TextAppearance.AppCompat.Small"
+        <FrameLayout
+            android:id="@+id/frameLayoutPrev4"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            tools:text="Prev 4" />
-
-        <View
-            android:id="@+id/fadeOverlayPrev4"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_gravity="top"
-            android:background="@drawable/fade_to_top" />
-    </FrameLayout>
-
-        <TextView
+            app:layout_constraintBottom_toTopOf="@+id/textSequencePrev3"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent">
+            <TextView
+                android:id="@+id/textSequencePrev4"
+                style="@style/TextAppearance.AppCompat.Small"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                tools:text="Prev 4" />
+            <View
+                android:id="@+id/fadeOverlayPrev4"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_gravity="top"
+                android:background="@drawable/fade_to_top" />
+        </FrameLayout>
+         <TextView
             android:id="@+id/textSequencePrev3"
             style="@style/TextAppearance.AppCompat.Small"
             android:layout_width="wrap_content"
@@ -226,7 +226,6 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             tools:text="Prev 1" />
-
         <TextView
             android:id="@+id/textSequenceCurrent"
             style="@style/TextAppearance.AppCompat.Medium"
@@ -242,7 +241,8 @@
             app:layout_constraintEnd_toStartOf="@+id/buttonSequenceDown"
             app:layout_constraintStart_toEndOf="@+id/buttonSequenceUp"
             app:layout_constraintTop_toTopOf="parent"
-            tools:text="Current Sequence Item" /> <ImageButton
+            tools:text="Current Sequence Item" />
+        <ImageButton
             android:id="@+id/buttonSequenceUp"
             android:layout_width="48dp"
             android:layout_height="48dp"
@@ -252,7 +252,6 @@
             app:layout_constraintBottom_toBottomOf="@+id/textSequenceCurrent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="@+id/textSequenceCurrent" />
-
         <ImageButton
             android:id="@+id/buttonSequenceDown"
             android:layout_width="48dp"
@@ -263,7 +262,6 @@
             app:layout_constraintBottom_toBottomOf="@+id/textSequenceCurrent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="@+id/textSequenceCurrent" />
-
         <TextView
             android:id="@+id/textSequenceNext1"
             style="@style/TextAppearance.AppCompat.Small"
@@ -294,22 +292,19 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/textSequenceNext2"
             tools:text="Next 3" />
-
-        <FrameLayout
+         <FrameLayout
             android:id="@+id/frameLayoutNext4"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             app:layout_constraintTop_toBottomOf="@+id/textSequenceNext3"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent">
-
             <TextView
                 android:id="@+id/textSequenceNext4"
                 style="@style/TextAppearance.AppCompat.Small"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 tools:text="Next 4" />
-
             <View
                 android:id="@+id/fadeOverlayNext4"
                 android:layout_width="match_parent"
@@ -318,6 +313,4 @@
                 android:background="@drawable/fade_to_bottom" />
         </FrameLayout>
 
-    </androidx.constraintlayout.widget.ConstraintLayout>
-</androidx.constraintlayout.widget.ConstraintLayout>
-
+    </androidx.constraintlayout.widget.ConstraintLayout> </androidx.constraintlayout.widget.ConstraintLayout>

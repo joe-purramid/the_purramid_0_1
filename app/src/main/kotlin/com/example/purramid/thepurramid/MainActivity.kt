@@ -34,6 +34,7 @@ import com.example.purramid.thepurramid.databinding.ActivityMainBinding // Impor
 import com.example.purramid.thepurramid.data.db.PurramidDatabase // Import Database
 import com.example.purramid.thepurramid.randomizers.RandomizerInstanceManager // Import Manager
 import com.example.purramid.thepurramid.randomizers.RandomizersActivity
+import com.example.purramid.thepurramid.randomizers.RandomizersHostActivity
 import com.example.purramid.thepurramid.screen_shade.ScreenShadeActivity
 import com.example.purramid.thepurramid.spotlight.SpotlightActivity
 import com.example.purramid.thepurramid.timers.TimersActivity
@@ -134,7 +135,7 @@ class MainActivity : AppCompatActivity() {
                 AppIntent(
                     title = getString(R.string.randomizers_title),
                     icon = ContextCompat.getDrawable(this, R.drawable.ic_random),
-                    action = { launchNewRandomizer() }
+                    action = { startActivity(Intent(this, RandomizersHostActivity::class.java)) }
                 ),
                 AppIntent(
                     title = getString(R.string.screen_shade_title),
@@ -227,23 +228,6 @@ private fun restoreRandomizerInstances() {
         // Else: No instances to restore, normal startup
     }
 }
-
-    // --- Launching Randomizers ---
-
-    /** Launches a brand new Randomizer instance (loads default settings). */
-    private fun launchNewRandomizer() {
-        val intent = Intent(this, RandomizersActivity::class.java)
-        // Do NOT pass an instance ID - ViewModel will create a new one
-        startActivity(intent)
-    }
-
-    /** Launches a Randomizer activity for a specific existing/restored instance. */
-    private fun launchExistingRandomizer(instanceId: UUID) {
-        val intent = Intent(this, RandomizersActivity::class.java).apply {
-            putExtra(RandomizersActivity.EXTRA_INSTANCE_ID, instanceId.toString())
-        }
-        startActivity(intent)
-    }
 
 // Helper Function for Touch Handling
     private fun isTouchInsideView(rawX: Float, rawY: Float, view: View): Boolean {
