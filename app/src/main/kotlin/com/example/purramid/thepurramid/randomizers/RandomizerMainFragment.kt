@@ -32,7 +32,12 @@ import com.example.purramid.thepurramid.data.db.SpinItemEntity
 import com.example.purramid.thepurramid.data.db.SpinListEntity
 import com.example.purramid.thepurramid.databinding.FragmentRandomizerMainBinding // Use Fragment binding
 import dagger.hilt.android.AndroidEntryPoint
+import java.util.concurrent.TimeUnit // Import TimeUnit
 import java.util.UUID
+import nl.dionsegijn.konfetti.core.Party
+import nl.dionsegijn.konfetti.core.Position
+import nl.dionsegijn.konfetti.core.emitter.Emitter
+import nl.dionsegijn.konfetti.xml.KonfettiView // Import KonfettiView
 
 @AndroidEntryPoint
 class RandomizerMainFragment : Fragment() {
@@ -54,9 +59,6 @@ class RandomizerMainFragment : Fragment() {
 
     // Sequence Views List
     private lateinit var sequenceTextViews: List<TextView>
-
-    // --- Track active particle systems ---
-    private var particleSystems = mutableListOf<ConfettiManager>() // Use ConfettiManager from library
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -285,8 +287,8 @@ class RandomizerMainFragment : Fragment() {
      }
 
     private fun startCelebration() {
-        if (_binding == null || context == null) return
-        val container = binding.fireworksContainer ?: return
+        if (_binding == null) return
+        val konfettiView = binding.konfettiView
 
         // --- Accessibility Check: Reduced Motion ---
         val am = context?.getSystemService(Context.ACCESSIBILITY_SERVICE) as? AccessibilityManager
@@ -297,74 +299,32 @@ class RandomizerMainFragment : Fragment() {
             return
         }
 
-        // Make container visible
-        container.visibility = View.VISIBLE
-
-        // --- Load Confetti Bitmaps ---
-        val confettiDrawables = listOf(
-            R.drawable.confetti_piece_red,
-            R.drawable.confetti_piece_yellow,
-            R.drawable.confetti_piece_green,
-            R.drawable.confetti_piece_blue,
-            R.drawable.confetti_piece_violet
+        // --- Konfetti Configuration ---
+        val party = Party(
+            speed = 0f,
+            maxSpeed = 30f,
+            damping = 0.9f,
+            spread = 360, // Full circle burst
+            colors = listOf(0xFF0000, 0xFFFF00, 0x00FF00, 0x4363D8, 0x7F00FF),
+            // Define emission point (e.g., top center)
+            position = Position.Relative(0.5, 0.0),
+            // Define emission pattern (e.g., burst 100 particles over 100ms)
+            emitter = Emitter(duration = 100, TimeUnit.MILLISECONDS).max(100)
+            // Or a stream: Emitter(duration = 3, TimeUnit.SECONDS).perSecond(50)
+            // Add other configurations: shapes, sizes, fadeOut, timeToLive, etc.
+            // shapes = listOf(Shape.Square, Shape.Circle),
+            // timeToLive = 3000L,
+            // fadeOutEnabled = true,
         )
 
-        val confettiBitmaps = confettiDrawables.mapNotNull { drawableId ->
-            // Convert drawable to bitmap
-            (ContextCompat.getDrawable(requireContext(), drawableId) as? BitmapDrawable)?.bitmap
-            // Or if using simple PNGs:
-            // BitmapFactory.decodeResource(resources, drawableId)
-        }
+        konfettiView.start(party) // Start the confetti
 
-        if (confettiBitmaps.isEmpty()) {
+        // Konfetti often stops based on emitter duration / timeToLive
+        // The postDelayed might not be strictly necessary unless you want to ensure
+        // cleanup or stop a continuous emitter after exactly 3s.
+        // Let's keep it for now to hide the view if needed, but Konfetti might handle stopping particles.
+        konfettiView.postDelayed({ // Use konfettiView or any view
             stopCelebration()
-            return
-        }
-
-        // --- Particle System Setup for Confetti ---
-        val numParticles = 150 // More particles for confetti usually
-        val durationPerParticle = 4000L // Let them stay longer
-
-        // Create Confetto objects from the loaded bitmaps, cycling through colors
-        val confettoList = List(numParticles) { index ->
-            BitmapConfetto(confettiBitmaps[index % confettiBitmaps.size])
-        }
-
-        // Stop any previous systems
-        particleSystems.forEach { it.terminate() }
-        particleSystems.clear()
-
-        // Configure the particle system for confetti burst/shower
-        val ps = ParticleSystem(confettoList)
-            .setSpeedBetween(0.1f, 5f)      // Slower speeds (pixels per physics step)
-            .setSpeedVariance(2f)
-            // .setEmissionMode(ParticleSystem.EmissionMode.STREAM) // For emit()
-            .setEmissionDuration(1000L)     // Emit for 1 second (if using emit, not oneShot)
-            .setInitialRotationBetween(0, 360) // Random initial rotation
-            .setRotationSpeedVariance(180f)    // Add random spin variance
-            .setRotationSpeed(90f)             // Average spin speed
-            .setFadeOut(1000L)              // Start fading after 1000ms of particle life
-            // Weak gravity, maybe slight sideways variance (wind)
-            .addAcceleration(ParticleSystem.GRAVITY_ACCELERATION / 4f, 90f) // Weaker gravity
-            .addAccelerationVariance(ParticleSystem.GRAVITY_ACCELERATION / 2f, 0f) // Some variance maybe
-            // .addInitializer(AccelerationInitializer(0.0001f, 0.0002f, -30, 30)) // Optional wind effect
-            .setParentViewGroup(container)
-
-        // Emit from top edge, falling down (adjust emitter x, y, width, height)
-        // Emit 'numParticles / second' for 'emissionDuration'
-        // val manager = ps.emit(container, (numParticles / (durationPerParticle/1000.0)).toInt(), durationPerParticle.toInt())
-
-        // OR: One burst from slightly above the center top
-        val manager = ps.oneShot(container.width / 2, -30, numParticles)
-
-
-        particleSystems.add(manager)
-
-        // Schedule stop after 3 seconds (original requirement)
-        container.postDelayed({
-            stopCelebration()
-            // Note: Particles might still be fading out after this if their
-            // lifespan + fadeout > 3000ms. stopCelebration just stops emission.
         }, 3000)
     }
 

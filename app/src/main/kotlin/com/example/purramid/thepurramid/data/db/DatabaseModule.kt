@@ -4,12 +4,17 @@ package com.example.purramid.thepurramid.data.db
 import android.content.Context
 import com.example.purramid.thepurramid.data.db.PurramidDatabase
 import com.example.purramid.thepurramid.data.db.RandomizerDao
+import com.example.purramid.thepurramid.data.db.TimeZoneDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import javax.inject.Qualifier
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+
 
 @Module
 @InstallIn(SingletonComponent::class) // Provides dependencies for the entire app lifecycle
@@ -19,6 +24,13 @@ object DatabaseModule {
     @Singleton // Ensures only one instance of the DAO is created
     fun provideRandomizerDao(database: PurramidDatabase): RandomizerDao {
         return database.randomizerDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideTimeZoneDao(database: PurramidDatabase): TimeZoneDao {
+        // Get TimeZoneDao from the PurramidDatabase instance
+        return database.timeZoneDao()
     }
 
     @Provides

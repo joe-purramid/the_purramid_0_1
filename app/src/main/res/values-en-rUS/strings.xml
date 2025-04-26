@@ -113,14 +113,17 @@
     '' ABOUT THIS APP ''
     <string name="version_number">Version 0.1</string> '' in dev ''
 
-    <string name="balsamiq_sans_title">Balsamiq Sans Font</string>
-    <string name="balsamiq_sans_license_text">Copyright © 2011 The <xliff:g translatable="false">Balsamiq Sans Project Authors</xliff:g> (https://github.com/balsamiq/balsamiqsans)\nThis Font Software is licensed under the SIL Open Font License, Version 1.1 .\nThis license is copied below, and is also available with a FAQ at: https://openfontlicense.org\n\nSIL OPEN FONT LICENSE Version 1.1 - 26 February 2007</string>
-
     <string name="purramid_copyright_title">The <xliff:g translatable="false">Purramid</xliff:g></string>
     <string name="purramid_copyright_text">Copyright © 2025 <xliff:g translatable="false">Purramid Learning®, Inc.</xliff:g> All rights reserved.</string>
 
+    <string name="balsamiq_sans_title"><xliff:g translatable="false">Balsamiq</xliff:g> Sans Font</string>
+    <string name="balsamiq_sans_license_text">Copyright © 2011 The <xliff:g translatable="false">Balsamiq Sans Project Authors</xliff:g> (https://github.com/balsamiq/balsamiqsans)\nThis Font Software is licensed under the SIL Open Font License, Version 1.1 .\nThis license is copied below, and is also available with a FAQ at: https://openfontlicense.org\n\nSIL OPEN FONT LICENSE Version 1.1 - 26 February 2007</string>
+
     <string name="sphere_title">3D Sphere</string>
     <string name="sphere_attribution_text">"sphere-gltf-example" (https://skfb.ly/6XGzq) by <xliff:g translatable="false">rawwerks</xliff:g> is licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).</string>
+
+    <string name="cities_database_title">World Cities Database</string>
+    <string name="cities_database_attribution_text">"World Cities Database" (https://simplemaps.com/data/world-cities) by <xliff:g translatable="false">simplemaps</xliff:g> is also licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).</string>
 
     <string name="data_privacy_title">Data Privacy (USA &amp; EU)</string>
     <string name="data_privacy_statement">At <xliff:g translatable="false">Purramid Learning, Inc.</xliff:g>, we are committed to your privacy. This application, The <xliff:g translatable="false">Purramid</xliff:g>, does not collect, share, or transmit any personal data away from the device on which it is installed. All data generated and used within the application remains solely on your device.</string>

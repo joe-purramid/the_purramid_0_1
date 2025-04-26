@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -42,6 +43,14 @@ android {
         viewBinding = true
     }
 
+    packaging {
+        resources {
+            excludes += "/META-INF/LICENSE.txt" // Note the leading '/' and '+=' operator
+            excludes += "/META-INF/NOTICE.txt"
+            // Add other excludes if build errors occur due to duplicate files
+        }
+    }
+
     // If using Room with KSP, you might need to configure sourcesets
    sourceSets.configureEach { // <- Potentially needed for KSP + Room
         kotlin.srcDir("build/generated/ksp/$name/kotlin")
@@ -53,6 +62,8 @@ dependencies {
     // annotationProcessor(libs.glide.compiler)
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx")
     implementation("androidx.lifecycle:lifecycle-livedata-ktx")
+    implementation("com.google.android.material:material:1.12.0")
+    implementation("com.google.ar:core:1.48.0")
     implementation(libs.activity.ktx)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidsvg)
@@ -61,14 +72,13 @@ dependencies {
     implementation(libs.androidx.lifecycle.livedata.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
-    implementation(libs.androidx.particles)
+    implementation(libs.konfetti.xml) // was libs.androidx.particles
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     implementation(libs.androidx.window)
     implementation(libs.appcompat)
-    implementation("com.google.android.material:material:1.12.0")
     implementation(libs.cardview)
     implementation(libs.constraintlayout)
     implementation(libs.glide.core)
@@ -76,10 +86,15 @@ dependencies {
     implementation(libs.hilt.android)
     implementation(libs.hilt.navigation.compose)
     testImplementation(libs.junit)
-    implementation(libs.navigation.fragment.ktx)
-    implementation(libs.navigation.ui.ktx)
+    implementation(libs.androidx.navigation.fragment.ktx)
+    implementation(libs.androidx.navigation.ui.ktx)
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
+    implementation(libs.sceneview) // instead of sceneform
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
+    implementation("org.locationtech.jts:jts-core:1.20.0")
+    implementation("org.locationtech.jts.io:jts-io-common:1.20.0")
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))

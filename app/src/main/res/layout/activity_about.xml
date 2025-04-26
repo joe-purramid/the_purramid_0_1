@@ -32,6 +32,26 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:text="@string/purramid_copyright_title"
+            android:textAppearance="?android:textAppearanceMedium"
+            android:layout_marginBottom="8dp" />
+
+        <TextView
+            android:id="@+id/purramid_copyright"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/purramid_copyright_text"
+            android:layout_marginBottom="16dp" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="?android:attr/listDivider"
+            android:layout_marginBottom="16dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:text="@string/balsamiq_sans_title" 
             android:textAppearance="?android:textAppearanceMedium"
             android:layout_marginBottom="8dp" />
@@ -52,15 +72,16 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/purramid_copyright_title" 
+            android:text="@string/sphere_title" 
             android:textAppearance="?android:textAppearanceMedium"
             android:layout_marginBottom="8dp" />
 
         <TextView
-            android:id="@+id/purramid_copyright"
+            android:id="@+id/sphere_attribution"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/purramid_copyright_text" 
+            android:text="@string/sphere_attribution_text" 
+            android:autoLink="web"
             android:layout_marginBottom="16dp" />
 
         <View
@@ -72,15 +93,15 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/sphere_title" 
+            android:text="@string/cities_database_title"
             android:textAppearance="?android:textAppearanceMedium"
             android:layout_marginBottom="8dp" />
 
         <TextView
-            android:id="@+id/sphere_attribution"
+            android:id="@+id/cities_database_attribution"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/sphere_attribution_text" 
+            android:text="@string/cities_database_attribution_text"
             android:autoLink="web"
             android:layout_marginBottom="16dp" />
 
