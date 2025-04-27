@@ -155,9 +155,10 @@ class TimeZoneGlobeViewModel @Inject constructor(
 
     // Updates the display text info for the active zone
     private fun updateActiveZoneInfo(timeZoneId: String?) {
+        _uiState.value = _uiState.value?.copy(activeTimeZoneInfo = null)
         if (timeZoneId == null) {
-            _uiState.value = _uiState.value?.copy(activeTimeZoneInfo = null)
-            return
+            val offsetString = getFormattedOffset(timeZoneId) ?: "Invalid Zone"
+            // return
         }
 
         try {

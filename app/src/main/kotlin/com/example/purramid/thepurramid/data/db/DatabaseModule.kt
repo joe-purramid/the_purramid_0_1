@@ -3,6 +3,8 @@ package com.example.purramid.thepurramid.data.db
 
 import android.content.Context
 import com.example.purramid.thepurramid.data.db.PurramidDatabase
+import com.example.purramid.thepurramid.data.db.CityDao
+import com.example.purramid.thepurramid.data.db.IoDispatcher
 import com.example.purramid.thepurramid.data.db.RandomizerDao
 import com.example.purramid.thepurramid.data.db.TimeZoneDao
 import dagger.Module
@@ -34,8 +36,19 @@ object DatabaseModule {
     }
 
     @Provides
+    @Singleton
+    fun provideCityDao(database: PurramidDatabase): CityDao {
+        return database.cityDao()
+    }
+
+    @Provides
     @Singleton // Ensures only one instance of the Database is created
     fun providePurramidDatabase(@ApplicationContext appContext: Context): PurramidDatabase {
         return PurramidDatabase.getDatabase(appContext)
     }
+
+    @Provides
+    @Singleton
+    @IoDispatcher
+    fun provideIoDispatcher(): CoroutineDispatcher = Dispatchers.IO
 }

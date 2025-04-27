@@ -162,12 +162,11 @@
     <string name="city_mebourne">Melbourne</string>
     <string name="city_sydney">Sydney</string>
     <string name="city_brisbane">Brisbane</string>
-    <string name="city_gold_coast">Gold Coast</string>
     <string name="city_vladivostok">Vladivostok</string>
     <string name="city_canberra">Canberra</string>
     <string name="city_port_moresby">Port Moresby</string>
     <string name="city_hobart">Hobart</string>
-    <string name="city_maina">Maina</string>
+    <string name="city_maina">Asan-Maina</string>
     <string name="city_weno">Weno</string>
     <string name="city_noumea">Nouméa</string>
     <string name="city_magadan">Magadan</string>
@@ -175,7 +174,7 @@
     <string name="city_okha">Okha</string>
     <string name="city_aukland">Auckland</string>
     <string name="city_wellington">Wellington</string>
-    <string name="city_kamchatskiy">Petropavlovsk-Kamchatskiy</string>
+    <string name="city_kamchatskiy">Petropavlovsk-amchatskiy</string>
     <string name="city_suva">Suva</string>
     <string name="city_tarawa">Tarawa</string>
     <string name="city_waitangi">Waitangi</string>

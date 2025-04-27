@@ -6,6 +6,8 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import com.example.purramid.thepurramid.data.db.CityEntity
+import com.example.purramid.thepurramid.data.db.CityDao
 import com.example.purramid.thepurramid.data.db.TimeZoneBoundaryEntity
 import com.example.purramid.thepurramid.data.db.TimeZoneDao
 
@@ -21,9 +23,10 @@ import com.example.purramid.thepurramid.data.db.TimeZoneDao
         SpinItemEntity::class,
         SpinListEntity::class,
         SpinSettingsEntity::class,
-        TimeZoneBoundaryEntity::class
+        TimeZoneBoundaryEntity::class,
+        CityEntity::class
     ],
-    version = 2, // Updated with TimeZoneBoundary features
+    version = 3, // Updated with CityEntity
     exportSchema = false // Set to true if you want to export the schema to a file for version control (recommended for production apps)
 )
 @TypeConverters(Converters::class) // Register the TypeConverters class
@@ -35,6 +38,7 @@ abstract class PurramidDatabase : RoomDatabase() {
      */
     abstract fun randomizerDao(): RandomizerDao
     abstract fun timeZoneDao(): TimeZoneDao
+    abstract fun cityDao(): CityDao
 
     companion object {
         // Singleton prevents multiple instances of the database opening at once
