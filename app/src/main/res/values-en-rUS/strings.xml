@@ -386,6 +386,39 @@
     <string name="delete_list_confirmation">Are you sure you want to delete \'%1$s\'? This cannot be undone.</string>
     <string name="sequence_up">Previous sequence item</string>
     <string name="sequence_down">Next sequence item</string>
+    <string name="default_list_title_colors">Colors</string>
+    <string name="default_list_title_consonants">Consonants (English)</string>
+    <string name="default_list_title_continents">Continents</string>
+    <string name="default_list_title_numbers">Numbers</string>
+    <string name="default_list_title_oceans">Oceans</string>
+    <string name="default_list_title_vowels">Vowels (English)</string>
+
+    <string-array name="default_list_items_colors">
+        <item>Red</item>
+        <item>Orange</item>
+        <item>Yellow</item>
+        <item>Green</item>
+        <item>Blue</item>
+        <item>Purple</item>
+    </string-array>
+
+    <string-array name="default_list_items_continents">
+        <item>Africa</item>
+        <item>Antarctica</item>
+        <item>Asia</item>
+        <item>Australia</item>
+        <item>Europe</item>
+        <item>North America</item>
+        <item>South America</item>
+    </string-array>
+
+    <string-array name="default_list_items_oceans">
+        <item>Arctic</item>
+        <item>Atlantic</item>
+        <item>Indian</item>
+        <item>Pacific</item>
+        <item>Southern</item>
+    </string-array>
 
 
     '' SCREEN SHADE APP ''

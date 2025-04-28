@@ -56,7 +56,7 @@
                 android:gravity="center" />
         </activity>
 
-        <activity android:name=".randomizers.RandomizersActivity"
+        <activity android:name=".randomizers.RandomizersHostActivity"
             android:exported="false"
             android:label="@string/randomizers_title"
             android:parentActivityName=".MainActivity"
@@ -142,7 +142,7 @@
                 android:enabled="true"
                 android:exported="false" /> -->
 
-        <activity android:name=".clock.TimeZoneGlobeActivity"
+        <activity android:name=".clock.ui.TimeZoneGlobeActivity"
             android:exported="false"
             android:label="@string/set_time_zone"
             android:parentActivityName=".clock.ClockSettingsActivity"

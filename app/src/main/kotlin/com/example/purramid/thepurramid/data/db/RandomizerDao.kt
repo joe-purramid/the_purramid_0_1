@@ -92,6 +92,14 @@ interface RandomizerDao {
 
 
     // --- Instance Operations ---
+    /** Gets the total number of lists currently stored. */
+    @Query("SELECT COUNT(*) FROM spin_lists")
+    suspend fun getListCount(): Int
+
+    /** Gets all lists ordered alphabetically by title (non-LiveData version). */
+    @Query("SELECT * FROM spin_lists ORDER BY title ASC")
+    suspend fun getAllSpinListsNonLiveData(): List<SpinListEntity>? // Nullable in case of DB error
+
     /** Inserts or replaces a record of an open randomizer instance. */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun saveInstance(instance: RandomizerInstanceEntity)

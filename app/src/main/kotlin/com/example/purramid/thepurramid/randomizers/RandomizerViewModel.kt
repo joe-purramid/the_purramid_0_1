@@ -46,14 +46,23 @@ class RandomizerViewModel @Inject constructor(
         savedStateHandle[KEY_INSTANCE_ID] = newId.toString()
         viewModelScope.launch(Dispatchers.IO) { // Add Dispatcher
             randomizerDao.saveInstance(RandomizerInstanceEntity(instanceId = newId))
+
+            // Get default lists
+            val allLists = randomizerDao.getAllSpinListsNonLiveData()
+            val firstListId = allLists?.firstOrNull()?.id // Get the ID of the first list
+
+            // Get settings
             val defaultSettings = randomizerDao.getDefaultSettings()
-            val initialSettings = defaultSettings?.copy(instanceId = newId)
-                ?: SpinSettingsEntity(instanceId = newId)
+            val initialSettings = SpinSettingsEntity(instanceId = newId, currentListId = firstListId)
             randomizerDao.saveSettings(initialSettings)
+
             // Post value back to main thread if initializing LiveData from background
             withContext(Dispatchers.Main) {
                 if (_spinDialData.value == null) { _spinDialData.value = SpinDialViewData() }
                 _spinDialData.value = _spinDialData.value?.copy(settings = initialSettings)
+                firstListId?.let {
+                    savedStateHandle["currentListId"] = it.toString()
+                }
             }
         }
     }
