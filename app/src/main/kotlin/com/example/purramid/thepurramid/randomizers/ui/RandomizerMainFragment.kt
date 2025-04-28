@@ -1,12 +1,10 @@
 // RandomizerMainFragment.kt
-package com.example.purramid.thepurramid.randomizers // Or .randomizers.ui
+package com.example.purramid.thepurramid.randomizers.ui // Or .randomizers.ui
 
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
-import android.content.Intent
-import android.graphics.BitmapFactory
 import android.graphics.Color // Import color for placeholder
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -17,27 +15,21 @@ import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.ArrayAdapter
 import android.widget.TextView
 import android.widget.Toast
-import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import androidx.lifecycle.Observer // Import Observer
-import androidx.navigation.fragment.findNavController // Import for navigation
 import com.bumptech.glide.Glide // Import Glide
-import com.github.jinatonic.confetti.confetto.BitmapConfetto // Or ShapeConfetto
-import com.github.jinatonic.confetti.ConfettiManager
-import com.github.jinatonic.confetti.ParticleSystem // Correct import from androidx-particles
 import com.example.purramid.thepurramid.R
 import com.example.purramid.thepurramid.data.db.SpinItemEntity
 import com.example.purramid.thepurramid.data.db.SpinListEntity
 import com.example.purramid.thepurramid.databinding.FragmentRandomizerMainBinding // Use Fragment binding
+import com.example.purramid.thepurramid.randomizers.viewmodel.RandomizerViewModel
+import com.example.purramid.thepurramid.randomizers.SpinItemType
 import dagger.hilt.android.AndroidEntryPoint
 import java.util.concurrent.TimeUnit // Import TimeUnit
-import java.util.UUID
 import nl.dionsegijn.konfetti.core.Party
 import nl.dionsegijn.konfetti.core.Position
 import nl.dionsegijn.konfetti.core.emitter.Emitter
-import nl.dionsegijn.konfetti.xml.KonfettiView // Import KonfettiView
 
 @AndroidEntryPoint
 class RandomizerMainFragment : Fragment() {

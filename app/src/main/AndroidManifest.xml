@@ -78,7 +78,7 @@
         </activity>
 
         <activity
-            android:name=".randomizers.RandomizerSettingsActivity"
+            android:name=".randomizers.ui.RandomizerSettingsActivity"
             android:exported="false"
             android:label="@string/settings" android:parentActivityName=".MainActivity" android:resizeableActivity="true"
             android:windowLayoutInDisplayCutoutMode="shortEdges" >
@@ -88,9 +88,9 @@
         </activity>
 
         <activity
-            android:name=".randomizers.ListEditorActivity"
+            android:name=".randomizers.ui.ListEditorActivity"
             android:exported="false"
-            android:label="@string/list_editor" android:parentActivityName=".randomizers.RandomizerSettingsActivity" android:resizeableActivity="true"
+            android:label="@string/list_editor" android:parentActivityName=".randomizers.ui.RandomizerSettingsActivity" android:resizeableActivity="true"
             android:windowLayoutInDisplayCutoutMode="shortEdges" >
             <layout android:defaultWidth="700dp"
                 android:defaultHeight="600dp"

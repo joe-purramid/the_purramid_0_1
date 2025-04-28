@@ -1,5 +1,5 @@
 // RandomizerViewModel.kt
-package com.example.purramid.thepurramid.randomizers
+package com.example.purramid.thepurramid.randomizers.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.LiveData
@@ -14,7 +14,7 @@ import com.example.purramid.thepurramid.data.db.RandomizerInstanceEntity
 import com.example.purramid.thepurramid.data.db.SpinItemEntity
 import com.example.purramid.thepurramid.data.db.SpinListEntity
 import com.example.purramid.thepurramid.data.db.SpinSettingsEntity
-import com.example.purramid.thepurramid.managers.RandomizerInstanceManager
+import com.example.purramid.thepurramid.randomizers.RandomizerInstanceManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.util.UUID
 import javax.inject.Inject

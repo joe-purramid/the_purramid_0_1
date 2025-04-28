@@ -1,5 +1,5 @@
 // ListEditorAdapter.kt
-package com.example.purramid.thepurramid.randomizers
+package com.example.purramid.thepurramid.randomizers.ui
 
 import android.view.LayoutInflater
 import android.view.ViewGroup

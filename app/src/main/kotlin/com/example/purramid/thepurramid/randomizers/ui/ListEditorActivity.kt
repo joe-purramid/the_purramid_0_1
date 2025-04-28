@@ -1,5 +1,5 @@
 // ListEditorActivity.kt
-package com.example.purramid.thepurramid.randomizers
+package com.example.purramid.thepurramid.randomizers.ui
 
 import android.os.Bundle
 import androidx.activity.viewModels
@@ -9,6 +9,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.purramid.thepurramid.R
 import com.example.purramid.thepurramid.data.db.SpinListEntity
 import com.example.purramid.thepurramid.databinding.ActivityListEditorBinding
+import com.example.purramid.thepurramid.randomizers.viewmodel.ListEditorViewModel
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.async // Import async

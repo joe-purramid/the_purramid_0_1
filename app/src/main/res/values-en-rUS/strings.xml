@@ -386,6 +386,14 @@
     <string name="delete_list_confirmation">Are you sure you want to delete \'%1$s\'? This cannot be undone.</string>
     <string name="sequence_up">Previous sequence item</string>
     <string name="sequence_down">Next sequence item</string>
+    <string name="list_creator_cannot_save_title">Cannot Save List</string>
+    <string name="list_creator_min_items_message">Empty Lists cannot be saved. Please add two or more items or cancel this List creation.</string>
+    <string name="list_creator_button_cancel_creation">Cancel Creation</string>
+    <string name="list_creator_button_continue_editing">Continue Editing</string>
+    <string name="delete_item_title">Delete Item?</string>
+    <string name="delete_item_confirmation">Are you sure you want to delete this item starting with \'%1$s\'?</string>
+
+    '' Pre-loaded Randomizer Lists ''
     <string name="default_list_title_colors">Colors</string>
     <string name="default_list_title_consonants">Consonants (English)</string>
     <string name="default_list_title_continents">Continents</string>

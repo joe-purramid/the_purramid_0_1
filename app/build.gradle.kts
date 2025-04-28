@@ -80,6 +80,7 @@ dependencies {
     implementation(libs.androidx.window)
     implementation(libs.appcompat)
     implementation(libs.cardview)
+    implementation(libs.colorpicker)
     implementation(libs.constraintlayout)
     implementation(libs.glide.core)
     implementation(libs.gson)

@@ -2,14 +2,49 @@
 <navigation xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/randomizers_nav_graph">
+    android:id="@+id/randomizers_nav_graph"
     app:startDestination="@id/randomizerMainFragment">
 
     <fragment
         android:id="@+id/randomizerMainFragment"
         android:name="com.example.purramid.thepurramid.randomizers.RandomizerMainFragment"
-        android:label="@string/randomizers_title"
+        android:label="@string/randomizer_main_title"
         tools:layout="@layout/fragment_randomizer_main" >
-        </fragment>
+        <action
+            android:id="@+id/action_main_to_settings"
+            app:destination="@id/randomizerSettingsFragment" />
+    </fragment>
 
-    </navigation>
+    <fragment
+        android:id="@+id/listEditorFragment"
+        android:name="com.example.purramid.thepurramid.randomizers.ListEditorFragment"
+        android:label="@string/list_editor"
+        tools:layout="@layout/fragment_list_editor" >
+        <action
+            android:id="@+id/action_listEditorFragment_to_listCreatorFragment"
+            app:destination="@id/listCreatorFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/listCreatorFragment"
+        android:name="com.example.purramid.thepurramid.randomizers.ListCreatorFragment"
+        android:label="@string/list_creator_title" tools:layout="@layout/fragment_list_creator">
+        <argument
+            android:name="listId"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/randomizerSettingsFragment"
+        android:name="com.example.purramid.thepurramid.randomizers.RandomizerSettingsFragment"
+        android:label="@string/settings"
+        tools:layout="@layout/fragment_randomizer_settings">
+        <action
+            android:id="@+id/action_settings_to_list_editor"
+            app:destination="@id/listEditorFragment"/>
+    </fragment>
+
+
+</navigation>

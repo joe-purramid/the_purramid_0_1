@@ -1,8 +1,7 @@
 // SpinDialView.kt
-package com.example.purramid.thepurramid.randomizers
+package com.example.purramid.thepurramid.randomizers.ui
 
 import android.content.Context
-import androidx.core.content.ContextCompat // If using placeholder drawable
 import android.graphics.Canvas
 import android.graphics.Color
 import androidx.core.graphics.ColorUtils
@@ -19,6 +18,9 @@ import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
 import com.example.purramid.thepurramid.data.db.SpinItemEntity
 import com.example.purramid.thepurramid.data.db.SpinSettingsEntity
+import com.example.purramid.thepurramid.randomizers.SpinItemType
+import com.example.purramid.thepurramid.randomizers.SpinList
+import com.example.purramid.thepurramid.randomizers.SpinSettings
 import java.util.*
 import kotlin.math.cos
 import kotlin.math.min

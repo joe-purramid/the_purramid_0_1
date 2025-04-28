@@ -1,5 +1,5 @@
 // RandomizerSettingsActivity.kt
-package com.example.purramid.thepurramid.randomizers
+package com.example.purramid.thepurramid.randomizers.ui
 
 import android.os.Bundle
 import android.content.Intent

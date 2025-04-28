@@ -1,5 +1,5 @@
 // ListEditorViewModel.kt
-package com.example.purramid.thepurramid.randomizers
+package com.example.purramid.thepurramid.randomizers.viewmodel
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
