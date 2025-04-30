@@ -15,6 +15,7 @@
     <string name="about">About this App</string>
 
     '' UNIVERSAL TERMS ''
+    <string name="snackbar_action_ok">OK</string>
     <string name="pause">Pause Button</string>
     <string name="pause_accessible">A Pause button to temporarily stop time.</string>
     <string name="play">Start</string>
@@ -42,7 +43,7 @@
     <string name="cancel">Cancel</string>
     <string name="delete">Delete</string>
 
-    '' CLOCK APP ''    
+    '' CLOCK APP ''
     <string name="clock_settings_title">Clock Settings</string>
     <string name="enable_floating_clock">Enable Floating Clock</string>
     <string name="clock_mode">Clock Type</string>
@@ -371,27 +372,23 @@
     <string name="city_pyongyang">North Korea</string>
 
     '' RANDOMIZERS APP ''
-    <string name="spin">Spin</string>
     <string name="select_list">Choose a List</string>
     <string name="show_lists">Open a drop-down menu to select a list</string>
     <string name="randomizer_mode">Randomizer Type</string>
     <string name="list_editor">List Editor</string>
     <string name="setting_spin_animation">Spin Animation</string>
     <string name="setting_announce">Announce Result</string>
-    <string name="setting_celebrate">Celebrate Result</string>
-    <string name="setting_sequence">Sequence Results</string>
     <string name="add_new_list">Add New List</string>
     <string name="delete_list">Delete List</string>
     <string name="delete_list_title">Delete List?</string>
     <string name="delete_list_confirmation">Are you sure you want to delete \'%1$s\'? This cannot be undone.</string>
     <string name="sequence_up">Previous sequence item</string>
     <string name="sequence_down">Next sequence item</string>
-    <string name="list_creator_cannot_save_title">Cannot Save List</string>
-    <string name="list_creator_min_items_message">Empty Lists cannot be saved. Please add two or more items or cancel this List creation.</string>
-    <string name="list_creator_button_cancel_creation">Cancel Creation</string>
-    <string name="list_creator_button_continue_editing">Continue Editing</string>
-    <string name="delete_item_title">Delete Item?</string>
-    <string name="delete_item_confirmation">Are you sure you want to delete this item starting with \'%1$s\'?</string>
+
+    '' RANDOMIZER SPIN MODE ''
+    <string name="spin">Spin</string>
+    <string name="setting_celebrate">Celebrate Result</string>
+    <string name="setting_sequence">Sequence Results</string>
 
     '' Pre-loaded Randomizer Lists ''
     <string name="default_list_title_colors">Colors</string>
@@ -436,8 +433,25 @@
     <string name="list_selection_clear">Clear Selection</string>
     <string name="no_lists_available">No lists available to select.</string>
     <string name="cannot_open_settings">Cannot open settings.</string>
-    <string name="item_image_content_description">Image representing list item</string>
-    <string name="item_image_content_description_secondary">Faded image representing adjacent list item</string>
+    <string name="item_image_content_description">Image representing list item</string> <!-- TODO What is this string for? -->
+    <string name="item_image_content_description_secondary">Faded image representing adjacent list item</string> <!-- TODO What is this string for? -->
+
+    '' RANDOMIZER SNACKBARS ''
+    <string name="error_settings_instance_id_failed">Some naughty kitties caused an error. Please close this window and open a new one to continue.</string>
+    <string name="info_settings_defaulted_kitty">A naughty kitty has made off with your settings. Starting with default settings.</string>
+    <string name="error_settings_final_save_failed">A naughty kitty has gotten underfoot. Your settings have applied to your current session, but they have not saved for later use.</string>
+    <string name="error_list_creator_save_title_failed">Kitties are causing problems. The List title failed to save.</string>
+    <string name="error_list_creator_add_item_failed">Kitties are being naughty. Failed to add new item.</string>
+    <string name="error_list_creator_update_item_failed">A naughty kitty has gotten underfoot. Failed to update item.</string>
+    <string name="error_list_creator_delete_item_failed">A kitty says this toy belongs to them. Failed to delete item.</string>
+    <string name="error_list_creator_delete_list_failed">A kitty says this toy belongs to them. Failed to delete list.</string>
+
+    <string name="list_creator_cannot_save_title">Cannot Save List</string> <!-- This is the title of list_creator_min_items_message -->
+    <string name="list_creator_min_items_message">Empty Lists cannot be saved. Please add two or more items or cancel this List creation.</string>
+    <string name="list_creator_button_cancel_creation">Cancel Creation</string>
+    <string name="list_creator_button_continue_editing">Continue Editing</string>
+    <string name="delete_item_title">Delete Item?</string>
+    <string name="delete_item_confirmation">Are you sure you want to delete this item starting with \'%1$s\'?</string>
 
 
     '' SCREEN SHADE APP ''
@@ -445,6 +459,7 @@
     <string name="lock_unlock">Lock/Unlock</string>
     <string name="lock_unlock_all">Lock/Unlock All</string>
     <string name="billboard">Billboard</string>
+
 
     '' SPOTLIGHT APP ''
     <string name="add_another_spotlight">Add another Spotlight</string>

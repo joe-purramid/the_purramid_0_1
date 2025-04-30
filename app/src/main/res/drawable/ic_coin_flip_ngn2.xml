@@ -1,0 +1,22 @@
+<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="ngnGoldGradientRev" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+      <stop offset="0%" style="stop-color:#E0B448;stop-opacity:1" /> <stop offset="70%" style="stop-color:#D0A038;stop-opacity:1" />
+      <stop offset="90%" style="stop-color:#B88A28;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#A07818;stop-opacity:1" />
+    </radialGradient>
+  </defs>
+
+  <circle cx="50" cy="50" r="45" fill="url(#ngnGoldGradientRev)" stroke="#705010" stroke-width="1.5"/>
+
+  <g transform="translate(50, 45) scale(0.6)">
+      <path d="M 0 -25 C -15 -25, -25 -10, -25 5 C -25 25, -10 30, 0 30 C 10 30, 25 25, 25 5 C 25 -10, 15 -25, 0 -25 Z" fill="none" stroke="#705010" stroke-width="1.5"/>
+      <path d="M -10 -5 C -5 -8, 5 -8, 10 -5" stroke-width="1"/> <circle cx="-7" cy="-5" r="2"/> <circle cx="7" cy="-5" r="2"/> <path d="M 0 0 L 0 10" stroke-width="1"/> <path d="M -5 15 Q 0 18, 5 15" stroke-width="1"/> </g>
+
+  <text x="50" y="85" font-family="sans-serif" font-size="20" font-weight="bold" text-anchor="middle" fill="#705010">₦1</text>
+
+  <text x="50" y="70" font-family="sans-serif" font-size="4" text-anchor="middle" fill="#705010">HERBERT MACAULAY</text>
+
+  <path d="M 30 30 A 40 40 0 0 1 70 30 A 45 45 0 0 1 30 30" fill="#FFF8DC" opacity="0.2"/>
+
+</svg>
