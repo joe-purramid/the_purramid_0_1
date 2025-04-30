@@ -8,6 +8,8 @@ import com.example.purramid.thepurramid.data.db.RandomizerDao
 import com.example.purramid.thepurramid.data.db.SpinItemEntity
 import com.example.purramid.thepurramid.data.db.SpinListEntity
 import com.example.purramid.thepurramid.data.db.SpinItemType // Ensure this import is correct
+import com.vanniktech.emoji.EmojiManager
+import com.vanniktech.emoji.google.GoogleEmojiProvider
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -32,6 +34,7 @@ class PurramidApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        EmojiManager.install(GoogleEmojiProvider())
         seedDefaultRandomizerLists()
     }
 

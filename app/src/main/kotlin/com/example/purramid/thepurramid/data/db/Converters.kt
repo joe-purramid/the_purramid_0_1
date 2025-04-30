@@ -2,9 +2,9 @@
 package com.example.purramid.thepurramid.data.db
 
 import androidx.room.TypeConverter
-// Import Gson - make sure you added the dependency in build.gradle.kts
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.example.purramid.thepurramid.randomizers.SlotsColumnState
 import java.util.UUID
 
 /**
@@ -67,6 +67,27 @@ class Converters {
                 // Handle potential JSON parsing errors
                 // Log.e("Converters", "Could not convert JSON to List<String>: $value", e)
                 null // Or return emptyList(), depending on desired error handling
+            }
+        }
+    }
+
+    @TypeConverter
+    fun fromSlotsColumnStateList(value: List<SlotsColumnState>?): String? {
+        return value?.let { Gson().toJson(it) }
+    }
+
+    @TypeConverter
+    fun toSlotsColumnStateList(value: String?): List<SlotsColumnState>? {
+        return if (value.isNullOrEmpty()) {
+            null // Return null or emptyList() based on preference
+        } else {
+            try {
+                // *** Use TypeToken for List<SlotsColumnState> ***
+                val listType = object : TypeToken<List<SlotsColumnState>>() {}.type
+                Gson().fromJson(value, listType)
+            } catch (e: Exception) {
+                // Log.e("Converters", "Could not convert JSON to List<SlotsColumnState>: $value", e)
+                null // Or return emptyList()
             }
         }
     }

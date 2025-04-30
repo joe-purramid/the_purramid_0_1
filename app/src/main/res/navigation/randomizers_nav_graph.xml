@@ -16,6 +16,18 @@
     </fragment>
 
     <fragment
+        android:id="@+id/slotsMainFragment"
+        android:name="com.example.purramid.thepurramid.randomizers.ui.SlotsMainFragment"
+        android:label="Slots Randomizer" tools:layout="@layout/fragment_slots_main">
+        <argument
+            android:name="instanceId"
+            app:argType="string"
+            app:nullable="true" /> <action
+        android:id="@+id/action_slotsMainFragment_to_settingsFragment"
+        app:destination="@id/randomizerSettingsFragment" />
+    </fragment>
+
+    <fragment
         android:id="@+id/listEditorFragment"
         android:name="com.example.purramid.thepurramid.randomizers.ListEditorFragment"
         android:label="@string/list_editor"

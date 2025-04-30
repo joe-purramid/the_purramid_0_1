@@ -83,7 +83,6 @@ class SpinDialView @JvmOverloads constructor(
     }
 
     private fun drawWedges(canvas: Canvas) {
-        val numWedges = settings.numWedges
         if (numWedges < 2) return // Avoid division by zero
         val wedgeAngle = 360f / numWedges
         var startAngle = 0f
