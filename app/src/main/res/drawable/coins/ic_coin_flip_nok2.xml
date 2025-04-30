@@ -1,0 +1,27 @@
+<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="nokGoldGradientRev" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+      <stop offset="0%" style="stop-color:#EAC75A;stop-opacity:1" /> <stop offset="70%" style="stop-color:#D9B44A;stop-opacity:1" />
+      <stop offset="90%" style="stop-color:#B88E30;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#A07A20;stop-opacity:1" />
+    </radialGradient>
+  </defs>
+
+  <circle cx="50" cy="50" r="45" fill="url(#nokGoldGradientRev)" stroke="#6B4423" stroke-width="1.5"/>
+
+  <g fill="none" stroke="#6B4423" stroke-width="1.5">
+      <path d="M 30 80 Q 25 50, 50 25 C 60 22, 75 25, 80 35" />
+      <path d="M 80 35 C 75 45, 65 45, 60 40 C 55 35, 58 30, 65 28 C 70 27, 73 30, 70 35" />
+      <path d="M 30 80 C 40 75, 60 70, 75 70" />
+      <path d="M 20 85 Q 50 80, 80 85" stroke-width="1"/>
+      <path d="M 25 90 Q 50 85, 75 90" stroke-width="1"/>
+  </g>
+
+
+  <text x="50" y="78" font-family="sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#6B4423">20</text>
+   <text x="50" y="88" font-family="sans-serif" font-size="8" text-anchor="middle" fill="#6B4423">KR</text>
+
+
+  <path d="M 30 30 A 40 40 0 0 1 70 30 A 45 45 0 0 1 30 30" fill="#FFFACD" opacity="0.2"/>
+
+</svg>

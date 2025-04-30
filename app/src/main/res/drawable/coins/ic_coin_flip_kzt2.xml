@@ -1,0 +1,26 @@
+<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="kztGoldGradientRev" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+      <stop offset="0%" style="stop-color:#EAC75A;stop-opacity:1" /> <stop offset="70%" style="stop-color:#D9B44A;stop-opacity:1" />
+      <stop offset="90%" style="stop-color:#B88E30;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#A07A20;stop-opacity:1" />
+    </radialGradient>
+  </defs>
+
+  <circle cx="50" cy="50" r="45" fill="url(#kztGoldGradientRev)" stroke="#6B4423" stroke-width="1.5"/>
+
+  <text x="50" y="55" font-family="sans-serif" font-size="40" font-weight="bold" text-anchor="middle" fill="#6B4423">20</text>
+
+  <text x="50" y="75" font-family="sans-serif" font-size="10" font-weight="bold" text-anchor="middle" fill="#6B4423">TEŃGE</text>
+
+  <g transform="translate(50, 88)" fill="none" stroke="#6B4423" stroke-width="1">
+      <path d="M -20 0 Q 0 -5, 20 0" />
+      <path d="M -15 -2 C -10 -5, -5 -2, -8 0" />
+      <path d="M 15 -2 C 10 -5, 5 -2, 8 0" />
+       <circle cx="0" cy="-4" r="1.5"/>
+  </g>
+
+
+  <path d="M 30 30 A 40 40 0 0 1 70 30 A 45 45 0 0 1 30 30" fill="#FFFACD" opacity="0.2"/>
+
+</svg>
