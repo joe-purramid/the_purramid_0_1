@@ -2,7 +2,7 @@
 
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     '' MAIN APP VIEW ''
-    <string name="app_name">The <xliff:g translatable="false">Purramid</xliff:g></string>
+    <string name="app_name">The <xliff:g id="tp" translatable="false">Purramid</xliff:g></string>
     <string name="app_widget_description">Launch a Purramid class management tool</string>
     <string name="enable_overlay">Enable Overlay</string>
     <string name="overlay_permission_denied">Overlay permission denied</string>
@@ -281,7 +281,7 @@
     <string name="country_el_salvador">El Salvador</string>
     <string name="country_honduras">Honduras</string>
     <string name="country_pitcairn_islands">Pitcairn Islands</string>
-    <string name="country_ireland">Northern Ireland</string>
+    <string name="country_northern_ireland">Northern Ireland</string>
     <string name="country_scotland">Scotland</string>
     <string name="country_wales">Wales</string>
     <string name="country_england">England</string>
@@ -314,7 +314,7 @@
     <string name="country_papua_new_guinea">Papua New Guinea</string>
     <string name="country_guam">Guam (USA)</string>
     <string name="country_micronesia">Micronesia</string>
-    <string name="country_new_caledonia">New Caledonia (<xliff:g translatable="false"><i>sui generis</i></xliff:g></string>
+    <string name="country_new_caledonia">New Caledonia (<xliff:g id="sg" translatable="false"><i>sui generis</i></xliff:g>)</string>
     <string name="country_solomon_islands">Solomon Islands</string>
     <string name="country_vanuatu">Vanuatu</string>
     <string name="country_new_zealand">New Zealand (Aotearoa)</string>
@@ -369,7 +369,7 @@
     <string name="country_singapore">Singapore</string>
     <string name="country_japan">Japan</string>
     <string name="country_south_korea">South Korea</string>
-    <string name="city_pyongyang">North Korea</string>
+    <string name="country_north_korea">North Korea</string>
 
     '' RANDOMIZERS APP ''
     <string name="select_list">Choose a List</string>
@@ -493,34 +493,34 @@
     '' ABOUT THIS APP ''
     <string name="version_number">Version 0.1</string> '' in dev ''
 
-    <string name="purramid_copyright_title">The <xliff:g translatable="false">Purramid</xliff:g></string>
-    <string name="purramid_copyright_text">Copyright © 2025 <xliff:g translatable="false">Purramid Learning®, Inc.</xliff:g> All rights reserved.</string>
+    <string name="purramid_copyright_title">The <xliff:g id="tp" translatable="false">Purramid</xliff:g></string>
+    <string name="purramid_copyright_text">Copyright © 2025 <xliff:g id="tpl" translatable="false">Purramid Learning®, Inc.</xliff:g> All rights reserved.</string>
 
-    <string name="balsamiq_sans_title"><xliff:g translatable="false">Balsamiq</xliff:g> Sans Font</string>
-    <string name="balsamiq_sans_license_text">Copyright © 2011 The <xliff:g translatable="false">Balsamiq Sans Project Authors</xliff:g> (https://github.com/balsamiq/balsamiqsans)\nThis Font Software is licensed under the SIL Open Font License, Version 1.1 .\nThis license is copied below, and is also available with a FAQ at: https://openfontlicense.org\n\nSIL OPEN FONT LICENSE Version 1.1 - 26 February 2007</string>
+    <string name="balsamiq_sans_title"><xliff:g id="bf" translatable="false">Balsamiq</xliff:g> Sans Font</string>
+    <string name="balsamiq_sans_license_text">Copyright © 2011 The <xliff:g id="bfpa" translatable="false">Balsamiq Sans Project Authors</xliff:g> (https://github.com/balsamiq/balsamiqsans)\nThis Font Software is licensed under the SIL Open Font License, Version 1.1 .\nThis license is copied below, and is also available with a FAQ at: https://openfontlicense.org\n\nSIL OPEN FONT LICENSE Version 1.1 - 26 February 2007</string>
 
     <string name="sphere_title">3D Sphere</string>
-    <string name="sphere_attribution_text">"sphere-gltf-example" (https://skfb.ly/6XGzq) by <xliff:g translatable="false">rawwerks</xliff:g> is licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).</string>
+    <string name="sphere_attribution_text">"sphere-gltf-example" (https://skfb.ly/6XGzq) by <xliff:g id="raw" translatable="false">rawwerks</xliff:g> is licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).</string>
 
     <string name="cities_database_title">World Cities Database</string>
-    <string name="cities_database_attribution_text">"World Cities Database" (https://simplemaps.com/data/world-cities) by <xliff:g translatable="false">simplemaps</xliff:g> is also licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).</string>
+    <string name="cities_database_attribution_text">"World Cities Database" (https://simplemaps.com/data/world-cities) by <xliff:g id="sm" translatable="false">simplemaps</xliff:g> is also licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).</string>
 
     <string name="data_privacy_title">Data Privacy (USA &amp; EU)</string>
-    <string name="data_privacy_statement">At <xliff:g translatable="false">Purramid Learning, Inc.</xliff:g>, we are committed to your privacy. This application, The <xliff:g translatable="false">Purramid</xliff:g>, does not collect, share, or transmit any personal data away from the device on which it is installed. All data generated and used within the application remains solely on your device.</string>
+    <string name="data_privacy_statement">At <xliff:g is="tpl" translatable="false">Purramid Learning, Inc.</xliff:g>, we are committed to your privacy. This application, The <xliff:g id="tp" translatable="false">Purramid</xliff:g>, does not collect, share, or transmit any personal data away from the device on which it is installed. All data generated and used within the application remains solely on your device.</string>
 
     <string name="best_practices_title">Best Practices for Responsible Use</string>
-    <string name="best_practices_content">While The <xliff:g translatable="false">Purramid</xliff:g> application is designed to operate locally and does not collect or transmit personal data, we encourage users to adopt responsible practices when using the application, especially in educational or collaborative settings. We recommend the following:
+    <string name="best_practices_content">While The <xliff:g id="tp1" translatable="false">Purramid</xliff:g> application is designed to operate locally and does not collect or transmit personal data, we encourage users to adopt responsible practices when using the application, especially in educational or collaborative settings. We recommend the following:
         \n\n* Avoid Storing Identifiable Information: To further safeguard privacy, we advise against directly storing personally identifiable information (PII) such as full names, specific addresses, or other sensitive details within the application\'s content or file names. Consider using anonymized labels or codes if necessary for your workflow.
-        \n* Mindful Sharing (If Applicable): If you choose to share files or content created with The <xliff:g translatable="false">Purramid</xliff:g> application, be mindful of the information contained within them and ensure they do not inadvertently include sensitive personal data.
+        \n* Mindful Sharing (If Applicable): If you choose to share files or content created with The <xliff:g id="tp2" translatable="false">Purramid</xliff:g> application, be mindful of the information contained within them and ensure they do not inadvertently include sensitive personal data.
         \n* Secure Your Device: As all application data is stored locally on your device, ensure your device itself is secured with appropriate measures such as strong passwords or biometric authentication to prevent unauthorized access.
         \n* Regular Backups: While not related to privacy, regularly backing up your application data is a good practice to prevent data loss.</string>
 
     <string name="acknowledgements_title">Acknowledgements</string>
-    <string name="acknowledgements_content">The development of The <xliff:g translatable="false">Purramid</xliff:g> application involved the use of advanced artificial intelligence models, including <xliff:g translatable="false">Gemini</xliff:g>, for code generation and assistance. We leveraged these tools to enhance the efficiency of our development process.
-        \n\nWe also want to explicitly acknowledge that all visual art and assets included within The <xliff:g translatable="false">Purramid</xliff:g> application were created by human artists who were fairly compensated for their work. We believe in supporting the creative community and ensuring ethical practices in the creation of our application\'s design.</string>
+    <string name="acknowledgements_content">The development of The <xliff:g id="tp1" translatable="false">Purramid</xliff:g> application involved the use of advanced artificial intelligence models, including <xliff:g id="gg" translatable="false">Gemini</xliff:g>, for code generation and assistance. We leveraged these tools to enhance the efficiency of our development process.
+        \n\nWe also want to explicitly acknowledge that all visual art and assets included within The <xliff:g id="tp2" translatable="false">Purramid</xliff:g> application were created by human artists who were fairly compensated for their work. We believe in supporting the creative community and ensuring ethical practices in the creation of our application\'s design.</string>
 
     <string name="eula_title">End User License Agreement</string>
-    <string name="eula_content">IMPORTANT - READ CAREFULLY: This End User License Agreement ("EULA") is a legal agreement between you (the "User") and <xliff:g translatable="false">Purramid Learning, Inc.</xliff:g> ("Licensor") for The <xliff:g translatable="false">Purramid</xliff:g> application (the "Application").
+    <string name="eula_content">IMPORTANT - READ CAREFULLY: This End User License Agreement ("EULA") is a legal agreement between you (the "User") and <xliff:g id="tpl" translatable="false">Purramid Learning, Inc.</xliff:g> ("Licensor") for The <xliff:g id="tp" translatable="false">Purramid</xliff:g> application (the "Application").
         \n\nBy installing, copying, or otherwise using the Application, the User agrees to be bound by the terms of this EULA. If the User does not agree to the terms of this EULA, do not install or use the Application.
         \n\n1. License Grant: The Licensor grants the User a non-exclusive, non-transferable, limited license to use the Application solely for the User\'s personal, non-commercial use on a single device.
         \n\n2. Ownership: The Application is owned by the Licensor and is protected by copyright laws and international treaty provisions. The Licensor retains all rights, title, and interest in and to the Application.
@@ -536,7 +536,7 @@
         \n\n8. Entire Agreement: This EULA constitutes the entire agreement between the User and the Licensor concerning the Application and supersedes all prior or contemporaneous communications and proposals, whether oral or written, between the User and the Licensor with respect to the Application.</string>
 
     <string name="contact_information_title">Contact Information</string>
-    <xliff:g name="contact_information" translatable="false">Purramid Learning, Inc.</xliff:g>
+    <string name="company_name"><xliff:g id="tpl" translatable="false">Purramid Learning, Inc.</xliff:g></string>
 
 
 </resources>
