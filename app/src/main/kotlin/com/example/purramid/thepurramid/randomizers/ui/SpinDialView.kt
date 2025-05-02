@@ -2,8 +2,10 @@
 package com.example.purramid.thepurramid.randomizers.ui
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Rect
 import androidx.core.graphics.ColorUtils
 import android.graphics.drawable.Drawable
 import android.graphics.Paint
@@ -22,6 +24,7 @@ import com.example.purramid.thepurramid.randomizers.SpinItemType
 import com.example.purramid.thepurramid.randomizers.SpinList
 import com.example.purramid.thepurramid.randomizers.SpinSettings
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.cos
 import kotlin.math.min
 import kotlin.math.sin
@@ -52,9 +55,16 @@ class SpinDialView @JvmOverloads constructor(
         style = Paint.Style.FILL
     }
 
+    private val textBounds = Rect()
+
     private var lists: List<SpinList> = emptyList()
     var currentList: SpinList? = null
     var settings: SpinSettings = SpinSettings()
+
+		// Cache for loaded images <ItemID, Bitmap?> (null if loading/failed) 
+		private val imageBitmapCache = ConcurrentHashMap<UUID, Bitmap?>() 
+		// Rect for text bounds measurement 
+		private val textBounds = Rect()
 
     private var dialRadius = 0f
     private var centerX = 0f
@@ -110,33 +120,50 @@ class SpinDialView @JvmOverloads constructor(
         val wedgeBackgroundColor = item.backgroundColor ?: getAutoAssignedColor(items.indexOf(item)) // Get the background color
         val defaultTextColor = Color.BLACK
         val alternateTextColor = Color.WHITE
+			// WCAG 2.2 AA contrast standards
+			val contrastThreshold = 4.5
         val contrastWithBlack = ColorUtils.calculateContrast(defaultTextColor, wedgeBackgroundColor)
         val contrastWithWhite = ColorUtils.calculateContrast(alternateTextColor, wedgeBackgroundColor)
 
         // Set text color to black or white depending on which has better contrast >= 4.5
         // Default to black if neither meets the threshold but black has higher contrast.
-        textPaint.color = if (contrastWithBlack >= 4.5) {
+        textPaint.color = if (contrastWithBlack >= contrastThreshold) {
             defaultTextColor
-        } else if (contrastWithWhite >= 4.5) {
+        } else if (contrastWithWhite >= contrastThreshold) {
             alternateTextColor
         } else {
             // Neither meets 4.5:1, pick the better of the two (or could default based on luminance)
             if (contrastWithBlack > contrastWithWhite) defaultTextColor else alternateTextColor
         }
 
-        canvas.withRotation(itemRotation, itemCenterX, itemCenterY) { // Use KTX extension for rotation
-            when (item.itemType) {
-                SpinItemType.TEXT -> {
-                    textPaint.textSize = calculateTextSize(item.content, sweepAngleDegrees)
-                    textPaint.getTextBounds(item.content, 0, item.content.length, textBounds)
-                    val textY = itemCenterY + textBounds.height() / 2f - textBounds.bottom
-                    canvas.drawText(item.content, itemCenterX, textY, textPaint)
-                }
-                SpinItemType.IMAGE -> {
-                    val cachedBitmap = imageBitmapCache[item.id]
-                    if (cachedBitmap != null) {
-                        // Image loaded successfully, draw it
-                        val scaledBitmap = scaleBitmapToFit(cachedBitmap, sweepAngleDegrees)
+       canvas.save() //Save canvas state before rotation
+			canvas.withRotation(itemRotation, itemCenterX, itemCenterY) { // Rotate canvas for easier drawing
+            
+			when (item.itemType) {
+       		SpinItemType.TEXT -> {
+	          textPaint.textSize = calculateTextSize(item.content, sweepAngleDegrees)
+					textPaint.getTextBounds(item.content, 0, item.content.length, textBounds)
+					val textY = itemCenterY + textBounds.height() / 2f - textBounds.bottom 
+					canvas.drawText(item.content, itemCenterX, textY, textPaint)
+       		}
+	      	SpinItemType.IMAGE -> {
+          	val cachedBitmap = imageBitmapCache[item.id]
+                    
+					if (cachedBitmap != null) {
+						// Image loaded successfully, draw it
+						val scaledBitmap = scaleBitmapToFit(cachedBitmap, sweepAngleDegrees)
+						// Draw bitmap centered at itemCenterX, itemCenterY
+						canvas.drawBitmap( 
+							scaledBitmap, 
+							itemCenterX - scaledBitmap.width / 2f, 
+							itemCenterY - scaledBitmap.height / 2f, 
+							null // Use default paint 
+						)
+						// Recycle the scaled bitmap if it's different from the cached one to save memory
+						if (scaledBitmap != cachedBitmap) { 
+							// scaledBitmap.recycle() 
+						}
+
                         val imageRect = RectF(
                             itemCenterX - scaledBitmap.width / 2f,
                             itemCenterY - scaledBitmap.height / 2f,
@@ -152,27 +179,63 @@ class SpinDialView @JvmOverloads constructor(
                         textPaint.getTextBounds("[Image]", 0, "[Image]".length, textBounds)
                         val textY = itemCenterY + textBounds.height() / 2f - textBounds.bottom
                         canvas.drawText("[Image]", itemCenterX, textY, textPaint)
-                        // Or draw placeholderDrawable if defined
-                        // placeholderDrawable?.setBounds(...)
-                        // placeholderDrawable?.draw(canvas)
                     }
                 }
-                SpinItemType.EMOJI -> {
-                    // TODO: Investigate using EmojiCompat TextView if default canvas drawing has issues.
-                    val emojiString = item.emojiList.joinToString(" ") // Join with space
-                    textPaint.textSize = calculateTextSize(emojiString, sweepAngleDegrees) // Adjust size
-                    textPaint.getTextBounds(emojiString, 0, emojiString.length, textBounds)
-                    val emojiY = itemCenterY + textBounds.height() / 2f - textBounds.bottom
-                    canvas.drawText(emojiString, itemCenterX, emojiY, textPaint)
+               
+				SpinItemType.EMOJI -> 
+					val emojiString = item.emojiList.joinToString(" ") // Join with space
+					textPaint.textSize = calculateTextSize(emojiString, sweepAngleDegrees) // Adjust size 
+					textPaint.getTextBounds(emojiString, 0, emojiString.length, textBounds
+					val emojiY = itemCenterY + textBounds.height() / 2f - textBounds.bottom
+					canvas.drawText(emojiString, itemCenterX, emojiY, textPaint)
                 }
             }
         } // Canvas rotation restored
     }
 
-    private fun calculateTextSize(text: String, sweepAngle: Float): Float {
-        // TODO: Calculate appropriate text size based on wedge size
-        return 24f
-    }
+    private fun calculateTextSize(text: String, sweepAngleDegrees: Float): Float { 
+			if (text.isBlank() || sweepAngleDegrees <= 0) { 
+				return 10f // Return a small default if no text or angle 
+	 		} 
+
+			// --- Define Constraints --- 
+			val radiusFactor = 0.65f // Where text is drawn radially 
+			val maxTextWidthPaddingFactor = 0.9f // Use 90% of calculated width for padding 
+			val maxTextHeightFactor = 0.18f // Use ~18% of dial radius for max height 
+
+			// Max height constraint (simple approach based on radius) 
+			val maxTextHeight = dialRadius * maxTextHeightFactor 
+
+			// Max width constraint (approximate chord length at radiusFactor) 
+			val textRadius = dialRadius * radiusFactor 
+			val sweepAngleRadians = Math.toRadians(sweepAngleDegrees.toDouble()) 
+			// Chord length = 2 * R * sin(angle / 2) 
+			val maxTextWidth = (2.0 * textRadius * sin(sweepAngleRadians / 2.0)).toFloat() * maxTextWidthPaddingFactor 
+
+			// --- Iterative Sizing --- 
+			val maxTryTextSize = dialRadius / 4f // Start with a large potential size 
+			val minTextSizeSp = 8f // Minimum text size in scaled pixels (sp) 
+			val minTextSizePx = minTextSizeSp * context.resources.displayMetrics.scaledDensity 
+
+			var currentTextSize = maxTryTextSize 
+
+			while (currentTextSize > minTextSizePx) { 
+				textPaint.textSize = currentTextSize 
+				textPaint.getTextBounds(text, 0, text.length, textBounds) 
+
+			// Check if text fits within calculated bounds 
+			if (textBounds.width() <= maxTextWidth && textBounds.height() <= maxTextHeight) { 
+				return currentTextSize // Found a suitable size 
+			} 
+
+			// Reduce text size and try again (e.g., decrease by 1sp equivalent) 
+			currentTextSize -= 1f * context.resources.displayMetrics.scaledDensity 
+			// Ensure we don't go below minimum 
+			currentTextSize = maxOf(currentTextSize, minTextSizePx) 
+		} 
+
+		// If loop finishes, it means even the minimum size didn't fit (or barely fits) return minTextSizePx 
+	}
 
     private fun drawSelectionArrow(canvas: Canvas) {
         val arrowSize = 40f
@@ -262,7 +325,7 @@ class SpinDialView @JvmOverloads constructor(
         invalidate()
     }
 
-    // --- NEW: Image Loading Function ---
+    // --- Image Loading Function ---
     private fun loadItemImage(item: SpinItemEntity) {
         if (item.itemType != SpinItemType.IMAGE || item.content.isBlank()) return
 
