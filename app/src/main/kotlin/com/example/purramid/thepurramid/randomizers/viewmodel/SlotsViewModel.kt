@@ -11,11 +11,14 @@ import com.example.purramid.thepurramid.data.db.SpinListEntity
 import com.example.purramid.thepurramid.data.db.SpinSettingsEntity
 import com.example.purramid.thepurramid.randomizers.SlotsColumnState
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.async
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.concurrent.ConcurrentHashMap
 import java.util.UUID
 import javax.inject.Inject
 import kotlin.random.Random
@@ -63,11 +66,33 @@ class SlotsViewModel @Inject constructor(
     private val _errorEvent = MutableLiveData<String?>()
     val errorEvent: LiveData<String?> = _errorEvent
 
+    // --- Cache for list items ---
+    private val listItemsCache = ConcurrentHashMap<UUID, List<SpinItemEntity>>()
+    private val fetchJobs = ConcurrentHashMap<UUID, Deferred<List<SpinItemEntity>>>()
+
     init {
         if (instanceId != null) {
             loadInitialState(instanceId)
         } else {
             _errorEvent.postValue("SlotsViewModel: Missing or invalid Instance ID.")
+        }
+        // Observe column states to pre-fetch items when lists are selected
+        _columnStates.observeForever { states ->
+            states?.forEach { state ->
+                state.selectedListId?.let { listId ->
+                    // Trigger fetch if not already cached or being fetched
+                    if (!listItemsCache.containsKey(listId) && !fetchJobs.containsKey(listId)) {
+                        fetchAndCacheItems(listId)
+                    }
+                }
+            }
+        }
+        // Also observe allSpinLists to potentially clear cache if a list is deleted/updated externally
+        allSpinLists.observeForever { lists ->
+            // Basic check: remove cached items for lists that no longer exist
+            val currentListIds = lists?.map { it.id }?.toSet() ?: emptySet()
+            listItemsCache.keys.retainAll { it in currentListIds }
+            fetchJobs.keys.retainAll { it in currentListIds }
         }
     }
 
@@ -77,23 +102,20 @@ class SlotsViewModel @Inject constructor(
             withContext(Dispatchers.Main) {
                 if (loadedSettings != null) {
                     _settings.value = loadedSettings
-                    // TODO: Extract slotsColumnStates from loadedSettings once added to SpinSettingsEntity
-                    // val savedColumnStates = loadedSettings.slotsColumnStates
-                    val savedColumnStates: List<SlotsColumnState> = emptyList() // Placeholder
+                    // Extract saved column states and number of columns from the loaded entity
+                    val savedColumnStates = loadedSettings.slotsColumnStates
+                    val numColumns = loadedSettings.numSlotsColumns
 
-                    // TODO: Get numSlotsColumns from loadedSettings once added
-                    // val numColumns = loadedSettings.numSlotsColumns
-                    val numColumns = DEFAULT_NUM_COLUMNS // Placeholder
-
-                    // Initialize column states if needed (e.g., mismatch count or empty)
+                    // Initialize column states based on saved data and number
                     val initialStates = initializeColumnStates(savedColumnStates, numColumns)
                     _columnStates.value = initialStates
 
                 } else {
                     _errorEvent.value = "Settings not found for instance $id."
-                    // Initialize defaults?
-                     _settings.value = SpinSettingsEntity(instanceId = id) // Basic default
-                     _columnStates.value = initializeColumnStates(emptyList(), DEFAULT_NUM_COLUMNS)
+                    // Initialize with defaults if settings are missing
+                    val defaultSettings = SpinSettingsEntity(instanceId = id) // Basic default
+                    _settings.value = defaultSettings
+                    _columnStates.value = initializeColumnStates(emptyList(), defaultSettings.numSlotsColumns)
                 }
             }
         }
@@ -102,8 +124,11 @@ class SlotsViewModel @Inject constructor(
     // Helper to ensure correct number of column states exist
     private fun initializeColumnStates(currentStates: List<SlotsColumnState>?, targetCount: Int): List<SlotsColumnState> {
         val initialStates = mutableListOf<SlotsColumnState>()
+        // Use the provided list (or empty list if null)
+        val validCurrentStates = currentStates ?: emptyList()
         for (i in 0 until targetCount) {
-            val existing = currentStates?.firstOrNull { it.columnIndex == i }
+            // Find existing state for the current index, or create a new default one
+            val existing = validCurrentStates.firstOrNull { it.columnIndex == i }
             initialStates.add(existing ?: SlotsColumnState(columnIndex = i))
         }
         return initialStates.take(targetCount) // Ensure exact count
@@ -123,6 +148,38 @@ class SlotsViewModel @Inject constructor(
                 _columnStates.value = currentStates // Update LiveData
                 saveCurrentState() // Persist change
             }
+        }
+    }
+
+    // --- Function to fetch and cache items ---
+    private fun fetchAndCacheItems(listId: UUID): Deferred<List<SpinItemEntity>> {
+        // Avoid launching multiple fetches for the same list
+        fetchJobs[listId]?.let { return it }
+
+        val job = viewModelScope.async(Dispatchers.IO) { // Use async to return Deferred
+            try {
+                val items = randomizerDao.getItemsForList(listId)
+                listItemsCache[listId] = items
+                items // Return items
+            } catch (e: Exception) {
+                // Handle potential DB error
+                _errorEvent.postValue("Error fetching items for list $listId")
+                emptyList<SpinItemEntity>() // Return empty on error
+            } finally {
+                fetchJobs.remove(listId) // Remove job once completed (success or fail)
+            }
+        }
+        fetchJobs[listId] = job // Store the job
+        return job
+    }
+    // --- Public function for Fragment to get items ---
+    fun getItemsForColumn(columnIndex: Int): List<SpinItemEntity>? {
+        val listId = _columnStates.value?.firstOrNull { it.columnIndex == columnIndex }?.selectedListId
+        return listId?.let {
+            listItemsCache[it] // Return cached items directly
+            // Fetching is triggered reactively by columnStates observer in init.
+            // If items aren't cached yet, the Fragment will get null/empty here,
+            // but will get an update later when the cache is populated and columnStates triggers observer again.
         }
     }
 
@@ -161,12 +218,29 @@ class SlotsViewModel @Inject constructor(
         }
     }
 
+    // --- Cleanup in onCleared ---
+    override fun onCleared() {
+        super.onCleared()
+        // Cancel any ongoing fetch jobs
+        fetchJobs.values.forEach { it.cancel() }
+        // Clear observers added with observeForever if necessary
+        // _columnStates.removeObserver(...)
+        // allSpinLists.removeObserver(...)
+    }
+
     private suspend fun determineResults(columnsSpun: List<SlotsColumnState>) {
         val finalResultsMap = mutableMapOf<Int, UUID?>()
 
+        // Fetch items concurrently using the cache/fetch mechanism
+        val itemFetchDeferreds = columnsSpun.associate { column ->
+            column.columnIndex to column.selectedListId?.let { fetchAndCacheItems(it) }
+        }
+
         withContext(Dispatchers.IO) { // Perform DB fetches off main thread
             columnsSpun.forEach { column ->
-                val items = column.selectedListId?.let { randomizerDao.getItemsForList(it) } ?: emptyList()
+                val itemsDeferred = itemFetchDeferreds[column.columnIndex]
+                val items = itemsDeferred?.await() ?: emptyList() // Wait for fetch if needed
+
                 if (items.isNotEmpty()) {
                     val randomIndex = Random.nextInt(items.size)
                     finalResultsMap[column.columnIndex] = items[randomIndex].id
@@ -183,43 +257,44 @@ class SlotsViewModel @Inject constructor(
             val resultForAnnouncement = mutableListOf<Pair<SlotsColumnState, SpinItemEntity?>>()
 
             currentStates.forEach { existingState ->
-                val newItemId = finalResultsMap[existingState.columnIndex] // Get new ID if it spun
-                val finalState = if (newItemId != null && !existingState.isLocked) { // Update only if spun & has result
-                    existingState.copy(currentItemId = newItemId)
+                // Get the new item ID if this column spun and had a result
+                val spunNewItemId = if (finalResultsMap.containsKey(existingState.columnIndex)) {
+                    finalResultsMap[existingState.columnIndex]
                 } else {
-                    existingState // Keep existing state (locked or didn't spin/empty list)
+                    null // This column didn't spin or had no items
                 }
+
+                // Determine the final item ID: use new ID if spun, otherwise keep current
+                val finalItemId = spunNewItemId ?: existingState.currentItemId
+
+                val finalState = existingState.copy(currentItemId = finalItemId)
                 finalColumnStates.add(finalState)
 
                 // Prepare result for announcement (include locked columns too)
-                val itemEntity = finalState.currentItemId?.let { findItemInList(it, finalState.selectedListId) }
+                // Use cache to find item details efficiently
+                val itemEntity = finalState.currentItemId?.let { itemId ->
+                    finalState.selectedListId?.let { listId ->
+                        listItemsCache[listId]?.firstOrNull { item -> item.id == itemId }
+                    }
+                }
                 resultForAnnouncement.add(Pair(finalState, itemEntity))
             }
 
-             _columnStates.value = finalColumnStates // Update state with final item IDs
+
+            _columnStates.value = finalColumnStates // Update state with final item IDs
 
             // Clear spinning state
             val spinningMap = _isSpinning.value?.toMutableMap() ?: mutableMapOf()
             columnsSpun.forEach { spinningMap[it.columnIndex] = false }
             _isSpinning.value = spinningMap
 
-             // Set final result for announcement logic
-             _spinResult.value = SlotsResult(resultForAnnouncement)
+            // Set final result for announcement logic
+            _spinResult.value = SlotsResult(resultForAnnouncement)
 
             // Persist the final state
             saveCurrentState()
         }
     }
-
-     // Helper function to find item details (needs efficient implementation)
-     // Ideally, we'd fetch all needed items together in determineResults
-     private suspend fun findItemInList(itemId: UUID, listId: UUID?): SpinItemEntity? {
-         return listId?.let {
-             // TODO: This is inefficient if called multiple times. Consider batch fetching.
-              randomizerDao.getItemsForList(it).firstOrNull { item -> item.id == itemId }
-         }
-     }
-
 
     fun clearSpinResult() {
         _spinResult.value = null
@@ -230,19 +305,23 @@ class SlotsViewModel @Inject constructor(
     }
 
     // --- Persistence ---
-
     private fun saveCurrentState() {
         if (instanceId == null) return
         val currentSettings = _settings.value ?: return
         val currentColumns = _columnStates.value ?: return
 
-        // TODO: Update the settings object with the current column states
-        // val settingsToSave = currentSettings.copy(slotsColumnStates = currentColumns)
-        val settingsToSave = currentSettings // Placeholder - needs modification
+        // Create a *new* settings object with the updated column states list
+        // Ensure numSlotsColumns is also correctly part of currentSettings if it can change elsewhere
+        val settingsToSave = currentSettings.copy(
+            slotsColumnStates = currentColumns
+            // If numSlotsColumns can be changed in settings, make sure it's updated here too, e.g.:
+            // numSlotsColumns = currentColumns.size // Or get from settings UI value
+        )
+        _settings.value = settingsToSave
 
         // Persist to database
         viewModelScope.launch(Dispatchers.IO) {
-            // TODO: Ensure the type converter for List<SlotsColumnState> is registered
+            // The TypeConverter for List<SlotsColumnState> in Converters.kt will handle the conversion
             randomizerDao.saveSettings(settingsToSave)
         }
     }

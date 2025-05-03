@@ -26,7 +26,7 @@ import com.example.purramid.thepurramid.data.db.TimeZoneDao
         TimeZoneBoundaryEntity::class,
         CityEntity::class
     ],
-    version = 3, // Updated with CityEntity
+    version = 4, // Updated with Slots randomizer mode
     exportSchema = false // Set to true if you want to export the schema to a file for version control (recommended for production apps)
 )
 @TypeConverters(Converters::class) // Register the TypeConverters class

@@ -174,9 +174,9 @@ class SlotsMainFragment : Fragment() {
                 val listTitle = availableLists.firstOrNull { it.id == state.selectedListId }?.title
                 columnView.setTitle(listTitle)
 
-                // Get data from ViewModel cache and set it on the view
-                val currentList = viewModel.getItemsForColumn(state.columnIndex)
-                columnView.setData(currentList, state.currentItemId)
+                // Get data from ViewModel cache/fetch mechanism and set it on the view
+                val currentListItems = viewModel.getItemsForColumn(state.columnIndex) ?: emptyList() // Provide empty list if null
+                columnView.setData(currentListItems, state.currentItemId)
             }
         }
     }
@@ -228,51 +228,57 @@ class SlotsMainFragment : Fragment() {
     /** Creates a TextView or ImageView for a result item */
     private fun createViewForResultItem(item: SpinItemEntity?): View {
         val context = requireContext()
+        val defaultSize = 100.dpToPx() // Example size, adjust as needed
+        val defaultPadding = 8.dpToPx() // Example padding
+
         if (item == null) {
             // Handle null item (e.g., empty list)
             return TextView(context).apply {
                 text = "-" // Placeholder for empty
-                setTextAppearance(R.style.TextAppearance_AppCompat_Headline5) // Example style
+                textSize = 24f // Example text size
+                setPadding(defaultPadding, defaultPadding, defaultPadding, defaultPadding)
             }
         }
 
         return when (item.itemType) {
             SpinItemType.IMAGE -> {
-                 // *** Assumes you will add ImageView creation logic later ***
-                 // For now, show placeholder text even for images
-                 TextView(context).apply {
-                    text = "[Image]" // Replace with ImageView later
-                    setTextAppearance(R.style.TextAppearance_AppCompat_Headline5)
-                 }
-                /* // Example ImageView creation (add later)
+                // --- START IMAGE IMPLEMENTATION ---
                 ImageView(context).apply {
-                    layoutParams = LinearLayout.LayoutParams(100.dpToPx(), 100.dpToPx()) // Example size
+                    layoutParams = LinearLayout.LayoutParams(defaultSize, defaultSize) // Set a reasonable size
                     scaleType = ImageView.ScaleType.FIT_CENTER
+                    setPadding(defaultPadding, defaultPadding, defaultPadding, defaultPadding)
+                    contentDescription = getString(R.string.item_image_content_description) // Accessibility
                     try {
-                        Glide.with(this@SlotsMainFragment)
+                        Glide.with(this@SlotsMainFragment) // Use fragment context
                             .load(Uri.parse(item.content))
+                            // Add placeholders/error drawables if desired
+                            // .placeholder(R.drawable.loading_spinner)
+                            // .error(R.drawable.error_placeholder)
                             .into(this)
                     } catch (e: Exception) {
-                        setImageResource(R.drawable.error_placeholder) // Set error drawable
+                        Log.e("SlotsMainFragment", "Failed to load image in announcement: ${item.content}", e)
+                        // Optionally set an error drawable if Glide fails
+                        setImageResource(R.drawable.ic_broken_image) // TODO: Add a suitable error drawable
                     }
                 }
-                */
             }
             SpinItemType.EMOJI -> {
                 TextView(context).apply {
-                    text = item.emojiList.joinToString(" ")
-                    setTextAppearance(R.style.TextAppearance_AppCompat_Headline5)
+                    textSize = 32f // Larger size for emoji
+                    setPadding(defaultPadding, defaultPadding, defaultPadding, defaultPadding)
                 }
             }
             SpinItemType.TEXT -> {
                 TextView(context).apply {
-                    text = item.content
-                    setTextAppearance(R.style.TextAppearance_AppCompat_Headline5)
+                    textSize = 24f // Example text size
+                    setPadding(defaultPadding, defaultPadding, defaultPadding, defaultPadding)
                 }
             }
         }
     }
 
+    // Helper function for dp to pixel conversion (if not already defined elsewhere)
+    fun Int.dpToPx(): Int = (this * resources.displayMetrics.density).toInt()
 
     private fun showListSelectionDialog(columnIndex: Int) {
         if (availableLists.isEmpty()) {
@@ -298,17 +304,9 @@ class SlotsMainFragment : Fragment() {
              }
             .show()
     }
-    // Removed findItemData - logic moved to ViewModel/cache access
-
 }
-// TODO: Add dpToPx extension function if needed for dynamic ImageView sizing
-// fun Int.dpToPx(): Int = (this * Resources.getSystem().displayMetrics.density).toInt()
 
 // TODO: Add required String resources:
-// R.string.select_list_for_column (e.g., "Select List for Column %1$d")
-// R.string.list_selection_clear (e.g., "Clear Selection")
-// R.string.no_lists_available (e.g., "No lists available to select.")
-// R.string.cannot_open_settings (e.g., "Cannot open settings.")
 // R.string.settings_navigation_failed (e.g., "Navigation to Settings failed...")
 
 // TODO: Add Navigation action from SlotsMainFragment to Settings Fragment/Activity in nav graph

@@ -1,6 +1,7 @@
 // Converters.kt
 package com.example.purramid.thepurramid.data.db
 
+import android.util.Log
 import androidx.room.TypeConverter
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -35,8 +36,7 @@ class Converters {
                 UUID.fromString(uuidString)
             } catch (e: IllegalArgumentException) {
                 // Handle potential malformed UUID strings if necessary,
-                // though ideally, only valid UUIDs should be stored.
-                // Log.e("Converters", "Could not convert string to UUID: $uuidString", e)
+                Log.e("Converters", "Could not convert string to UUID: $uuidString", e)
                 null // Or throw an exception, depending on desired error handling
             }
         }
@@ -48,7 +48,14 @@ class Converters {
      */
     @TypeConverter
     fun fromStringList(value: List<String>?): String? {
-        return value?.let { Gson().toJson(it) }
+        return value?.let {
+            try {
+                Gson().toJson(it)
+            } catch (e: Exception) {
+                Log.e("Converters", "Could not convert List<String> to JSON", e)
+                null
+            }
+        }
     }
 
     /**
@@ -65,7 +72,7 @@ class Converters {
                 Gson().fromJson(value, listType)
             } catch (e: Exception) {
                 // Handle potential JSON parsing errors
-                // Log.e("Converters", "Could not convert JSON to List<String>: $value", e)
+                Log.e("Converters", "Could not convert JSON to List<String>: $value", e)
                 null // Or return emptyList(), depending on desired error handling
             }
         }
@@ -73,25 +80,35 @@ class Converters {
 
     @TypeConverter
     fun fromSlotsColumnStateList(value: List<SlotsColumnState>?): String? {
-        return value?.let { Gson().toJson(it) }
-    }
-
-    @TypeConverter
-    fun toSlotsColumnStateList(value: String?): List<SlotsColumnState>? {
-        return if (value.isNullOrEmpty()) {
-            null // Return null or emptyList() based on preference
-        } else {
+        // Use let for null safety
+        return value?.let {
             try {
-                // *** Use TypeToken for List<SlotsColumnState> ***
-                val listType = object : TypeToken<List<SlotsColumnState>>() {}.type
-                Gson().fromJson(value, listType)
+                Gson().toJson(it)
             } catch (e: Exception) {
-                // Log.e("Converters", "Could not convert JSON to List<SlotsColumnState>: $value", e)
-                null // Or return emptyList()
+                Log.e("Converters", "Could not convert List<SlotsColumnState> to JSON", e)
+                null // Return null on serialization error
             }
         }
     }
 
-    // Add other converters here if needed for different data types
-    // (e.g., Date, Bitmap, custom objects)
+    /**
+     * Converts a JSON String? back to a List<SlotsColumnState>? when reading from the database.
+     * Uses Gson for deserialization. Returns null if the string is null/empty or parsing fails.
+     */
+    @TypeConverter
+    fun toSlotsColumnStateList(value: String?): List<SlotsColumnState>? {
+        return if (value.isNullOrEmpty()) {
+            null // Handle null or empty input string
+        } else {
+            try {
+                // Define the specific generic type for Gson
+                val listType = object : TypeToken<List<SlotsColumnState>>() {}.type
+                Gson().fromJson(value, listType)
+            } catch (e: Exception) {
+                // Handle potential JSON parsing errors
+                Log.e("Converters", "Could not convert JSON to List<SlotsColumnState>: $value", e)
+                null // Return null on parsing error
+            }
+        }
+    }
 }

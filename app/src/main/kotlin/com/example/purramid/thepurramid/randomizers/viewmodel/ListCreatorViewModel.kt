@@ -1,6 +1,7 @@
 // ListCreatorViewModel.kt
 package com.example.purramid.thepurramid.randomizers.viewmodel
 
+import android.app.Application
 import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.LiveData
@@ -25,6 +26,7 @@ import javax.inject.Inject
 class ListCreatorViewModel @Inject constructor(
     private val randomizerDao: RandomizerDao,
     private val savedStateHandle: SavedStateHandle
+    private val application: Application
 ) : ViewModel() {
 
     companion object {
@@ -32,6 +34,7 @@ class ListCreatorViewModel @Inject constructor(
         const val MAX_ITEM_LENGTH = 27
         const val MAX_ITEMS = 44
         const val MIN_ITEMS_FOR_NEW_LIST = 2
+        private const val MAX_IMAGE_SIZE_BYTES = 3 * 1024 * 1024 // 3 MB
     }
 
     private val listIdArg: String? = savedStateHandle[ARG_LIST_ID]
@@ -251,6 +254,31 @@ class ListCreatorViewModel @Inject constructor(
 
     fun updateItemImage(itemId: UUID, imageUri: Uri?) {
         if (imageUri == null) return
+        // --- Image Size Check ---
+        var fileSize: Long = -1
+        try {
+            // Use application context to get ContentResolver
+            application.contentResolver.openFileDescriptor(imageUri, "r")?.use { pfd ->
+                fileSize = pfd.statSize
+            }
+        } catch (e: Exception) {
+            Log.e("ListCreatorVM", "Could not determine file size for URI: $imageUri", e)
+            _errorEvent.postValue(Event(R.string.error_list_creator_image_size_check_failed)) // TODO: Add string resource
+            return // Stop processing if size check fails
+        }
+
+        if (fileSize == -1L) {
+            Log.w("ListCreatorVM", "File size determination failed for URI: $imageUri")
+            _errorEvent.postValue(Event(R.string.error_list_creator_image_size_check_failed)) // TODO: Add string resource
+            return // Stop processing
+        }
+
+        if (fileSize > MAX_IMAGE_SIZE_BYTES) {
+            Log.w("ListCreatorVM", "Image size ($fileSize bytes) exceeds limit ($MAX_IMAGE_SIZE_BYTES bytes) for URI: $imageUri")
+            _errorEvent.postValue(Event(R.string.error_list_creator_image_too_large)) // TODO: Add string resource (e.g., "Image file is too large (Max 10MB)")
+            return // Stop processing
+        }
+
         val currentList = _internalItems.value ?: return
         val index = currentList.indexOfFirst { it.id == itemId }
         if (index != -1) {

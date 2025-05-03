@@ -46,7 +46,7 @@
                 android:layout_width="20dp"
                 android:layout_height="20dp"
                 android:contentDescription="@string/show_lists"
-                android:src="@drawable/ic_arrow_drop_down_24dp"
+                android:src="@drawable/ic_arrow_drop_down"
                 app:tint="?android:attr/textColorSecondary" />
 
         </LinearLayout>
@@ -85,7 +85,7 @@
             tools:srcCompat="@tools:sample/avatars"
             android:contentDescription="@string/item_image_content_description" />
 
-         <TextView
+        <TextView
              android:id="@+id/slotItemTextViewAbove"
              android:layout_width="match_parent"
              android:layout_height="wrap_content"
@@ -132,7 +132,6 @@
             android:contentDescription="@string/item_image_content_description_secondary"/>
 
     </FrameLayout>
-
 
     <ImageButton
         android:id="@+id/slotLockButton"

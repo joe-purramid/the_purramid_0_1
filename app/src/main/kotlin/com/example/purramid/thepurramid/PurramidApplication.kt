@@ -2,12 +2,15 @@
 package com.example.purramid.thepurramid
 
 import android.app.Application
+import androidx.core.provider.FontRequest
+import androidx.emoji2.text.EmojiCompat
+import androidx.emoji2.text.FontRequestEmojiCompatConfig
 import androidx.preference.PreferenceManager // Or use DataStore if preferred
 import com.example.purramid.thepurramid.data.db.PurramidDatabase
 import com.example.purramid.thepurramid.data.db.RandomizerDao
 import com.example.purramid.thepurramid.data.db.SpinItemEntity
 import com.example.purramid.thepurramid.data.db.SpinListEntity
-import com.example.purramid.thepurramid.data.db.SpinItemType // Ensure this import is correct
+import com.example.purramid.thepurramid.randomizers.SpinItemType // Ensure this import is correct
 import com.vanniktech.emoji.EmojiManager
 import com.vanniktech.emoji.google.GoogleEmojiProvider
 import dagger.hilt.android.HiltAndroidApp
@@ -34,7 +37,15 @@ class PurramidApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        EmojiManager.install(GoogleEmojiProvider())
+        val fontRequest = FontRequest(
+            "com.google.android.gms.fonts", // Font provider authority
+            "com.google.android.gms", // Font provider package
+            "emoji compat Font Query", // Query string (can be anything)
+            R.array.com_google_android_gms_fonts_certs // Certificate resources
+        )
+        val config = FontRequestEmojiCompatConfig(applicationContext, fontRequest)
+            .setReplaceAll(true) // Replace all supported emojis
+        EmojiCompat.init(config)
         seedDefaultRandomizerLists()
     }
 

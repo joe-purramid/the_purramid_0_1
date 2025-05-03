@@ -91,6 +91,17 @@ class RandomizerSettingsViewModel @Inject constructor(
         }
     }
 
+    /** Updates the number of columns for Slots mode */
+    fun updateNumSlotsColumns(numColumns: Int) {
+        if (numColumns != 3 && numColumns != 5) return // Only allow 3 or 5
+
+        val currentSettings = _settings.value ?: return
+        if (currentSettings.numSlotsColumns != numColumns) {
+            val updatedSettings = currentSettings.copy(numSlotsColumns = numColumns)
+            saveSettings(updatedSettings) // Use the common save function
+        }
+    }
+
     /** Saves the provided settings state, applying business rules. */
     private fun saveSettings(newSettings: SpinSettingsEntity) {
         if (instanceId == null) {

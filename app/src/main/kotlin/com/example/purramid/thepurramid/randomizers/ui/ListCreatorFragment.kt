@@ -1,8 +1,6 @@
 // ListCreatorFragment.kt
 package com.example.purramid.thepurramid.randomizers.ui
 
-import android.app.AlertDialog // Import for delete confirmation
-import android.content.DialogInterface // Import for Dialog buttons
 import android.graphics.Color // Import Color for default
 import android.net.Uri
 import android.os.Bundle
@@ -13,7 +11,6 @@ import android.widget.Toast // For TODO placeholders
 import androidx.activity.OnBackPressedCallback // Import for handling back press
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels

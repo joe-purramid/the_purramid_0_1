@@ -1,10 +1,10 @@
 // SpinSettingsEntity.kt
 package com.example.purramid.thepurramid.data.db
 
-import androidx.room.PrimaryKey
 import androidx.room.Entity
-import com.example.purramid.thepurramid.randomizers.SlotsColumnState
+import androidx.room.PrimaryKey
 import com.example.purramid.thepurramid.randomizers.RandomizerMode // Ensure this is imported
+import com.example.purramid.thepurramid.randomizers.SlotsColumnState
 import java.util.UUID
 
 @Entity(tableName = "spin_settings")
@@ -13,7 +13,9 @@ data class SpinSettingsEntity(
 
     var mode: RandomizerMode = RandomizerMode.SPIN,
     var currentListId: UUID? = null, // ID of the currently selected list
+
     var isSpinEnabled: Boolean = true,
+
     var isAnnounceEnabled: Boolean = false,
     var isCelebrateEnabled: Boolean = false,
     var isSequenceEnabled: Boolean = false
