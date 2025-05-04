@@ -8,7 +8,6 @@ import android.widget.CompoundButton // Import for switch listener
 import android.widget.Toast // Import Toast for errors
 import androidx.activity.viewModels // Import for viewModels delegate
 import androidx.appcompat.app.AppCompatActivity
-import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.snackbar.Snackbar
 import com.example.purramid.thepurramid.R // Import R
 import com.example.purramid.thepurramid.databinding.ActivityRandomizerSettingsBinding
@@ -87,16 +86,16 @@ class RandomizerSettingsActivity : AppCompatActivity() {
             // Call ViewModel update function based on which switch was toggled
             when (buttonView.id) {
                 R.id.switchSpin -> viewModel.updateBooleanSetting { it.copy(isSpinEnabled = isChecked) }
-                R.id.switchAnnounce -> viewModel.updateBooleanSetting { it.copy(isAnnounceEnabled = isChecked) }
-                R.id.switchCelebrate -> viewModel.updateBooleanSetting { it.copy(isCelebrateEnabled = isChecked) }
-                R.id.switchSequence -> viewModel.updateBooleanSetting { it.copy(isSequenceEnabled = isChecked) }
+                R.id.switchIsAnnounceEnabled -> viewModel.updateBooleanSetting { it.copy(isAnnounceEnabled = isChecked) }
+                R.id.switchIsCelebrateEnabled -> viewModel.updateBooleanSetting { it.copy(isCelebrateEnabled = isChecked) }
+                R.id.switchIsSequenceEnabled -> viewModel.updateBooleanSetting { it.copy(isSequenceEnabled = isChecked) }
             }
         }
 
         binding.switchSpin.setOnCheckedChangeListener(switchListener)
-        binding.switchAnnounce.setOnCheckedChangeListener(switchListener)
-        binding.switchCelebrate.setOnCheckedChangeListener(switchListener)
-        binding.switchSequence.setOnCheckedChangeListener(switchListener)
+        binding.switchIsAnnounceEnabled.setOnCheckedChangeListener(switchListener)
+        binding.switchIsCelebrateEnabled.setOnCheckedChangeListener(switchListener)
+        binding.switchIsSequenceEnabled.setOnCheckedChangeListener(switchListener)
 
         // --- Mode Toggle Group Listener ---
         binding.modeToggleGroup.addOnButtonCheckedListener { group, checkedId, isChecked ->

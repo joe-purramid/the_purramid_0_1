@@ -91,6 +91,7 @@ dependencies {
     implementation(libs.colorpicker)
     implementation(libs.constraintlayout)
     implementation(libs.emojiPopup)
+    implementation(libs.flexbox)
     implementation(libs.glide.core)
     implementation(libs.gson)
     implementation(libs.hilt.android)

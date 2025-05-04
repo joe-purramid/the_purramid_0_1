@@ -75,30 +75,20 @@ class RandomizerSettingsViewModel @Inject constructor(
     }
 
     /** Updates a specific boolean setting */
-    fun updateBooleanSetting(settingUpdater: (SpinSettingsEntity) -> SpinSettingsEntity) {
-        val currentSettings = _settings.value ?: return // Need current state
-        val updatedSettings = settingUpdater(currentSettings)
-        saveSettings(updatedSettings)
+    private fun updateBooleanSetting(updateAction: (SpinSettingsEntity) -> SpinSettingsEntity) {
+        val currentSettings = _settings.value ?: return
+        saveSettings(updateAction(currentSettings)) // Pass updated settings to common save function
     }
 
     /** Updates the Randomizer mode */
     fun updateMode(newMode: RandomizerMode) {
-        val currentSettings = _settings.value ?: return
-        if (currentSettings.mode != newMode) {
-            val updatedSettings = currentSettings.copy(mode = newMode)
-            // Add any logic here if changing mode affects other settings
-            saveSettings(updatedSettings)
-        }
+        updateBooleanSetting { it.copy(mode = newMode) }
     }
 
     /** Updates the number of columns for Slots mode */
     fun updateNumSlotsColumns(numColumns: Int) {
-        if (numColumns != 3 && numColumns != 5) return // Only allow 3 or 5
-
-        val currentSettings = _settings.value ?: return
-        if (currentSettings.numSlotsColumns != numColumns) {
-            val updatedSettings = currentSettings.copy(numSlotsColumns = numColumns)
-            saveSettings(updatedSettings) // Use the common save function
+        if (numColumns != 3 && numColumns != 5) return {
+            updateBooleanSetting { it.copy(numSlotsColumns = numColumns) }
         }
     }
 
@@ -109,22 +99,103 @@ class RandomizerSettingsViewModel @Inject constructor(
              return
         }
 
-        // Ensure the settings being saved are associated with the correct instanceId
-        var settingsToSave = newSettings.copy(instanceId = instanceId)
+    // --- NEW Dice Toggle Updaters ---
+    fun updateUseDicePips(enabled: Boolean) {
+        updateBooleanSetting { it.copy(useDicePips = enabled) }
+    }
 
-        // Apply business logic: If Sequence is enabled, disable Announce and Celebrate
-        if (settingsToSave.isSequenceEnabled) {
-            settingsToSave = settingsToSave.copy(
-                isAnnounceEnabled = false,
-                isCelebrateEnabled = false
-            )
+    fun updateIsPercentileDiceEnabled(enabled: Boolean) {
+        updateBooleanSetting { it.copy(isPercentileDiceEnabled = enabled) }
+    }
+
+    fun updateIsDiceAnimationEnabled(enabled: Boolean) {
+        updateBooleanSetting { it.copy(isDiceAnimationEnabled = enabled) }
+    }
+
+    fun updateIsDiceCritCelebrationEnabled(enabled: Boolean) {
+        // Apply dependency: Crit celebration requires announcement
+        updateBooleanSetting {
+            val announceIsOn = it.isAnnounceEnabled
+            it.copy(isDiceCritCelebrationEnabled = enabled && announceIsOn)
         }
-        // Apply business logic: If Announce is disabled, disable Celebrate
-        else if (!settingsToSave.isAnnounceEnabled) {
-             settingsToSave = settingsToSave.copy(
-                 isCelebrateEnabled = false
-             )
+    }
+
+    // --- Common/Spin Toggle Updaters ---
+    fun updateIsAnnounceEnabled(enabled: Boolean) {
+        updateBooleanSetting {
+            // If turning Announce OFF, also turn off dependent settings
+            if (!enabled) {
+                it.copy(
+                    isAnnounceEnabled = false,
+                    isCelebrateEnabled = false, // Turn off general celebration
+                    isDiceCritCelebrationEnabled = false // Turn off dice crit celebration
+                    // Also disable Modifiers, Sum Results later
+                )
+            } else {
+                it.copy(
+                    isAnnounceEnabled = true,
+                    graphDistributionType = GraphDistributionType.OFF // Force graph off
+                )
+            }
         }
+    }
+
+    fun updateIsCelebrateEnabled(enabled: Boolean) { // General celebration (Spin?)
+        // Requires Announce to be enabled
+        updateBooleanSetting {
+            val announceIsOn = it.isAnnounceEnabled
+            it.copy(isCelebrateEnabled = enabled && announceIsOn)
+        }
+    }
+
+    fun updateIsSpinEnabled(enabled: Boolean) {
+        updateBooleanSetting { it.copy(isSpinEnabled = enabled) }
+    }
+
+    fun updateIsSequenceEnabled(enabled: Boolean) {
+        // Apply dependency: Sequence disables Announce/Celebrate
+        updateBooleanSetting {
+            if (enabled) {
+                it.copy(isSequenceEnabled = true, isAnnounceEnabled = false, isCelebrateEnabled = false)
+            } else {
+                it.copy(isSequenceEnabled = false)
+                // Don't automatically re-enable announce/celebrate here, let user do it
+            }
+        }
+    }
+
+    // --- Update Graph Type ---
+    fun updateGraphDistributionType(newType: GraphDistributionType) {
+        updateBooleanSetting { currentState ->
+            if (newType != GraphDistributionType.OFF) {
+                // --- Turning Graph ON (any mode other than OFF) ---
+                // Force Announcement and its dependent settings OFF
+                currentState.copy(
+                    graphDistributionType = newType,
+                    isAnnounceEnabled = false,
+                    isCelebrateEnabled = false, // Force off general celebration
+                    isDiceCritCelebrationEnabled = false // Force off dice crit celebration
+                    // diceSumResultType = DiceSumResultType.INDIVIDUAL, // TODO Reset sum type? Or leave?
+                    // diceModifierConfigJson = DEFAULT_EMPTY_JSON_MAP // TODO Reset modifiers? Or leave?
+                )
+            } else {
+                // --- Turning Graph OFF ---
+                // Just update the graph type, don't automatically re-enable Announcement
+                currentState.copy(graphDistributionType = GraphDistributionType.OFF)
+            }
+        }
+    }
+
+    // --- Save Logic ---
+    /** Saves the provided settings state, applying business rules. */
+    private fun saveSettings(newSettings: SpinSettingsEntity) {
+        if (instanceId == null) {
+            _errorEvent.postValue(Event(R.string.error_settings_instance_id_failed))
+            return
+        }
+
+        // Handled by passing the modified object to this function
+        val settingsToSave = newSettings.copy(instanceId = instanceId) // Ensure ID is correct
 
         // Update LiveData immediately for UI responsiveness
         _settings.value = settingsToSave
@@ -133,17 +204,15 @@ class RandomizerSettingsViewModel @Inject constructor(
         saveSettingsInternal(settingsToSave)
     }
 
-    /** Performs the actual database save operation */
     private fun saveSettingsInternal(settingsToSave: SpinSettingsEntity) {
-         viewModelScope.launch(Dispatchers.IO) {
-             try {
-                 randomizerDao.saveSettings(settingsToSave)
-             } catch (e: Exception) {
-                 Log.e("RandomizerSettingsViewModel", "Failed to save settings", e)
-                 // *** Post the Resource ID for a generic save error ***
-                 _errorEvent.postValue(R.string.error_settings_save_failed_kitty)
-             }
-         }
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                randomizerDao.saveSettings(settingsToSave)
+            } catch (e: Exception) {
+                Log.e("RandomizerSettingsViewModel", "Failed to save settings", e)
+                _errorEvent.postValue(Event(R.string.error_settings_save_failed_kitty))
+            }
+        }
     }
 
     /** Clears any pending error event */

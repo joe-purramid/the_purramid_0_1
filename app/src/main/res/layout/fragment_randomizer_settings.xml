@@ -113,6 +113,16 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/modeToggleGroup" />
 
+    <com.google.android.material.switchmaterial.SwitchMaterial
+        android:id="@+id/switchSpin"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="@string/setting_spin_animation"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/slotsSettingsLayout" />
+
     <LinearLayout
         android:id="@+id/slotsSettingsLayout"
         android:layout_width="0dp"
@@ -154,44 +164,76 @@
         </com.google.android.material.button.MaterialButtonToggleGroup>
     </LinearLayout>
 
+    <LinearLayout
+        android:id="@+id/diceSettingsLayout"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginTop="8dp"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@+id/slotsSettingsLayout"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        tools:visibility="visible">
+
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/switchUseDicePips"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/setting_dice_use_pips" />
+
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/switchIsPercentileDiceEnabled"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/setting_dice_percentile_mode" />
+
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/switchIsDiceAnimationEnabled"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/setting_dice_roll_animation" />
+
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/switchIsDiceCritCelebrationEnabled"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/setting_dice_crit_celebration" />
+    </LinearLayout>
+
     <com.google.android.material.switchmaterial.SwitchMaterial
-        android:id="@+id/switchSpin"
+        android:id="@+id/switchIsAnnounceEnabled"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:text="@string/setting_spin_animation"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/slotsSettingsLayout" />
-
-    <com.google.android.material.switchmaterial.SwitchMaterial
-        android:id="@+id/switchAnnounce"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
         android:text="@string/setting_announce"
+        android:visibility="gone" tools:visibility="visible"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/switchSpin" />
+        app:layout_constraintTop_toBottomOf="@+id/diceSettingsLayout" />
 
     <com.google.android.material.switchmaterial.SwitchMaterial
-        android:id="@+id/switchCelebrate"
+        android:id="@+id/switchIsCelebrateEnabled"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:text="@string/setting_celebrate"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/switchAnnounce" />
+        app:layout_constraintTop_toBottomOf="@+id/switchIsAnnounceEnabled" />
 
     <com.google.android.material.switchmaterial.SwitchMaterial
-        android:id="@+id/switchSequence"
+        android:id="@+id/switchIsSequenceEnabled"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:text="@string/setting_sequence"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/switchCelebrate" />
+        app:layout_constraintTop_toBottomOf="@+id/switchIsCelebrateEnabled" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

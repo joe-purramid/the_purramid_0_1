@@ -77,7 +77,7 @@
                 android:gravity="center" />
         </activity>
 
-        <activity
+<!--        <activity
             android:name=".randomizers.ui.RandomizerSettingsActivity"
             android:exported="false"
             android:label="@string/settings" android:parentActivityName=".MainActivity" android:resizeableActivity="true"
@@ -85,7 +85,7 @@
             <layout android:defaultWidth="350dp"
                 android:defaultHeight="275dp"
                 android:gravity="center" />
-        </activity>
+        </activity> -->
 
         <activity
             android:name=".randomizers.ui.ListEditorActivity"

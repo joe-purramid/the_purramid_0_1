@@ -5,6 +5,9 @@ import android.util.Log
 import androidx.room.TypeConverter
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.example.purramid.thepurramid.randomizers.DiceSumResultType // Import new Enums
+import com.example.purramid.thepurramid.randomizers.GraphDistributionType
+import com.example.purramid.thepurramid.randomizers.GraphLineStyle
 import com.example.purramid.thepurramid.randomizers.SlotsColumnState
 import java.util.UUID
 
@@ -111,4 +114,73 @@ class Converters {
             }
         }
     }
-}
+    // For Map<Int, Int> (Dice Pool, Colors, Modifiers)
+    @TypeConverter
+    fun fromIntIntMap(value: Map<Int, Int>?): String? {
+        // Return default empty map string if value is null or empty? Or just null?
+        // Returning "{}" might be safer for non-nullable String field if default is "{}"
+        return if (value.isNullOrEmpty()) DEFAULT_EMPTY_JSON_MAP else Gson().toJson(value)
+    }
+
+    @TypeConverter
+    fun toIntIntMap(value: String?): Map<Int, Int>? {
+        // Handle null/empty input, default to empty map might be safer than null
+        if (value.isNullOrEmpty()) {
+            return emptyMap() // Return empty map instead of null
+        }
+        return try {
+            val mapType = object : TypeToken<Map<Int, Int>>() {}.type
+            Gson().fromJson(value, mapType)
+        } catch (e: Exception) {
+            Log.e("Converters", "Could not convert JSON to Map<Int, Int>: $value", e)
+            emptyMap() // Return empty map on error
+        }
+    }
+
+    // Converter for DiceSumResultType Enum
+    @TypeConverter
+    fun fromDiceSumResultType(value: DiceSumResultType?): String? {
+        return value?.name ?: DiceSumResultType.INDIVIDUAL.name // Default if null
+    }
+
+    @TypeConverter
+    fun toDiceSumResultType(value: String?): DiceSumResultType {
+        return try {
+            value?.let { enumValueOf<DiceSumResultType>(it) } ?: DiceSumResultType.INDIVIDUAL
+        } catch (e: IllegalArgumentException) {
+            Log.e("Converters", "Invalid DiceSumResultType string: $value", e)
+            DiceSumResultType.INDIVIDUAL // Default on error
+        }
+    }
+
+    // Converter for GraphDistributionType Enum
+    @TypeConverter
+    fun fromGraphDistributionType(value: GraphDistributionType?): String? {
+        return value?.name ?: GraphDistributionType.OFF.name // Default if null
+    }
+
+    @TypeConverter
+    fun toGraphDistributionType(value: String?): GraphDistributionType {
+        return try {
+            value?.let { enumValueOf<GraphDistributionType>(it) } ?: GraphDistributionType.OFF
+        } catch (e: IllegalArgumentException) {
+            Log.e("Converters", "Invalid GraphDistributionType string: $value", e)
+            GraphDistributionType.OFF // Default on error
+        }
+    }
+
+    // Converter for GraphLineStyle Enum
+    @TypeConverter
+    fun fromGraphLineStyle(value: GraphLineStyle?): String? {
+        return value?.name ?: GraphLineStyle.SOLID.name // Default if null
+    }
+
+    @TypeConverter
+    fun toGraphLineStyle(value: String?): GraphLineStyle {
+        return try {
+            value?.let { enumValueOf<GraphLineStyle>(it) } ?: GraphLineStyle.SOLID
+        } catch (e: IllegalArgumentException) {
+            Log.e("Converters", "Invalid GraphLineStyle string: $value", e)
+            GraphLineStyle.SOLID // Default on error
+
+        }

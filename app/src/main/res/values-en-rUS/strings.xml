@@ -372,6 +372,7 @@
     <string name="country_north_korea">North Korea</string>
 
     '' RANDOMIZERS APP ''
+    <string name="randomizer_settings_title">Randomizer Settings</string>
     <string name="select_list">Choose a List</string>
     <string name="show_lists">Open a drop-down menu to select a list</string>
     <string name="randomizer_mode">Randomizer Type</string>
@@ -386,6 +387,7 @@
     <string name="sequence_down">Next sequence item</string>
 
     '' RANDOMIZER SPIN MODE ''
+    <string name="randomizer_mode_spin">Spin Mode</string>
     <string name="spin">Spin</string>
     <string name="setting_celebrate">Celebrate Result</string>
     <string name="setting_sequence">Sequence Results</string>
@@ -426,6 +428,7 @@
     </string-array>
 
     '' RANDOMIZER SLOTS MODE ''
+    <string name="randomizer_mode_slots">Slots Mode</string>
     <string name="lock_column">Lock Column</string>
     <string name="unlock_column">Unlock Column</string>
     <string name="item_image_placeholder">[Image]</string>
@@ -438,6 +441,17 @@
     <string name="setting_slots_num_columns">Number of Columns</string>
     <string name="setting_slots_columns_3">3</string>
     <string name="setting_slots_columns_5">5</string>
+
+    '' RANDOMIZER DICE MODE ''
+    <string name="randomizer_mode_dice">Dice Mode</string>
+    <string name="roll">Roll</string>
+    <string name="dice_pool">Dice Pool</string>
+    <string name="dice_pool_decrement">Decrease dice count</string>
+    <string name="dice_pool_increment">Increase dice count</string>
+    <string name="setting_dice_use_pips">Use Pips for d6</string>
+    <string name="setting_dice_percentile_mode">Percentile Dice (d%)</string>
+    <string name="setting_dice_roll_animation">Roll Animation</string>
+    <string name="setting_dice_crit_celebration">Critical Celebration (d20=20)</string>
 
     '' RANDOMIZER SNACKBARS ''
     <string name="error_settings_instance_id_failed">Some naughty kitties caused an error. Please close this window and open a new one to continue.</string>

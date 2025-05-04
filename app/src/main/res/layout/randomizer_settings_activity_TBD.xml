@@ -134,7 +134,7 @@
         app:layout_constraintTop_toBottomOf="@+id/buttonListEditor" />
 
         <com.google.android.material.switchmaterial.SwitchMaterial
-        android:id="@+id/switchAnnounce"
+        android:id="@+id/switchIsAnnounceEnabled"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
@@ -144,23 +144,23 @@
         app:layout_constraintTop_toBottomOf="@+id/switchSpin" />
 
         <com.google.android.material.switchmaterial.SwitchMaterial
-        android:id="@+id/switchCelebrate"
+        android:id="@+id/switchIsCelebrateEnabled"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:text="@string/setting_celebrate"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/switchAnnounce" />
+        app:layout_constraintTop_toBottomOf="@+id/switchIsAnnounceEnabled" />
 
         <com.google.android.material.switchmaterial.SwitchMaterial
-        android:id="@+id/switchSequence"
+        android:id="@+id/switchIsSequenceEnabled"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:text="@string/setting_sequence"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/switchCelebrate" />
+        app:layout_constraintTop_toBottomOf="@+id/switchIsCelebrateEnabled" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>

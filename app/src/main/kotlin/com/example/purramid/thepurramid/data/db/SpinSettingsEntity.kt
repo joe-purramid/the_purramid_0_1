@@ -3,24 +3,53 @@ package com.example.purramid.thepurramid.data.db
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.example.purramid.thepurramid.randomizers.DiceSumResultType
+import com.example.purramid.thepurramid.randomizers.GraphDistributionType
+import com.example.purramid.thepurramid.randomizers.GraphLineStyle
 import com.example.purramid.thepurramid.randomizers.RandomizerMode // Ensure this is imported
 import com.example.purramid.thepurramid.randomizers.SlotsColumnState
 import java.util.UUID
+
+// Default dice pool: 1d6
+const val DEFAULT_DICE_POOL_JSON = "{\"6\":1}"
+// Default empty JSON map for colors and modifiers
+const val DEFAULT_EMPTY_JSON_MAP = "{}"
 
 @Entity(tableName = "spin_settings")
 data class SpinSettingsEntity(
     @PrimaryKey val instanceId: UUID,
 
     var mode: RandomizerMode = RandomizerMode.SPIN,
+
+    // --- Multi-mode settings ---
     var currentListId: UUID? = null, // ID of the currently selected list
-
-    var isSpinEnabled: Boolean = true,
-
     var isAnnounceEnabled: Boolean = false,
     var isCelebrateEnabled: Boolean = false,
+
+    // --- Spin Specific ---
+    var isSpinEnabled: Boolean = true,
     var isSequenceEnabled: Boolean = false
 
-    // --- Slots Mode ---
+    // --- Slots Specific ---
     var numSlotsColumns: Int = 3, // Default to 3 columns
     var slotsColumnStates: List<SlotsColumnState> = emptyList() // List to hold state for each column
-)
+
+    // --- Dice Specific ---
+    // Configs stored as JSON strings, handled by TypeConverters
+    var dicePoolConfigJson: String = DEFAULT_DICE_POOL_JSON, // Map<Int, Int> sides -> count
+    var diceColorConfigJson: String = DEFAULT_EMPTY_JSON_MAP, // Map<Int, Int> sides -> colorInt
+    var diceModifierConfigJson: String = DEFAULT_EMPTY_JSON_MAP, // Map<Int, Int> sides -> modifier
+    var useDicePips: Boolean = false, // Default numbers for d6
+    var isPercentileDiceEnabled: Boolean = false, // Default off
+    var isDiceAnimationEnabled: Boolean = true, // Default on
+    var isDiceCritCelebrationEnabled: Boolean = false, // Default off
+    var diceSumResultType: DiceSumResultType = DiceSumResultType.INDIVIDUAL, // Default
+    var graphDistributionType: GraphDistributionType = GraphDistributionType.OFF, // Default off
+    var graphLineStyle: GraphLineStyle = GraphLineStyle.SOLID, // Default solid
+    var graphRollCount: Int = 1000, // Default for Normal/Uniform
+
+    // --- Coin Flip Mode Specific --- (Placeholders)
+    var numCoins: Int = 1,
+
+
+    )

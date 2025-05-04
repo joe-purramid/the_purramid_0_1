@@ -15,7 +15,6 @@ import com.example.purramid.thepurramid.R
 import com.example.purramid.thepurramid.databinding.FragmentRandomizerSettingsBinding // Use Fragment binding
 import com.example.purramid.thepurramid.randomizers.RandomizerMode
 import com.example.purramid.thepurramid.randomizers.viewmodel.RandomizerSettingsViewModel
-import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
 import java.util.UUID
@@ -35,10 +34,8 @@ class RandomizerSettingsFragment : Fragment() {
 
     private var isUpdatingSwitches = false
     private var isUpdatingMode = false
-
-    private var isUpdatingSwitches = false
-    private var isUpdatingMode = false
-    private var isUpdatingNumColumns = false // Add flag for column toggle
+    private var isUpdatingSlotsColumns = false // Add flag for column toggle
+    private var isUpdatingDiceSettings = false // Flag for Dice switches
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -98,9 +95,9 @@ class RandomizerSettingsFragment : Fragment() {
             if (isUpdatingSwitches) return@OnCheckedChangeListener
             when (buttonView.id) {
                 R.id.switchSpin -> viewModel.updateBooleanSetting { it.copy(isSpinEnabled = isChecked) }
-                R.id.switchAnnounce -> viewModel.updateBooleanSetting { it.copy(isAnnounceEnabled = isChecked) }
-                R.id.switchCelebrate -> viewModel.updateBooleanSetting { it.copy(isCelebrateEnabled = isChecked) }
-                R.id.switchSequence -> viewModel.updateBooleanSetting { it.copy(isSequenceEnabled = isChecked) }
+                R.id.switchIsAnnounceEnabled -> viewModel.updateBooleanSetting { it.copy(isAnnounceEnabled = isChecked) }
+                R.id.switchIsCelebrateEnabled -> viewModel.updateBooleanSetting { it.copy(isCelebrateEnabled = isChecked) }
+                R.id.switchIsSequenceEnabled -> viewModel.updateBooleanSetting { it.copy(isSequenceEnabled = isChecked) }
             }
         }
         binding.switchSpin.setOnCheckedChangeListener(switchListener)
@@ -121,8 +118,9 @@ class RandomizerSettingsFragment : Fragment() {
             selectedMode?.let { viewModel.updateMode(it) }
         }
 
+        // Slots Columns Listener
         binding.slotsNumColumnsToggleGroup.addOnButtonCheckedListener { group, checkedId, isChecked ->
-            if (isUpdatingNumColumns || !isChecked) return@addOnButtonCheckedListener // Prevent loops
+            if (isUpdatingSlotsColumns || !isChecked) return@addOnButtonCheckedListener // Prevent loops
 
             val numColumns = when (checkedId) {
                 R.id.buttonSlotsColumns3 -> 3
@@ -131,6 +129,49 @@ class RandomizerSettingsFragment : Fragment() {
             }
             viewModel.updateNumSlotsColumns(numColumns)
         }
+
+        // --- Listener for Common Switches ---
+        // Apply to switches that might be shared or need general handling
+        val commonSwitchListener = CompoundButton.OnCheckedChangeListener { buttonView, isChecked ->
+            if (isUpdatingSwitches) return@OnCheckedChangeListener
+            when (buttonView.id) {
+                // Add common switches here if any in the future
+                R.id.switchIsAnnounceEnabled -> viewModel.updateIsAnnounceEnabled(isChecked)
+                R.id.switchIsCelebrateEnabled -> viewModel.updateIsCelebrateEnabled(isChecked) // General celebration (Spin?)
+                // Spin specific handled separately for clarity now
+            }
+        }
+        binding.switchIsAnnounceEnabled.setOnCheckedChangeListener(commonSwitchListener)
+        binding.switchIsCelebrateEnabled.setOnCheckedChangeListener(commonSwitchListener)
+
+
+        // --- Listener for Spin-Specific Switches ---
+        val spinSwitchListener = CompoundButton.OnCheckedChangeListener { buttonView, isChecked ->
+            if (isUpdatingSwitches) return@OnCheckedChangeListener // Reuse flag or use specific if needed
+            when (buttonView.id) {
+                R.id.switchSpin -> viewModel.updateIsSpinEnabled(isChecked)
+                R.id.switchIsSequenceEnabled -> viewModel.updateIsSequenceEnabled(isChecked)
+            }
+        }
+        binding.switchSpin.setOnCheckedChangeListener(spinSwitchListener)
+        binding.switchIsSequenceEnabled.setOnCheckedChangeListener(spinSwitchListener)
+
+
+        // --- Listener for Dice-Specific Switches ---
+        val diceSwitchListener = CompoundButton.OnCheckedChangeListener { buttonView, isChecked ->
+            if (isUpdatingDiceSettings) return@OnCheckedChangeListener
+            when (buttonView.id) {
+                R.id.switchUseDicePips -> viewModel.updateUseDicePips(isChecked)
+                R.id.switchIsPercentileDiceEnabled -> viewModel.updateIsPercentileDiceEnabled(isChecked)
+                R.id.switchIsDiceAnimationEnabled -> viewModel.updateIsDiceAnimationEnabled(isChecked)
+                R.id.switchIsDiceCritCelebrationEnabled -> viewModel.updateIsDiceCritCelebrationEnabled(isChecked)
+                // Add listeners for Graph settings later
+            }
+        }
+        binding.switchUseDicePips.setOnCheckedChangeListener(diceSwitchListener)
+        binding.switchIsPercentileDiceEnabled.setOnCheckedChangeListener(diceSwitchListener)
+        binding.switchIsDiceAnimationEnabled.setOnCheckedChangeListener(diceSwitchListener)
+        binding.switchIsDiceCritCelebrationEnabled.setOnCheckedChangeListener(diceSwitchListener)
     }
 
     private fun observeViewModel() {
@@ -140,44 +181,59 @@ class RandomizerSettingsFragment : Fragment() {
         viewModel.settings.observe(lifecycleOwner) { settingsEntity ->
             isUpdatingSwitches = true
             isUpdatingMode = true
-            isUpdatingNumColumns = true // Set flag
+            isUpdatingSlotsColumns = true // Set flag
+            isUpdatingDiceSettings = true
 
             if (settingsEntity != null) {
-                binding.switchSpin.isChecked = settingsEntity.isSpinEnabled
-                binding.switchAnnounce.isChecked = settingsEntity.isAnnounceEnabled
-                binding.switchCelebrate.isChecked = settingsEntity.isCelebrateEnabled
-                binding.switchSequence.isChecked = settingsEntity.isSequenceEnabled
+                // Update UI based on loaded settings
+                updateModeSelectionUI(settingsEntity.mode) // Handles mode button and visibility of sections
 
-                updateModeSelectionUI(settingsEntity.mode) // Update mode selector visual state
-
-                // *** UPDATE Number of Columns Toggle ***
-                val buttonToCheck = when (settingsEntity.numSlotsColumns) {
+                // Update Slots specific UI
+                val slotsButtonToCheck = when (settingsEntity.numSlotsColumns) {
                     5 -> R.id.buttonSlotsColumns5
-                    else -> R.id.buttonSlotsColumns3 // Default to 3
+                    else -> R.id.buttonSlotsColumns3
                 }
-                if (binding.slotsNumColumnsToggleGroup.checkedButtonId != buttonToCheck) {
-                    binding.slotsNumColumnsToggleGroup.check(buttonToCheck)
+                if (binding.slotsNumColumnsToggleGroup.checkedButtonId != slotsButtonToCheck) {
+                    binding.slotsNumColumnsToggleGroup.check(slotsButtonToCheck)
                 }
 
-                // Hide placeholder text
+                // Update Dice specific UI
+                binding.switchUseDicePips.isChecked = settingsEntity.useDicePips
+                binding.switchIsPercentileDiceEnabled.isChecked = settingsEntity.isPercentileDiceEnabled
+                binding.switchIsDiceAnimationEnabled.isChecked = settingsEntity.isDiceAnimationEnabled
+                binding.switchIsDiceCritCelebrationEnabled.isChecked = settingsEntity.isDiceCritCelebrationEnabled
+                // Update Graph settings UI later
+
+                // Update Common UI
+                binding.switchIsAnnounceEnabled.isChecked = settingsEntity.isAnnounceEnabled
+                binding.switchIsCelebrateEnabled.isChecked = settingsEntity.isCelebrateEnabled // General celebration
+
+                // Update Spin Specific UI
+                binding.switchSpin.isChecked = settingsEntity.isSpinEnabled
+                binding.switchIsSequenceEnabled.isChecked = settingsEntity.isSequenceEnabled
+
+                // Handle interdependencies affecting enabled state (example)
+                binding.switchIsCelebrateEnabled.isEnabled = settingsEntity.isAnnounceEnabled && binding.switchIsCelebrateEnabled.isVisible // General celebration requires announce AND visibility
+                binding.switchIsDiceCritCelebrationEnabled.isEnabled = settingsEntity.isAnnounceEnabled && binding.switchIsDiceCritCelebrationEnabled.isVisible // Dice crit celebration requires announce AND visibility
+                // Add logic for Graph/Announcement interdependency later
+
                 binding.textViewSettingsPlaceholder.visibility = View.GONE
+                // Ensure controls are generally enabled
+                enableAllControls(true)
 
             } else {
-                // Show placeholder/error text and disable controls
+                // Handle null settings (error case)
                 binding.textViewSettingsPlaceholder.text = getString(R.string.error_settings_load_failed)
                 binding.textViewSettingsPlaceholder.visibility = View.VISIBLE
-                binding.modeToggleGroup.isEnabled = false
-                binding.switchSpin.isEnabled = false
-                binding.switchAnnounce.isEnabled = false
-                binding.switchCelebrate.isEnabled = false
-                binding.switchSequence.isEnabled = false
-                binding.buttonListEditor.isEnabled = false
-                binding.slotsNumColumnsToggleGroup.isEnabled = false
-                // Also clear toggle group selection visually on error
-                binding.modeToggleGroup.clearChecked()
+                enableAllControls(false) // Disable all controls
+                binding.modeToggleGroup.clearChecked() // Clear mode selection on error
+                binding.slotsNumColumnsToggleGroup.clearChecked() // Clear slots selection
             }
+            // Reset all update flags
             isUpdatingSwitches = false
             isUpdatingMode = false
+            isUpdatingSlotsColumns = false
+            isUpdatingDiceSettings = false
         }
 
         // Observe Error Event
@@ -198,6 +254,22 @@ class RandomizerSettingsFragment : Fragment() {
         }
     }
 
+    // Helper to enable/disable all controls during load/error
+    private fun enableAllControls(enabled: Boolean) {
+        binding.modeToggleGroup.isEnabled = enabled
+        binding.buttonListEditor.isEnabled = enabled
+        binding.slotsNumColumnsToggleGroup.isEnabled = enabled
+        binding.switchUseDicePips.isEnabled = enabled
+        binding.switchIsPercentileDiceEnabled.isEnabled = enabled
+        binding.switchIsDiceAnimationEnabled.isEnabled = enabled
+        binding.switchIsDiceCritCelebrationEnabled.isEnabled = enabled
+        binding.switchIsAnnounceEnabled.isEnabled = enabled
+        binding.switchIsCelebrateEnabled.isEnabled = enabled
+        binding.switchSpin.isEnabled = enabled
+        binding.switchIsSequenceEnabled.isEnabled = enabled
+        // Add graph controls later
+    }
+
     // Update Mode Selection UI and visibility/enablement of related controls
     private fun updateModeSelectionUI(currentMode: RandomizerMode) {
         val buttonIdToCheck = when (currentMode) {
@@ -210,31 +282,41 @@ class RandomizerSettingsFragment : Fragment() {
             binding.modeToggleGroup.check(buttonIdToCheck)
         }
 
-        // Visibility/Enablement based on mode
+        // --- Visibility Control ---
         val listModes = listOf(RandomizerMode.SPIN, RandomizerMode.SLOTS, RandomizerMode.DICE, RandomizerMode.COIN_FLIP)
-        val announceModes = listOf(RandomizerMode.SPIN, RandomizerMode.SLOTS)
-        val isSpinMode = currentMode == RandomizerMode.SPIN
-        val isSlotsMode = currentMode == RandomizerMode.SLOTS
-        val isDiceMode = currentMode == RandomizerMode.DICE
-        val isCoinFlipMode = currentMode == RandomizerMode.COIN_FLIP
+        val announceModes = listOf(RandomizerMode.SPIN, RandomizerMode.SLOTS, RandomizerMode.DICE)
 
-        binding.buttonListEditor.isVisible = currentMode in listModes // Use isVisible
-        binding.switchSpin.isVisible = isSpinMode
-        binding.switchAnnounce.isVisible = currentMode in announceModes
-        binding.switchCelebrate.isVisible = isSpinMode
-        binding.switchSequence.isVisible = isSpinMode
+        // Mode Specific Sections
+        binding.buttonListEditor.isVisible = currentMode in listModes
+        binding.slotsSettingsLayout.isVisible = currentMode == RandomizerMode.SLOTS
+        binding.diceSettingsLayout.isVisible = currentMode == RandomizerMode.DICE
+        binding.diceSettingsLayout.isVisible = currentMode == RandomizerMode.COIN_FLIP
 
-        // *** SHOW/HIDE SLOTS SETTINGS ***
-        binding.slotsSettingsLayout.isVisible = isSlotsMode // Show layout only for Slots
+        // Common Settings Visibility
+        binding.switchIsAnnounceEnabled.isVisible = currentMode in announceModes
+        binding.switchIsCelebrateEnabled.isVisible = currentMode == RandomizerMode.SPIN // Only show general celebrate for Spin?
 
-        // Adjust enablement based on other switches (only relevant if visible)
-        val sequenceEnabled = viewModel.settings.value?.isSequenceEnabled ?: false
-        val announceChecked = viewModel.settings.value?.isAnnounceEnabled ?: false
+        // Spin Specific Settings Visibility
+        binding.switchSpin.isVisible = currentMode == RandomizerMode.SPIN
+        binding.switchIsSequenceEnabled.isVisible = currentMode == RandomizerMode.SPIN
 
-        // Announce is disabled if sequence is ON (applies only if Announce is visible)
-        binding.switchAnnounce.isEnabled = !sequenceEnabled && binding.switchAnnounce.isVisible
+        // --- Adjust Enablement Based on Visibility and Dependencies ---
+        // (This part needs careful implementation based on final logic)
+        val settings = viewModel.settings.value // Get current settings for dependency checks
+        val announceEnabled = settings?.isAnnounceEnabled ?: false
+        val sequenceEnabled = settings?.isSequenceEnabled ?: false
+        // val graphEnabled = settings?.graphDistributionType != GraphDistributionType.OFF // Check graph state later
 
-        // Celebrate is disabled if sequence is ON OR announce is OFF (applies only if Celebrate is visible)
-        binding.switchCelebrate.isEnabled = !sequenceEnabled && announceChecked && binding.switchCelebrate.isVisible
+        // Example dependencies:
+        binding.switchIsCelebrateEnabled.isEnabled = announceEnabled && binding.switchIsCelebrateEnabled.isVisible
+        binding.switchIsDiceCritCelebrationEnabled.isEnabled = announceEnabled && binding.switchIsDiceCritCelebrationEnabled.isVisible
+
+        // Spin-specific dependencies
+        if (currentMode == RandomizerMode.SPIN) {
+            binding.switchIsAnnounceEnabled.isEnabled = !sequenceEnabled && binding.switchIsAnnounceEnabled.isVisible
+            binding.switchIsCelebrateEnabled.isEnabled = !sequenceEnabled && announceEnabled && binding.switchIsCelebrateEnabled.isVisible
+        }
+
+        // Add logic for Graph disabling Announce later
     }
 }
