@@ -140,12 +140,12 @@ class MainActivity : AppCompatActivity() {
                 AppIntent(
                     title = getString(R.string.screen_shade_title),
                     icon = ContextCompat.getDrawable(this, R.drawable.ic_shade),
-                    action = { startActivity(Intent(this, ScreenShadeActivity::class.java)) }
-                ),
-                AppIntent(
-                    title = getString(R.string.spotlight_title),
-                    icon = ContextCompat.getDrawable(this, R.drawable.ic_spotlight),
-                    action = { startActivity(Intent(this, SpotlightActivity::class.java)) }
+                    action = {
+                        val intent = Intent(this, SpotlightService::class.java).apply {
+                            action = ACTION_START_SPOTLIGHT // Use action defined in Service
+                        }
+                        ContextCompat.startForegroundService(this, intent)
+                    }
                 ),
                 AppIntent(
                     title = getString(R.string.timers_title),

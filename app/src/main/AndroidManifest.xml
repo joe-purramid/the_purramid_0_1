@@ -123,9 +123,9 @@
                 android:gravity="center" />
         </activity>
 
-<!--        <service android:name=".SpotlightService"
+        <service android:name=".SpotlightService"
             android:enabled="true"
-            android:exported="false" /> -->
+            android:exported="false" />
 
         <activity android:name=".timers.TimersActivity"
             android:exported="false"
