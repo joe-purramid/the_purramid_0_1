@@ -31,6 +31,9 @@ data class TrafficLightState(
     val orientation: Orientation = Orientation.VERTICAL,
     val isBlinkingEnabled: Boolean = true,
     val activeLight: LightColor? = null,
+    val isSettingsOpen: Boolean = false, // To track if settings is open for *this* instance 
+    val isMicrophoneAvailable: Boolean = true, // Assume available for now, update later 
+    val numberOfOpenInstances: Int = 1 // Assume 1 for now, update later 
     // Add fields for position, size, settings persistence later
     // val windowX: Int = 0,
     // val windowY: Int = 0,
@@ -90,8 +93,11 @@ class TrafficLightViewModel @Inject constructor(
     }
 
     fun setMode(newMode: TrafficLightMode) {
-        _uiState.update { it.copy(currentMode = newMode) }
-         // If switching away from Manual, potentially clear active light? Check requirements.
+        var newActiveLight = _uiState.value.activeLight 
+        if (newMode == TrafficLightMode.TIMED_CHANGE || (newMode == TrafficLightMode.RESPONSIVE_CHANGE && _uiState.value.currentMode != TrafficLightMode.RESPONSIVE_CHANGE)) { 
+             newActiveLight = null // Clear light when switching to Timed or initially to Responsive 
+        }
+         _uiState.update { it.copy(currentMode = newMode) }
          // if(newMode != TrafficLightMode.MANUAL_CHANGE) {
          //      _uiState.update { it.copy(activeLight = null) }
          // }
@@ -101,6 +107,27 @@ class TrafficLightViewModel @Inject constructor(
      fun toggleBlinking(isEnabled: Boolean) {
         _uiState.update { it.copy(isBlinkingEnabled = isEnabled) }
         // TODO: Persist change
+    }
+
+    fun setSettingsOpen(isOpen: Boolean) { 
+         _uiState.update { it.copy(isSettingsOpen = isOpen) } 
+    }
+
+    // --- Placeholder functions for settings items to be implemented later --- 
+    fun setShowTimeRemaining(show: Boolean) { 
+         // TODO: Update state and persist 
+         Log.d("TrafficLightVM", "Set Show Time Remaining: $show") 
+    } 
+
+    fun setShowTimeline(show: Boolean) { 
+         // TODO: Update state and persist 
+         Log.d("TrafficLightVM", "Set Show Timeline: $show") 
+         } 
+
+    // To be called from Activity when it's created, potentially with an ID from Intent 
+    fun initializeInstance(id: Int) { 
+         _uiState.update { it.copy(instanceId = id) } 
+         // TODO: Load specific persisted state for this instanceId 
     }
 
     // --- Functions for future features ---

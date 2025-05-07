@@ -2,15 +2,23 @@
 package com.example.purramid.thepurramid.traffic_light
 
 import android.app.Dialog
+import android.content.DialogInterface
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
+import android.widget.Toast
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.activityViewModels // Use activityViewModels if sharing ViewModel with Activity
+import androidx.lifecycle.Lifecycle 
+import androidx.lifecycle.lifecycleScope 
+import androidx.lifecycle.repeatOnLifecycle 
 import com.example.purramid.thepurramid.R
 import com.example.purramid.thepurramid.databinding.FragmentTrafficLightSettingsBinding
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import kotlinx.coroutines.launch
 
 // Note: Using activityViewModels assumes you want this settings fragment
 // to directly interact with the TrafficLightActivity's ViewModel instance.
@@ -23,6 +31,9 @@ class TrafficLightSettingsFragment : DialogFragment() {
 
     // Get a reference to the Activity's ViewModel
     private val viewModel: TrafficLightViewModel by activityViewModels()
+
+    // To prevent listener loops during programmatic changes 
+    private var blockListeners: Boolean = false 
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
