@@ -10,6 +10,11 @@ import com.example.purramid.thepurramid.randomizers.GraphDistributionType
 import com.example.purramid.thepurramid.randomizers.GraphLineStyle
 import com.example.purramid.thepurramid.randomizers.SlotsColumnState
 import com.example.purramid.thepurramid.spotlight.SpotlightView
+import com.example.purramid.thepurramid.traffic_light.viewmodel.DbRange // Import if storing DbRange separately
+import com.example.purramid.thepurramid.traffic_light.viewmodel.LightColor
+import com.example.purramid.thepurramid.traffic_light.viewmodel.Orientation
+import com.example.purramid.thepurramid.traffic_light.viewmodel.ResponsiveModeSettings
+import com.example.purramid.thepurramid.traffic_light.viewmodel.TrafficLightMode
 import java.util.UUID
 
 /**
@@ -201,4 +206,76 @@ class Converters {
             null // Return null if the string doesn't match an enum constant
         }
     }
+
+    @TypeConverter
+    fun fromTrafficLightMode(mode: TrafficLightMode?): String? {
+        return mode?.name ?: TrafficLightMode.MANUAL_CHANGE.name // Default if null
+    }
+
+    @TypeConverter
+    fun toTrafficLightMode(modeName: String?): TrafficLightMode {
+        return try {
+            modeName?.let { TrafficLightMode.valueOf(it) } ?: TrafficLightMode.MANUAL_CHANGE
+        } catch (e: IllegalArgumentException) {
+            Log.e("Converters", "Invalid TrafficLightMode string: $modeName", e)
+            TrafficLightMode.MANUAL_CHANGE // Default on error
+        }
+    }
+
+    @TypeConverter
+    fun fromOrientation(orientation: Orientation?): String? {
+        return orientation?.name ?: Orientation.VERTICAL.name // Default if null
+    }
+
+    @TypeConverter
+    fun toOrientation(orientationName: String?): Orientation {
+        return try {
+            orientationName?.let { Orientation.valueOf(it) } ?: Orientation.VERTICAL
+        } catch (e: IllegalArgumentException) {
+            Log.e("Converters", "Invalid Orientation string: $orientationName", e)
+            Orientation.VERTICAL // Default on error
+        }
+    }
+
+    @TypeConverter
+    fun fromLightColor(color: LightColor?): String? {
+        return color?.name // Nullable color maps directly to nullable string
+    }
+
+    @TypeConverter
+    fun toLightColor(colorName: String?): LightColor? {
+        return try {
+            colorName?.let { LightColor.valueOf(it) }
+        } catch (e: IllegalArgumentException) {
+            Log.e("Converters", "Invalid LightColor string: $colorName", e)
+            null // Return null if string is invalid or null
+        }
+    }
+
+    // --- Traffic Light Settings Object Converter ---
+    @TypeConverter
+    fun fromResponsiveModeSettings(settings: ResponsiveModeSettings?): String? {
+        return settings?.let { gson.toJson(it) }
+    }
+
+    @TypeConverter
+    fun toResponsiveModeSettings(settingsJson: String?): ResponsiveModeSettings? {
+        if (settingsJson.isNullOrEmpty()) {
+            return null // Or return default: ResponsiveModeSettings()
+        }
+        return try {
+            gson.fromJson(settingsJson, ResponsiveModeSettings::class.java)
+        } catch (e: Exception) {
+            Log.e("Converters", "Failed to parse ResponsiveModeSettings JSON: $settingsJson", e)
+            null // Or return default
+        }
+    }
+
+    // Optional: If you decide to store DbRange separately (not needed if part of Settings JSON)
+    /*
+    @TypeConverter
+    fun fromDbRange(range: DbRange?): String? { ... }
+    @TypeConverter
+    fun toDbRange(rangeJson: String?): DbRange? { ... }
+    */
 }

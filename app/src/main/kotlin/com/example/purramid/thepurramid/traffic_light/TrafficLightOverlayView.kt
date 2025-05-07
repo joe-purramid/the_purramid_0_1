@@ -3,6 +3,7 @@ package com.example.purramid.thepurramid.traffic_light
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.graphics.Rect
 import android.util.AttributeSet
 import android.util.Log
 import android.view.LayoutInflater
@@ -29,18 +30,19 @@ class TrafficLightOverlayView @JvmOverloads constructor(
     var interactionListener: InteractionListener? = null
 
     // --- Touch Handling Variables ---
-    private var initialX: Float = 0f
-    private var initialY: Float = 0f
     private var initialTouchX: Float = 0f
     private var initialTouchY: Float = 0f
     private var isMoving = false
-    private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
+    private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop.toFloat()
+
+    // Rect for hit testing buttons
+    private val viewBoundsRect = Rect()
 
     interface InteractionListener {
         fun onLightTapped(color: LightColor)
         fun onCloseRequested()
         fun onSettingsRequested()
-        fun onMove(deltaX: Int, deltaY: Int)
+        fun onMove(rawDeltaX: Float, rawDeltaY: Float)
         fun onMoveFinished()
         // Add onResize methods if needed
     }
@@ -89,7 +91,7 @@ class TrafficLightOverlayView @JvmOverloads constructor(
     // --- Touch Handling for Movement ---
     @SuppressLint("ClickableViewAccessibility")
     private fun setupTouchListener() {
-        binding.overlayRootLayout.setOnTouchListener { _, event ->
+        this.setOnTouchListener { _, event ->
             // Allow touches on buttons to pass through
             if (isTouchOnButton(event)) {
                  return@setOnTouchListener false // Don't consume if touch is on a button
@@ -100,7 +102,7 @@ class TrafficLightOverlayView @JvmOverloads constructor(
                     initialTouchX = event.rawX
                     initialTouchY = event.rawY
                     // Get initial window position (needs to be passed from Service or stored)
-                    // For simplicity, we calculate deltas and notify the service
+                    // For simplicity, calculate deltas and notify the service
                     isMoving = false
                     true // Consume ACTION_DOWN to receive MOVE/UP
                 }
@@ -133,6 +135,9 @@ class TrafficLightOverlayView @JvmOverloads constructor(
                     true // Consume UP event
                 }
                 MotionEvent.ACTION_CANCEL -> {
+                    if (isMoving) {
+                        interactionListener?.onMoveFinished() // Treat cancel like UP for saving position
+                    }
                     isMoving = false
                     true // Consume CANCEL event
                 }
@@ -141,7 +146,30 @@ class TrafficLightOverlayView @JvmOverloads constructor(
         }
     }
 
-     private fun isTouchOnButton(event: MotionEvent): Boolean {
+    // Helper to check if touch is within the bounds of any interactive child
+    private fun isTouchOnInteractiveElement(event: MotionEvent): Boolean {
+        val x = event.x.toInt()
+        val y = event.y.toInt()
+
+        // Check buttons first as they are smaller targets
+        if (isTouchInsideTarget(x, y, binding.overlayButtonClose)) return true
+        if (isTouchInsideTarget(x, y, binding.overlayButtonSettings)) return true
+
+        // Check currently visible light container
+        if (binding.trafficLightVerticalContainerOverlay.isVisible) {
+            if (isTouchInsideTarget(x, y, binding.lightRedVerticalOverlay)) return true
+            if (isTouchInsideTarget(x, y, binding.lightYellowVerticalOverlay)) return true
+            if (isTouchInsideTarget(x, y, binding.lightGreenVerticalOverlay)) return true
+        } else if (binding.trafficLightHorizontalContainerOverlay.isVisible) {
+            if (isTouchInsideTarget(x, y, binding.lightRedHorizontalOverlay)) return true
+            if (isTouchInsideTarget(x, y, binding.lightYellowHorizontalOverlay)) return true
+            if (isTouchInsideTarget(x, y, binding.lightGreenHorizontalOverlay)) return true
+        }
+
+        return false
+    }
+
+    private fun isTouchOnButton(event: MotionEvent): Boolean {
         val x = event.x.toInt()
         val y = event.y.toInt()
 
@@ -174,5 +202,4 @@ class TrafficLightOverlayView @JvmOverloads constructor(
                x >= target.left && x <= target.right &&
                y >= target.top && y <= target.bottom
     }
-
 }

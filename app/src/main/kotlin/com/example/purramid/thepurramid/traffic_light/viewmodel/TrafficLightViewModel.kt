@@ -2,21 +2,36 @@ package com.example.purramid.thepurramid.traffic_light.viewmodel
 
 import android.os.SystemClock // For double-tap timing
 import android.util.Log
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
-// import androidx.lifecycle.viewModelScope // Only if you add coroutines here
+// import androidx.lifecycle.viewModelScope
+import com.example.purramid.thepurramid.data.db.TrafficLightDao
+import com.example.purramid.thepurramid.data.db.TrafficLightStateEntity
 import com.example.purramid.thepurramid.traffic_light.AdjustValuesFragment // For ColorForRange enum
+import com.google.gson.Gson
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.Dispatchers
+iimport kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @HiltViewModel
 class TrafficLightViewModel @Inject constructor(
-    // TODO: Inject Repository for persistence later
-    // private val repository: TrafficLightRepository
+    private val trafficLightDao: TrafficLightDao, // Inject DAO
+    private val savedStateHandle: SavedStateHandle // Inject SavedStateHandle
 ) : ViewModel() {
+
+    companion object {
+        const val KEY_INSTANCE_ID = TrafficLightActivity.EXTRA_INSTANCE_ID // Use key from Activity
+        private const val TAG = "TrafficLightVM"
+    }
+
+    // instanceId passed via Intent/Args through SavedStateHandle
+    private val instanceId: Int? = savedStateHandle[KEY_INSTANCE_ID]
 
     private val _uiState = MutableStateFlow(TrafficLightState())
     val uiState: StateFlow<TrafficLightState> = _uiState.asStateFlow()
@@ -27,177 +42,244 @@ class TrafficLightViewModel @Inject constructor(
     private val doubleTapTimeoutMs: Long = 500 // Standard double-tap timeout
 
     init {
-        // TODO: Load initial state from repository
-        // viewModelScope.launch {
-        //     _uiState.value = repository.loadInitialState()
-        // }
+        Log.d(TAG, "Initializing ViewModel for instanceId: $instanceId")
+        if (instanceId != null) {
+            loadInitialState(instanceId)
+        } else {
+            Log.e(TAG, "Instance ID is null, cannot load state.")
+            // Consider setting an error state or using a default non-persistent instance ID
+            _uiState.update { it.copy(instanceId = -1) } // Indicate error or default
+        }
+    }
+
+    private fun loadInitialState(id: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val entity = trafficLightDao.getById(id)
+            withContext(Dispatchers.Main) {
+                if (entity != null) {
+                    Log.d(TAG, "Loaded state from DB for instance $id")
+                    _uiState.value = mapEntityToState(entity)
+                } else {
+                    Log.d(TAG, "No saved state found for instance $id, using defaults.")
+                    // Initialize with default state for this new instance ID
+                    val defaultState = TrafficLightState(instanceId = id)
+                    _uiState.value = defaultState
+                    // Save the initial default state to the DB
+                    saveState(defaultState)
+                }
+            }
+        }
     }
 
     fun handleLightTap(tappedColor: LightColor) {
         val currentTimeMs = SystemClock.elapsedRealtime()
         val currentState = _uiState.value
 
-        if (currentState.currentMode == TrafficLightMode.MANUAL_CHANGE) {
-            if (currentState.activeLight == tappedColor &&
-                (currentTimeMs - lastTapTimeMs) < doubleTapTimeoutMs &&
-                lastTappedColor == tappedColor
-            ) {
-                // Double tap on the active light: turn it off
-                _uiState.update { it.copy(activeLight = null) }
-                // Reset tap tracking
-                lastTapTimeMs = 0
-                lastTappedColor = null
-            } else {
-                // Single tap or tap on a different light: turn the tapped light on
-                _uiState.update { it.copy(activeLight = tappedColor) }
-                // Update tap tracking for potential double tap
-                lastTapTimeMs = currentTimeMs
-                lastTappedColor = tappedColor
-            }
+        if (currentState.currentMode != TrafficLightMode.MANUAL_CHANGE) return
+
+        var newActiveLight: LightColor? = null
+        if (currentState.activeLight == tappedColor &&
+            (currentTimeMs - lastTapTimeMs) < doubleTapTimeoutMs &&
+            lastTappedColor == tappedColor
+        ) {
+            // Double tap on active: turn off
+            newActiveLight = null
+            lastTapTimeMs = 0
+            lastTappedColor = null
+        } else {
+            // Single tap or different light: turn tapped on
+            newActiveLight = tappedColor
+            lastTapTimeMs = currentTimeMs
+            lastTappedColor = tappedColor
         }
-        // TODO: Handle taps in other modes if necessary (might be disabled)
+
+        if (currentState.activeLight != newActiveLight) {
+            _uiState.update { it.copy(activeLight = newActiveLight) }
+            saveState(_uiState.value) // Save updated state
+        }
     }
 
     fun setOrientation(newOrientation: Orientation) {
+        if (_uiState.value.orientation == newOrientation) return
         _uiState.update { it.copy(orientation = newOrientation) }
-        // TODO: Persist change
+        saveState(_uiState.value)
     }
 
     fun setMode(newMode: TrafficLightMode) {
         val currentState = _uiState.value
-        var updatedActiveLight = currentState.activeLight
+        if (currentState.currentMode == newMode) return
 
-        if (currentState.currentMode != newMode && currentState.activeLight != null) {
-            // If the mode is actually changing AND a light is currently active,
-            // clear the active light.
-            updatedActiveLight = null
+        var updatedActiveLight = currentState.activeLight
+        if (currentState.activeLight != null) {
+            updatedActiveLight = null // Clear light when changing mode
         }
-        // This covers the general case. Specific modes might have further initial states
-        // once entered (e.g., Timed mode waits for play, Responsive starts measuring).
 
         _uiState.update { it.copy(currentMode = newMode, activeLight = updatedActiveLight) }
-        // TODO: Persist currentMode and activeLight changes
+        saveState(_uiState.value)
     }
 
-     fun toggleBlinking(isEnabled: Boolean) {
+    fun toggleBlinking(isEnabled: Boolean) {
+        if (_uiState.value.isBlinkingEnabled == isEnabled) return
         _uiState.update { it.copy(isBlinkingEnabled = isEnabled) }
-        // TODO: Persist change
+        saveState(_uiState.value)
     }
 
     fun setSettingsOpen(isOpen: Boolean) {
-         _uiState.update { it.copy(isSettingsOpen = isOpen) }
+        // isSettingsOpen is likely transient UI state, maybe don't persist?
+        // If persistence is desired, uncomment saveState.
+        _uiState.update { it.copy(isSettingsOpen = isOpen) }
+        // saveState(_uiState.value)
     }
 
     // --- Placeholder functions for settings items to be implemented later ---
     fun setShowTimeRemaining(show: Boolean) {
-         // TODO: Update state and persist
-         Log.d("TrafficLightVM", "Set Show Time Remaining: $show")
-    }
+        if (_uiState.value.showTimeRemaining == show) return
+        _uiState.update { it.copy(showTimeRemaining = show) }
+        saveState(_uiState.value) // Save the change
+   }
 
     fun setShowTimeline(show: Boolean) {
-         // TODO: Update state and persist
-         Log.d("TrafficLightVM", "Set Show Timeline: $show")
-         }
+        if (_uiState.value.showTimeline == show) return
+        _uiState.update { it.copy(showTimeline = show) }
+        saveState(_uiState.value) // Save the change
+        }
 
     fun updateResponsiveSettings(newSettings: ResponsiveModeSettings) {
+        if (_uiState.value.responsiveModeSettings == newSettings) return
         _uiState.update { it.copy(responsiveModeSettings = newSettings) }
-        // TODO: Persist change
+        saveState(_uiState.value)
     }
 
     fun setDangerousSoundAlert(isEnabled: Boolean) {
         val currentSettings = _uiState.value.responsiveModeSettings
-        _uiState.update {
-            it.copy(responsiveModeSettings = currentSettings.copy(dangerousSoundAlertEnabled = isEnabled))
-        }
-        // TODO: Persist change
+        if (currentSettings.dangerousSoundAlertEnabled == isEnabled) return
+        val newSettings = currentSettings.copy(dangerousSoundAlertEnabled = isEnabled)
+        updateResponsiveSettings(newSettings) // Calls saveState internally
     }
 
-    // Placeholder for complex update logic
     fun updateSpecificDbValue(
-        colorForRange: AdjustValuesFragment.ColorForRange, // Using enum from Fragment for now
+        colorForRange: AdjustValuesFragment.ColorForRange,
         isMinField: Boolean,
         newValue: Int?
     ) {
         val currentSettings = _uiState.value.responsiveModeSettings
+        val updatedSettings = calculateUpdatedRanges(currentSettings, colorForRange, isMinField, newValue)
+
+        if (currentSettings != updatedSettings) {
+            updateResponsiveSettings(updatedSettings) // Calls saveState internally
+        }
+    }
+
+    // Extracted calculation logic (remains complex, needs careful implementation)
+    private fun calculateUpdatedRanges(
+        currentSettings: ResponsiveModeSettings,
+        colorForRange: AdjustValuesFragment.ColorForRange,
+        isMinField: Boolean,
+        newValue: Int?
+    ) : ResponsiveModeSettings {
+        // --- START OF COMPLEX LINKED LOGIC (placeholder - needs full implementation) ---
         var newGreen = currentSettings.greenRange
         var newYellow = currentSettings.yellowRange
         var newRed = currentSettings.redRange
+        val safeValue = newValue?.coerceIn(0, 120)
 
-        // --- START OF COMPLEX LINKED LOGIC (TO BE FULLY IMPLEMENTED) ---
-        // This is a simplified placeholder. Real logic needs to handle:
-        // - Ensuring min <= max for the same color.
-        // - Adjacency: Green.max < Yellow.min, Yellow.max < Red.min
-        // - Auto-adjusting adjacent bands.
-        // - N/A logic if bands are eliminated.
-        // - Clamping values (0-120 for Red.max, etc.)
-
-        val safeValue = newValue?.coerceIn(0, 120) // Basic clamping
-
-        when (colorForRange) {
-            AdjustValuesFragment.ColorForRange.GREEN -> {
-                newGreen = if (isMinField) newGreen.copy(minDb = safeValue) else newGreen.copy(maxDb = safeValue)
-                // Example: if green.max changes, yellow.min might need to change
-                if (!isMinField && safeValue != null && newYellow.minDb != null && safeValue >= newYellow.minDb!!) {
-                    newYellow = newYellow.copy(minDb = safeValue + 1)
-                } else if (isMinField && safeValue !=null && newGreen.maxDb !=null && safeValue >= newGreen.maxDb!!){
-                    // if min becomes > max, set max to min+1 or handle error
-                    newGreen = newGreen.copy(maxDb = safeValue+1) // very basic
-                }
-
-            }
-            AdjustValuesFragment.ColorForRange.YELLOW -> {
-                newYellow = if (isMinField) newYellow.copy(minDb = safeValue) else newYellow.copy(maxDb = safeValue)
-                // Example: if yellow.min changes, green.max might need to change
-                if (isMinField && safeValue != null && newGreen.maxDb != null && safeValue <= newGreen.maxDb!!) {
-                    newGreen = newGreen.copy(maxDb = safeValue - 1)
-                }
-                // Example: if yellow.max changes, red.min might need to change
-                if (!isMinField && safeValue != null && newRed.minDb != null && safeValue >= newRed.minDb!!) {
-                    newRed = newRed.copy(minDb = safeValue + 1)
-                }
-            }
-            AdjustValuesFragment.ColorForRange.RED -> {
-                newRed = if (isMinField) newRed.copy(minDb = safeValue) else newRed.copy(maxDb = safeValue)
-                // Example: if red.min changes, yellow.max might need to change
-                if (isMinField && safeValue != null && newYellow.maxDb != null && safeValue <= newYellow.maxDb!!) {
-                    newYellow = newYellow.copy(maxDb = safeValue - 1)
-                }
-            }
+        // TODO: Implement the full cascading logic for min/max and N/A states
+        // This placeholder just updates the specific field without validation/cascading
+        when(colorForRange) {
+            AdjustValuesFragment.ColorForRange.GREEN -> newGreen = if (isMinField) newGreen.copy(minDb = safeValue) else newGreen.copy(maxDb = safeValue)
+            AdjustValuesFragment.ColorForRange.YELLOW -> newYellow = if (isMinField) newYellow.copy(minDb = safeValue) else newYellow.copy(maxDb = safeValue)
+            AdjustValuesFragment.ColorForRange.RED -> newRed = if (isMinField) newRed.copy(minDb = safeValue) else newRed.copy(maxDb = safeValue)
         }
-
-        // --- N/A Logic Placeholder ---
-        // If Green max >= Yellow max -> Yellow becomes N/A
-        if (newGreen.maxDb != null && newYellow.maxDb != null && !newYellow.isNa() && newGreen.maxDb!! >= newYellow.maxDb!!) {
-            newYellow = DbRange.NA_RANGE
-        }
-        // If Yellow max >= Red max (and Yellow not N/A) -> Red might become N/A (or just clamped)
-        // If Green min >= Red min (and Green not N/A) -> Yellow and Red might become N/A
-
-        // Basic check for green range validity
-        if (newGreen.minDb != null && newGreen.maxDb != null && newGreen.minDb!! > newGreen.maxDb!!) {
-            newGreen = newGreen.copy(maxDb = newGreen.minDb) // or revert, or show error
-        }
-        // Similar checks for yellow and red
-
-
-        // Ensure ranges don't overlap improperly or become invalid
-        // This requires careful cascading updates.
-        // Example: If Green.Max is set to 70:
-        //  - Yellow.Min should become 71.
-        //  - If Yellow.Max was < 71, Yellow becomes N/A.
-        //      - Then Green.Max might extend further, or Red.Min needs to adjust to Green.Max + 1.
-
-        // This logic will be the most complex part of this feature.
-        // For now, this is a very simplified update.
-
         // --- END OF COMPLEX LINKED LOGIC ---
 
-        val updatedSettings = currentSettings.copy(
-            greenRange = newGreen,
-            yellowRange = newYellow,
-            redRange = newRed
+        // Return potentially modified ranges
+        return currentSettings.copy(greenRange = newGreen, yellowRange = newYellow, redRange = newRed)
+    }
+
+    // --- Persistence ---
+    private fun saveState(state: TrafficLightState) {
+        val currentInstanceId = state.instanceId
+        if (currentInstanceId <= 0) { // Don't save if ID is invalid/default
+            Log.w(TAG, "Attempted to save state with invalid instanceId: $currentInstanceId")
+            return
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val entity = mapStateToEntity(state)
+                trafficLightDao.insertOrUpdate(entity)
+                Log.d(TAG, "Saved state for instance $currentInstanceId")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to save state for instance $currentInstanceId", e)
+                // Optionally notify UI of save failure
+            }
+        }
+    }
+
+    fun saveWindowPosition(x: Int, y: Int) {
+        val currentState = _uiState.value
+        if (currentState.windowX == x && currentState.windowY == y) return
+        _uiState.update { it.copy(windowX = x, windowY = y) }
+        saveState(_uiState.value)
+    }
+
+    fun saveWindowSize(width: Int, height: Int) {
+        val currentState = _uiState.value
+        if (currentState.windowWidth == width && currentState.windowHeight == height) return
+        _uiState.update { it.copy(windowWidth = width, windowHeight = height) }
+        saveState(_uiState.value)
+    }
+
+    // --- Mappers ---
+    private fun mapEntityToState(entity: TrafficLightStateEntity): TrafficLightState {
+        val responsiveSettings = try {
+            gson.fromJson(entity.responsiveModeSettingsJson, ResponsiveModeSettings::class.java)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to parse ResponsiveModeSettings JSON, using default.", e)
+            ResponsiveModeSettings() // Default on error
+        }
+        return TrafficLightState(
+            instanceId = entity.instanceId,
+            currentMode = try { TrafficLightMode.valueOf(entity.currentMode) } catch (e: Exception) { TrafficLightMode.MANUAL_CHANGE },
+            orientation = try { Orientation.valueOf(entity.orientation) } catch (e: Exception) { Orientation.VERTICAL },
+            isBlinkingEnabled = entity.isBlinkingEnabled,
+            activeLight = entity.activeLight?.let { try { LightColor.valueOf(it) } catch (e: Exception) { null } },
+            isSettingsOpen = entity.isSettingsOpen,
+            isMicrophoneAvailable = entity.isMicrophoneAvailable,
+            numberOfOpenInstances = entity.numberOfOpenInstances,
+            responsiveModeSettings = responsiveSettings,
+            windowX = entity.windowX,
+            windowY = entity.windowY,
+            windowWidth = entity.windowWidth,
+            windowHeight = entity.windowHeight
         )
-        _uiState.update { it.copy(responsiveModeSettings = updatedSettings) }
-        // TODO: Persist
+    }
+
+    private fun mapStateToEntity(state: TrafficLightState): TrafficLightStateEntity {
+        val responsiveJson = gson.toJson(state.responsiveModeSettings)
+        return TrafficLightStateEntity(
+            instanceId = state.instanceId,
+            currentMode = state.currentMode.name,
+            orientation = state.orientation.name,
+            isBlinkingEnabled = state.isBlinkingEnabled,
+            activeLight = state.activeLight?.name,
+            isSettingsOpen = state.isSettingsOpen,
+            isMicrophoneAvailable = state.isMicrophoneAvailable,
+            numberOfOpenInstances = state.numberOfOpenInstances, // This might be better managed globally
+            responsiveModeSettingsJson = responsiveJson,
+            showTimeRemaining = state.showTimeRemaining,
+            showTimeline = state.showTimeline,
+            windowX = state.windowX,
+            windowY = state.windowY,
+            windowWidth = state.windowWidth,
+            windowHeight = state.windowHeight
+        )
+    }
+
+    // --- Cleanup ---
+    override fun onCleared() {
+        Log.d(TAG, "ViewModel cleared for instanceId: $instanceId")
+        // Persist final state before clearing? Usually done on state change.
+        // saveState(_uiState.value) // Consider if needed here
+        super.onCleared()
     }
 }

@@ -14,7 +14,9 @@ import android.os.IBinder
 import android.util.Log
 import android.view.Gravity
 import android.view.WindowManager
+import android.view.WindowManager.LayoutParams
 import androidx.core.app.NotificationCompat
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStore
@@ -24,9 +26,11 @@ import com.example.purramid.thepurramid.MainActivity
 import com.example.purramid.thepurramid.R
 import com.example.purramid.thepurramid.traffic_light.viewmodel.TrafficLightViewModel
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 
 // Define Actions
 const val ACTION_START_TRAFFIC_LIGHT = "com.example.purramid.START_TRAFFIC_LIGHT"
@@ -37,7 +41,7 @@ const val ACTION_STOP_TRAFFIC_LIGHT = "com.example.purramid.STOP_TRAFFIC_LIGHT"
 class TrafficLightService : LifecycleService(), ViewModelStoreOwner { // Inherit from LifecycleService and implement ViewModelStoreOwner
 
     @Inject lateinit var windowManager: WindowManager
-    // @Inject lateinit var viewModelFactory: ViewModelProvider.Factory // Needed if not using Hilt directly
+    @Inject lateinit var viewModelFactory: ViewModelProvider.Factory // Inject factory
 
     private lateinit var viewModel: TrafficLightViewModel
     private val viewModelStore = ViewModelStore() // Required for ViewModelStoreOwner
@@ -46,6 +50,8 @@ class TrafficLightService : LifecycleService(), ViewModelStoreOwner { // Inherit
     private lateinit var layoutParams: WindowManager.LayoutParams
 
     private var isViewAdded = false
+    private var initialParamsSet = false // Flag to set initial params only once
+    private var stateObserverJob: Job? = null // Keep track of the observer job
 
     companion object {
         private const val TAG = "TrafficLightService"
@@ -60,67 +66,111 @@ class TrafficLightService : LifecycleService(), ViewModelStoreOwner { // Inherit
         super.onCreate()
         Log.d(TAG, "onCreate")
 
-        // --- ViewModel Initialization ---
-        // Use Hilt's default factory provided via Activity/Fragment scope or manual provider
-        // Since Service doesn't have direct Hilt ViewModel support, we get it manually
-        // This requires setting up Hilt correctly to provide ViewModels outside standard scopes or using Activity context (less ideal)
-        // A simpler way for now might be to tie VM lifecycle to service lifecycle manually.
-        // Let's use the standard Hilt injection via activityViewModels() in the Activity/Fragment
-        // and communicate state updates TO the service/view via other means (e.g., observing from service)
-        // --- OR --- Implement ViewModelStoreOwner as done above.
-
         // Initialize ViewModel using the service as the owner
-        viewModel = ViewModelProvider(this).get(TrafficLightViewModel::class.java)
+        // Note: AndroidViewModelFactory might be needed if ViewModel has Application context
+        viewModel = ViewModelProvider(this, viewModelFactory)[TrafficLightViewModel::class.java]
 
 
         createNotificationChannel()
-        setupLayoutParams()
+        setupDefaultLayoutParams()
 
-        // Observe ViewModel state to update the overlay view
+        // Launch coroutine to load initial state and set params
         lifecycleScope.launch {
-            viewModel.uiState.collectLatest { state ->
-                // Ensure view exists and state is valid before updating
-                overlayView?.updateState(state)
-                 // Update window size/position if needed based on state (e.g., orientation change might affect desired size)
-                 if (isViewAdded) {
-                    // Example: Adjust layout params based on orientation if needed
-                    // layoutParams.width = if (state.orientation == Orientation.VERTICAL) dpToPx(80) else dpToPx(220)
-                    // layoutParams.height = if (state.orientation == Orientation.VERTICAL) dpToPx(220) else dpToPx(80)
-                    // windowManager.updateViewLayout(overlayView, layoutParams)
-                 }
+            // Get the *first* non-default state emitted after loading
+            val initialState = viewModel.uiState.first { it.instanceId != 0 }
+            Log.d(TAG, "Initial state loaded: Pos=(${initialState.windowX}, ${initialState.windowY}), Size=(${initialState.windowWidth}x${initialState.windowHeight})")
+            applyStateToLayoutParams(initialState)
+            initialParamsSet = true
+            // If view is already added (e.g., service restart), update its layout
+            if (isViewAdded && overlayView != null) {
+                try {
+                    windowManager.updateViewLayout(overlayView, layoutParams)
+                } catch (e: Exception) { Log.e(TAG, "Error updating layout after initial load", e) }
             }
+            // Start observing subsequent state changes
+            observeViewModelState()
         }
     }
 
     private fun setupLayoutParams() {
-        // Initial size and position (can be loaded from ViewModel/DB later)
-        val initialWidth = resources.getDimensionPixelSize(R.dimen.traffic_light_default_width)
-        val initialHeight = resources.getDimensionPixelSize(R.dimen.traffic_light_default_height)
+        val defaultWidth = resources.getDimensionPixelSize(R.dimen.traffic_light_default_width)
+        val defaultHeight = resources.getDimensionPixelSize(R.dimen.traffic_light_default_height)
 
-        layoutParams = WindowManager.LayoutParams(
-            initialWidth,
-            initialHeight,
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-            } else {
-                WindowManager.LayoutParams.TYPE_SYSTEM_ALERT
-            },
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+        layoutParams = LayoutParams(
+            defaultWidth,
+            defaultHeight,
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) LayoutParams.TYPE_APPLICATION_OVERLAY else LayoutParams.TYPE_SYSTEM_ALERT,
+            LayoutParams.FLAG_NOT_FOCUSABLE or LayoutParams.FLAG_NOT_TOUCH_MODAL,
             PixelFormat.TRANSLUCENT
         ).apply {
-            gravity = Gravity.CENTER // Start centered or load last position
-            // Load x, y from ViewModel/DB later
-            // x = savedX
-            // y = savedY
+            gravity = Gravity.CENTER // Default to center
+            x = 0 // Will be updated from loaded state
+            y = 0 // Will be updated from loaded state
         }
     }
 
+    // Apply loaded/saved state to LayoutParams
+    private fun applyStateToLayoutParams(state: TrafficLightState) {
+        layoutParams.x = state.windowX
+        layoutParams.y = state.windowY
+        // Use default/wrap_content if saved size is invalid (-1)
+        layoutParams.width = if (state.windowWidth > 0) state.windowWidth else resources.getDimensionPixelSize(R.dimen.traffic_light_default_width)
+        layoutParams.height = if (state.windowHeight > 0) state.windowHeight else resources.getDimensionPixelSize(R.dimen.traffic_light_default_height)
+        // Ensure gravity is correct for absolute positioning
+        layoutParams.gravity = Gravity.TOP or Gravity.START
+    }
+
+    // Start observing state changes *after* initial load
+    private fun observeViewModelState() {
+        stateObserverJob?.cancel() // Cancel previous job if any
+        stateObserverJob = lifecycleScope.launch {
+            viewModel.uiState.collectLatest { state ->
+                if (state.instanceId == 0) return@collectLatest // Ignore default initial state
+
+                // Apply state to the view
+                overlayView?.updateState(state)
+
+                // Apply state to layout params *if* they differ and initial load is done
+                if (initialParamsSet) {
+                    var needsLayoutUpdate = false
+                    if (layoutParams.x != state.windowX || layoutParams.y != state.windowY) {
+                        layoutParams.x = state.windowX
+                        layoutParams.y = state.windowY
+                        layoutParams.gravity = Gravity.TOP or Gravity.START // Ensure correct gravity
+                        needsLayoutUpdate = true
+                    }
+                    val newWidth = if (state.windowWidth > 0) state.windowWidth else layoutParams.width // Keep current if state has no size
+                    val newHeight = if (state.windowHeight > 0) state.windowHeight else layoutParams.height
+
+                    if (layoutParams.width != newWidth || layoutParams.height != newHeight) {
+                        layoutParams.width = newWidth
+                        layoutParams.height = newHeight
+                        needsLayoutUpdate = true
+                    }
+
+                    if (needsLayoutUpdate && isViewAdded && overlayView != null) {
+                        try {
+                            windowManager.updateViewLayout(overlayView, layoutParams)
+                        } catch (e: Exception) { Log.e(TAG, "Error updating layout from state observer", e) }
+                    }
+                }
+            }
+        }
+    }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId) // Important for LifecycleService
         Log.d(TAG, "onStartCommand: ${intent?.action}")
         when (intent?.action) {
             ACTION_START_TRAFFIC_LIGHT -> {
+                // Ensure the ViewModel instance ID is correctly set if passed via intent
+                // Hilt handles SavedStateHandle injection, so ViewModel init should get it.
+                val idFromIntent = intent.getIntExtra(TrafficLightActivity.EXTRA_INSTANCE_ID, -1)
+                if (idFromIntent != -1 && viewModel.uiState.value.instanceId != idFromIntent) {
+                    Log.w(TAG, "Instance ID mismatch? Intent: $idFromIntent, VM: ${viewModel.uiState.value.instanceId}. Reloading VM state.")
+                    // This scenario needs careful handling. Maybe re-create VM or force load?
+                    // For now, rely on init loading the correct ID from SavedStateHandle.
+                }
                 startForegroundService()
                 addOverlayViewIfNeeded()
             }
@@ -145,21 +195,26 @@ class TrafficLightService : LifecycleService(), ViewModelStoreOwner { // Inherit
                     }
                     override fun onSettingsRequested() {
                         viewModel.setSettingsOpen(true)
-                        // Need context to show fragment - best launched from Activity
-                        // Send broadcast or use other mechanism to request Activity to show settings
                         val intent = Intent(this@TrafficLightService, TrafficLightActivity::class.java).apply {
-                            action = "SHOW_SETTINGS" // Define a custom action
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            // Pass instance ID if needed
+                            action = TrafficLightActivity.ACTION_SHOW_SETTINGS
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+                            // Pass the correct instance ID back to the activity
+                            putExtra(TrafficLightActivity.EXTRA_INSTANCE_ID, viewModel.uiState.value.instanceId)
                         }
-                        startActivity(intent) // Starting activity from service
+                        try {
+                            startActivity(intent)
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error starting TrafficLightActivity for settings", e)
+                            // TODO Decide on error messaging standard (toast? snackbar? nothing?)
+                            // Handler(Looper.getMainLooper()).post { Toast.makeText(applicationContext, "Cannot open settings", Toast.LENGTH_SHORT).show() }
+                        }
                     }
 
                     // Handle window movement requests from the view's touch handler
                      override fun onMove(deltaX: Int, deltaY: Int) {
                          if (!isViewAdded) return
-                         layoutParams.x += deltaX
-                         layoutParams.y += deltaY
+                         layoutParams.x += rawDeltaX.toInt()
+                         layoutParams.y += rawDeltaY.toInt()
                          try {
                              windowManager.updateViewLayout(this@apply, layoutParams)
                          } catch (e: Exception) {
@@ -167,15 +222,15 @@ class TrafficLightService : LifecycleService(), ViewModelStoreOwner { // Inherit
                          }
                      }
                      override fun onMoveFinished() {
-                         // TODO: Persist new position via ViewModel/DB
-                         // viewModel.savePosition(layoutParams.x, layoutParams.y)
+                         // Save final position
+                         viewModel.saveWindowPosition(layoutParams.x, layoutParams.y)
                      }
                      // Add onResize if implementing resizing
                 }
             }
         }
 
-        if (!isViewAdded && overlayView != null) {
+        if (!isViewAdded && overlayView != null && initialParamsSet) {
             try {
                 windowManager.addView(overlayView, layoutParams)
                 isViewAdded = true
@@ -184,6 +239,8 @@ class TrafficLightService : LifecycleService(), ViewModelStoreOwner { // Inherit
                 Log.e(TAG, "Error adding overlay view", e)
                 overlayView = null // Reset if failed
             }
+        } else if (!initialParamsSet) {
+            Log.d(TAG, "Overlay view creation deferred until initial state is loaded.")
         }
     }
 
@@ -210,9 +267,9 @@ class TrafficLightService : LifecycleService(), ViewModelStoreOwner { // Inherit
         stopSelf()
     }
 
-
     override fun onDestroy() {
         Log.d(TAG, "onDestroy")
+        stateObserverJob?.cancel() // Cancel the state observer
         removeOverlayView()
         viewModelStore.clear() // Clear the ViewModelStore
         super.onDestroy()
@@ -228,15 +285,13 @@ class TrafficLightService : LifecycleService(), ViewModelStoreOwner { // Inherit
     // --- Foreground Service Setup ---
     private fun startForegroundService() {
         val notificationIntent = Intent(this, MainActivity::class.java)
-        val pendingIntent = PendingIntent.getActivity(
-            this, 0, notificationIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
+        val pendingIntentFlags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        val pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, pendingIntentFlags)
 
         val notification: Notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Traffic Light Active")
             .setContentText("Traffic Light overlay is running.")
-            .setSmallIcon(R.drawable.ic_traffic_light) // Use traffic light icon
+            .setSmallIcon(R.drawable.ic_traffic_light)
             .setContentIntent(pendingIntent)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .build()
