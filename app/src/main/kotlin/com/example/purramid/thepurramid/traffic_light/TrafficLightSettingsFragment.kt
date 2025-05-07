@@ -1,10 +1,8 @@
 // TrafficLightSettingsFragment.kt
 package com.example.purramid.thepurramid.traffic_light
 
-import android.app.Dialog
 import android.content.DialogInterface
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -17,7 +15,10 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle 
 import com.example.purramid.thepurramid.R
 import com.example.purramid.thepurramid.databinding.FragmentTrafficLightSettingsBinding
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.example.purramid.thepurramid.traffic_light.viewmodel.Orientation
+import com.example.purramid.thepurramid.traffic_light.viewmodel.TrafficLightMode
+import com.example.purramid.thepurramid.traffic_light.viewmodel.TrafficLightState
+import com.example.purramid.thepurramid.traffic_light.viewmodel.TrafficLightViewModel
 import kotlinx.coroutines.launch
 
 // Note: Using activityViewModels assumes you want this settings fragment
@@ -43,6 +44,27 @@ class TrafficLightSettingsFragment : DialogFragment() {
         return binding.root
     }
 
+    /* // Using onCreateView for more control over dialog presentation if not using MaterialAlertDialogBuilder
+    override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
+        _binding = FragmentTrafficLightSettingsBinding.inflate(LayoutInflater.from(context))
+        // viewModel.setSettingsOpen(true) // Managed by Activity now
+
+        val dialog = MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.traffic_light_settings)
+            .setView(binding.root)
+            .setPositiveButton(R.string.dialog_close) { d, _ ->
+                d.dismiss() // onDismiss will be called
+            }
+            .create()
+
+        // Need to call setup and observe after binding is available and before view is shown
+        // This lifecycle is tricky with onCreateDialog directly.
+        // Consider using onCreateView and letting DialogFragment manage the dialog shell,
+        // or call setupViews and observeViewModel in onStart or onResume if using onCreateDialog.
+        // For simplicity, we'll stick to onCreateView and let DialogFragment manage the dialog.
+        return dialog
+    }*/
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -50,71 +72,110 @@ class TrafficLightSettingsFragment : DialogFragment() {
         observeViewModel() // We'll populate this in the next step
     }
 
-    /* // Optional: Use MaterialAlertDialogBuilder for a standard dialog frame
-     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-         _binding = FragmentTrafficLightSettingsBinding.inflate(LayoutInflater.from(context))
-
-         setupViews()
-         observeViewModel()
-
-         return MaterialAlertDialogBuilder(requireContext())
-             .setTitle(R.string.traffic_light_settings) // Use string resource
-             .setView(binding.root)
-             // Add Positive/Negative buttons if needed (e.g., Save/Cancel)
-             .setPositiveButton(R.string.dialog_close) { dialog, _ ->
-                 dialog.dismiss()
-             }
-             .create()
-     }*/
-
      private fun setupViews() {
-        // --- Setup Initial Listeners (functionality added in next step) ---
+         binding.radioGroupMode.setOnCheckedChangeListener { _, checkedId ->
+             if (blockListeners) return@setOnCheckedChangeListener
+             val newMode = when (checkedId) {
+                 R.id.radio_manual -> TrafficLightMode.MANUAL_CHANGE
+                 R.id.radio_responsive -> TrafficLightMode.RESPONSIVE_CHANGE
+                 R.id.radio_timed -> TrafficLightMode.TIMED_CHANGE
+                 else -> viewModel.uiState.value.currentMode // Should not happen
+             }
+             viewModel.setMode(newMode)
+         }
 
-        binding.radioGroupMode.setOnCheckedChangeListener { _, checkedId ->
-            // TODO: Call ViewModel to update mode
-        }
+         binding.switchOrientation.setOnCheckedChangeListener { _, isChecked ->
+             if (blockListeners) return@setOnCheckedChangeListener
+             viewModel.setOrientation(if (isChecked) Orientation.HORIZONTAL else Orientation.VERTICAL)
+         }
 
-        binding.switchOrientation.setOnCheckedChangeListener { _, isChecked ->
-            // TODO: Call ViewModel to update orientation (isChecked=Horizontal?)
-        }
+         binding.switchBlinking.setOnCheckedChangeListener { _, isChecked ->
+             if (blockListeners) return@setOnCheckedChangeListener
+             viewModel.toggleBlinking(isChecked)
+         }
 
-        binding.switchBlinking.setOnCheckedChangeListener { _, isChecked ->
-            // TODO: Call ViewModel to update blinking enabled
-        }
+         binding.buttonAdjustValues.setOnClickListener {
+             AdjustValuesFragment.newInstance().show(
+                 parentFragmentManager, AdjustValuesFragment.TAG
+             )
+         }
 
-        binding.buttonAdjustValues.setOnClickListener {
-            // TODO: Open Adjust Values Dialog/Fragment
-        }
+         binding.buttonAddMessages.setOnClickListener {
+             Toast.makeText(context, "Add Messages: Coming Soon", Toast.LENGTH_SHORT).show()
+         }
 
-        binding.buttonAddMessages.setOnClickListener {
-            // TODO: Open Add Messages Dialog/Fragment
-        }
-
-        binding.buttonEditSequence.setOnClickListener {
-            // TODO: Open Edit Sequence Activity/Fragment
-        }
+         binding.buttonEditSequence.setOnClickListener {
+             Toast.makeText(context, "Edit Sequence: Coming Soon", Toast.LENGTH_SHORT).show()
+         }
 
          binding.switchShowTimeRemaining.setOnCheckedChangeListener { _, isChecked ->
-            // TODO: Call ViewModel to update show time remaining
-        }
+             if (blockListeners) return@setOnCheckedChangeListener
+             viewModel.setShowTimeRemaining(isChecked) // Placeholder in VM
+         }
 
          binding.switchShowTimeline.setOnCheckedChangeListener { _, isChecked ->
-            // TODO: Call ViewModel to update show timeline
-        }
+             if (blockListeners) return@setOnCheckedChangeListener
+             viewModel.setShowTimeline(isChecked) // Placeholder in VM
+         }
 
-        binding.buttonAddAnother.setOnClickListener {
-            // TODO: Tell Activity/Service to launch another instance
-             dismiss() // Close settings after requesting a new light
-        }
+         binding.buttonAddAnother.setOnClickListener {
+             Toast.makeText(context, "Add Another: Coming Soon", Toast.LENGTH_SHORT).show()
+             // TODO: Tell Activity/Service to launch another instance
+             // This would likely involve an interface callback to the hosting Activity
+             // or a shared ViewModel/Service that manages instances.
+             dismiss()
+         }
+     }
 
-        // TODO: Set initial state of views based on ViewModel (in observeViewModel)
-        // TODO: Set visibility of conditional views based on mode (in observeViewModel)
+    private fun observeViewModelState() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.uiState.collect { state ->
+                    updateUiControls(state)
+                }
+            }
+        }
     }
 
-    private fun observeViewModel() {
-        // TODO: Observe viewModel.uiState
-        // Update radio buttons, switches based on state.currentMode, state.orientation etc.
-        // Update visibility of conditional buttons/switches based on state.currentMode
+    private fun updateUiControls(state: TrafficLightState) {
+        blockListeners = true // Prevent listeners from firing during programmatic updates
+
+        binding.radioGroupMode.check(
+            when (state.currentMode) {
+                TrafficLightMode.MANUAL_CHANGE -> R.id.radio_manual
+                TrafficLightMode.RESPONSIVE_CHANGE -> R.id.radio_responsive
+                TrafficLightMode.TIMED_CHANGE -> R.id.radio_timed
+            }
+        )
+
+        binding.switchOrientation.isChecked = state.orientation == Orientation.HORIZONTAL
+        binding.switchBlinking.isChecked = state.isBlinkingEnabled
+
+        // Conditional visibility
+        binding.buttonAdjustValues.isVisible = state.currentMode == TrafficLightMode.RESPONSIVE_CHANGE
+        binding.buttonAddMessages.isVisible = state.currentMode == TrafficLightMode.MANUAL_CHANGE || state.currentMode == TrafficLightMode.RESPONSIVE_CHANGE
+        binding.buttonEditSequence.isVisible = state.currentMode == TrafficLightMode.TIMED_CHANGE
+        binding.switchShowTimeRemaining.isVisible = state.currentMode == TrafficLightMode.TIMED_CHANGE
+        binding.switchShowTimeline.isVisible = state.currentMode == TrafficLightMode.TIMED_CHANGE
+
+        // Handle conditional enabling (placeholders for now)
+        binding.radioResponsive.isEnabled = state.isMicrophoneAvailable // Based on mic check later
+        if (!state.isMicrophoneAvailable && state.currentMode == TrafficLightMode.RESPONSIVE_CHANGE) {
+            // If somehow responsive is selected but mic becomes unavailable, switch to manual.
+            // This logic is a bit preemptive; mic check should prevent selection.
+            viewModel.setMode(TrafficLightMode.MANUAL_CHANGE)
+            binding.radioGroupMode.check(R.id.radio_manual)
+        }
+
+        binding.buttonAddAnother.isEnabled = state.numberOfOpenInstances < 4 // Based on instance count later
+
+        blockListeners = false
+    }
+
+
+    override fun onDismiss(dialog: DialogInterface) {
+        super.onDismiss(dialog)
+        viewModel.setSettingsOpen(false) // Notify ViewModel that settings are closed
     }
 
     override fun onDestroyView() {

@@ -112,17 +112,6 @@
             android:enabled="true"
             android:exported="false" />
 
-        <activity android:name=".spotlight.SpotlightActivity"
-            android:exported="true"
-            android:label="@string/spotlight_title"
-            android:parentActivityName=".MainActivity"
-            android:resizeableActivity="true"
-            android:windowLayoutInDisplayCutoutMode="shortEdges">
-            <layout android:defaultWidth="420dp"
-                android:defaultHeight="300dp"
-                android:gravity="center" />
-        </activity>
-
         <service android:name=".SpotlightService"
             android:enabled="true"
             android:exported="false" />

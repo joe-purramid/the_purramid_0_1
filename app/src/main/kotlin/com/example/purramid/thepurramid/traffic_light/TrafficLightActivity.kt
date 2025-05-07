@@ -2,39 +2,44 @@
 package com.example.purramid.thepurramid.traffic_light
 
 import android.annotation.SuppressLint
+import android.graphics.Color // For highlight example
 import android.os.Bundle
 import android.util.Log
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
-import android.view.View
 import android.view.WindowManager
-import android.widget.ImageView
-import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
-import androidx.fragment.app.commit
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.example.purramid.thepurramid.R
-// Corrected import for the renamed layout file
-import com.example.purramid.thepurramid.databinding.ActivityTrafficLightBinding // <-- CHANGE HERE
+import com.example.purramid.thepurramid.databinding.ActivityTrafficLightBinding
+// Make sure these viewmodel imports are correct for your file structure
+import com.example.purramid.thepurramid.traffic_light.LightColor // Assuming LightColor is in the same package
+import com.example.purramid.thepurramid.traffic_light.Orientation // Assuming Orientation is in the same package
+import com.example.purramid.thepurramid.traffic_light.TrafficLightState // Assuming TrafficLightState is in the same package
+import com.example.purramid.thepurramid.traffic_light.TrafficLightViewModel // Assuming TrafficLightViewModel is in the same package
+
 import dagger.hilt.android.AndroidEntryPoint
+import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.sqrt // Import for sqrt
 
 @AndroidEntryPoint
 class TrafficLightActivity : AppCompatActivity() {
 
-    // Use the correct binding class name
-    private lateinit var binding: ActivityTrafficLightBinding // <-- CHANGE HERE
+    private lateinit var binding: ActivityTrafficLightBinding
     private val viewModel: TrafficLightViewModel by viewModels()
 
+    private var instanceId: Int = 0
+
     // --- Window Movement & Resizing Variables ---
-    private lateinit var windowManager: WindowManager
+    private lateinit var windowManagerService: WindowManager // Renamed to avoid conflict
     private lateinit var layoutParams: WindowManager.LayoutParams
     private var initialX: Int = 0
     private var initialY: Int = 0
@@ -42,54 +47,57 @@ class TrafficLightActivity : AppCompatActivity() {
     private var initialTouchY: Float = 0f
     private var isMoving = false
     private var isResizing = false
-    private val touchSlop = 20 // Pixel buffer for shake tolerance / distinguishing tap/drag
+    private val touchSlop = 20 // Pixel buffer
     private lateinit var scaleGestureDetector: ScaleGestureDetector
     private var scaleFactor = 1f
 
+
+    companion object {
+        private val M_INSTANCE_ID_COUNTER = AtomicInteger(0)
+        const val EXTRA_INSTANCE_ID = "com.example.purramid.traffic_light.INSTANCE_ID"
+
+        fun getNextInstanceId(): Int {
+            return M_INSTANCE_ID_COUNTER.getAndIncrement()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Inflate using the correct binding class
-        binding = ActivityTrafficLightBinding.inflate(layoutInflater) // <-- CHANGE HERE
+        binding = ActivityTrafficLightBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Important: Ensure the window can be moved/resized
+        instanceId = intent.getIntExtra(EXTRA_INSTANCE_ID, getNextInstanceId())
+        viewModel.initializeInstance(instanceId)
+
         window.setFlags(
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
         )
         window.setFlags(
-            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, // Allow drawing outside screen bounds initially if needed
+            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
             WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
         )
-        window.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND) // No dimming
-        // Apply theme/style for transparency if needed via AndroidManifest or theme
+        window.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
 
-        windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
+        windowManagerService = getSystemService(WINDOW_SERVICE) as WindowManager
         layoutParams = window.attributes as WindowManager.LayoutParams
 
-        // Initialize scale detector for resizing
         scaleGestureDetector = ScaleGestureDetector(this, ScaleListener())
-
 
         setupButtonClickListeners()
         observeViewModel()
-        setupTouchListener() // Setup touch listener AFTER initializing window manager etc.
+        setupTouchListener()
     }
 
     private fun setupButtonClickListeners() {
         binding.buttonClose.setOnClickListener { finish() }
         binding.buttonSettings.setOnClickListener {
-            // Show the settings dialog fragment
+            viewModel.setSettingsOpen(true)
             TrafficLightSettingsFragment.newInstance().show(
                 supportFragmentManager, TrafficLightSettingsFragment.TAG
             )
-
-            // TODO: Implement highlight logic for the window that opened settings
-            // This might involve the ViewModel triggering a state change
-            // observed by the Activity, or direct communication if using a Service.
         }
 
-        // Setup listeners for light taps
         binding.lightRedVertical.setOnClickListener { viewModel.handleLightTap(LightColor.RED) }
         binding.lightYellowVertical.setOnClickListener { viewModel.handleLightTap(LightColor.YELLOW) }
         binding.lightGreenVertical.setOnClickListener { viewModel.handleLightTap(LightColor.GREEN) }
@@ -103,18 +111,27 @@ class TrafficLightActivity : AppCompatActivity() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.uiState.collect { state ->
-                    updateUi(state)
+                    if (state.instanceId == instanceId) {
+                        updateUi(state)
+                        updateHighlight(state.isSettingsOpen)
+                    }
                 }
             }
         }
     }
 
+    private fun updateHighlight(isSettingsCurrentlyOpen: Boolean) {
+        if (isSettingsCurrentlyOpen) {
+            binding.rootLayout.setBackgroundColor(Color.argb(50, 255, 255, 0))
+        } else {
+            binding.rootLayout.setBackgroundColor(Color.TRANSPARENT)
+        }
+    }
+
     private fun updateUi(state: TrafficLightState) {
-        // Update Orientation
         binding.trafficLightVerticalContainer.isVisible = state.orientation == Orientation.VERTICAL
         binding.trafficLightHorizontalContainer.isVisible = state.orientation == Orientation.HORIZONTAL
 
-        // Update Active Light (selectors handle visual change)
         val (redView, yellowView, greenView) = if (state.orientation == Orientation.VERTICAL) {
             Triple(binding.lightRedVertical, binding.lightYellowVertical, binding.lightGreenVertical)
         } else {
@@ -125,93 +142,93 @@ class TrafficLightActivity : AppCompatActivity() {
         yellowView.isActivated = state.activeLight == LightColor.YELLOW
         greenView.isActivated = state.activeLight == LightColor.GREEN
 
-        // Update Content Descriptions based on active light
-        val activeDesc = when(state.activeLight) {
+        val activeDesc = when (state.activeLight) {
             LightColor.RED -> getString(R.string.traffic_light_red_active_desc)
             LightColor.YELLOW -> getString(R.string.traffic_light_yellow_active_desc)
             LightColor.GREEN -> getString(R.string.traffic_light_green_active_desc)
             null -> getString(R.string.traffic_light_no_light_active_desc)
         }
-        // Update content description of the appropriate container or shell image
-        if(state.orientation == Orientation.VERTICAL) {
+        if (state.orientation == Orientation.VERTICAL) {
             binding.trafficLightVerticalShell.contentDescription = activeDesc
         } else {
             binding.trafficLightHorizontalShell.contentDescription = activeDesc
         }
-
-        // TODO: Update blinking state visuals if needed
-        // TODO: Update Timer UI elements
-        // TODO: Update Message UI elements
     }
 
     @SuppressLint("ClickableViewAccessibility")
     private fun setupTouchListener() {
         binding.rootLayout.setOnTouchListener { _, event ->
-            // Pass touch events to ScaleGestureDetector first
             val scaleConsumed = scaleGestureDetector.onTouchEvent(event)
 
-            // Only handle move if not resizing
-            if (!isResizing) {
+            if (!isResizing) { // isResizing is set by ScaleListener
                 handleMoveGesture(event)
             }
-
-            // Consume event if scale or move handled it
-            scaleConsumed || isMoving || event.action == MotionEvent.ACTION_DOWN // Consume ACTION_DOWN to enable move detection
+            scaleConsumed || isMoving || event.actionMasked == MotionEvent.ACTION_DOWN
         }
     }
 
-
     private fun handleMoveGesture(event: MotionEvent) {
+        // This function is generally called when !isResizing
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
-                // Only track primary pointer for moving
-                if (event.pointerCount == 1) {
+                // Only consider starting a move if it's the primary pointer
+                if (event.pointerId == 0) { // Check if it's the first pointer
                     initialX = layoutParams.x
                     initialY = layoutParams.y
                     initialTouchX = event.rawX
                     initialTouchY = event.rawY
-                    isMoving = false // Reset moving flag
+                    isMoving = false // Not moving yet, just pressed down
                 }
             }
             MotionEvent.ACTION_MOVE -> {
-                // Ignore move if more than one pointer OR if resizing is active
+                // Process move only if a single pointer is involved and not resizing
                 if (event.pointerCount == 1 && !isResizing) {
                     val deltaX = event.rawX - initialTouchX
                     val deltaY = event.rawY - initialTouchY
 
-                    // Only start moving if displacement exceeds slop
-                    if (isMoving || abs(deltaX) > touchSlop || abs(deltaY) > touchSlop) {
-                        isMoving = true // Set flag once movement threshold passed
+                    if (!isMoving) { // If not moving, check if slop is overcome
+                        if (sqrt(deltaX * deltaX + deltaY * deltaY) > touchSlop) {
+                            isMoving = true // Slop overcome, now officially moving
+                        }
+                    }
+
+                    if (isMoving) { // If moving state is active
                         layoutParams.x = initialX + deltaX.toInt()
                         layoutParams.y = initialY + deltaY.toInt()
                         try {
-                            windowManager.updateViewLayout(binding.root, layoutParams)
+                            windowManagerService.updateViewLayout(binding.root, layoutParams)
                         } catch (e: IllegalArgumentException) {
-                            // Handle edge case where view might be detached
-                            Log.e("TrafficLightActivity", "Error updating view layout", e)
+                            Log.e("TrafficLightActivity", "Error updating view layout on move", e)
                         }
                     }
+                } else if (isMoving && event.pointerCount > 1) {
+                    // If a move was in progress and more pointers are added,
+                    // but it didn't become a scale gesture (isResizing is false),
+                    // the drag effectively stops because the condition (event.pointerCount == 1) is no longer met.
+                    // This satisfies "second finger ignored" as the drag halts.
+                    isMoving = false // Stop the one-finger drag
                 }
             }
-            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                // Reset flags only if we weren't resizing
-                if (!isResizing) {
-                    isMoving = false
-                    // Optional: Persist position via ViewModel
-                    // if (abs(layoutParams.x - initialX) > someThreshold || abs(layoutParams.y - initialY) > someThreshold ) {
-                    //      viewModel.updateWindowPosition(layoutParams.x, layoutParams.y)
-                    // }
-                }
-            }
-            // Prevent moving if a second finger is added AFTER starting a move
-            MotionEvent.ACTION_POINTER_DOWN -> {
+            MotionEvent.ACTION_UP -> {
+                // Last pointer is up
                 if (isMoving) {
-                    // Cancel current move if a second finger is added
+                    // Optional: Persist position via ViewModel
+                }
+                isMoving = false
+                // isResizing should be false here, managed by ScaleListener.onScaleEnd
+            }
+            MotionEvent.ACTION_CANCEL -> {
+                isMoving = false
+                isResizing = false // Ensure this is reset on cancel as well
+            }
+            MotionEvent.ACTION_POINTER_UP -> {
+                if (event.actionIndex == 0 && isMoving) { // If primary pointer that was moving is lifted
                     isMoving = false
-                    // Reset to initial position? Or keep current? Requirements say ignore move if resizing starts.
-                    // layoutParams.x = initialX
-                    // layoutParams.y = initialY
-                    // windowManager.updateViewLayout(binding.root, layoutParams)
+                }
+                // If a scale gesture was active and now only one pointer remains
+                if (isResizing && event.pointerCount < 2) {
+                    isResizing = false // Scale ended
+                    isMoving = false // Don't immediately start moving
                 }
             }
         }
@@ -222,65 +239,63 @@ class TrafficLightActivity : AppCompatActivity() {
         private var startHeight = 0
 
         override fun onScaleBegin(detector: ScaleGestureDetector): Boolean {
-            // Ignore resize if already moving with one finger
+            if (isMoving && detector.eventTime - detector.previousEventTime < 100) { // Heuristic: quick succession of events
+                // If a move was just happening, a very quick second finger might be part of a pinch.
+                // Allow scaling to take over.
+                isMoving = false // Stop the move to allow scaling
+            }
+            // Ignore resize if already moving with one finger, UNLESS it's a clear pinch start
+            // The above 'isMoving = false' handles the transition.
+            // If still isMoving here, means it wasn't a quick transition.
             if (isMoving) return false
+
 
             isResizing = true
             startWidth = layoutParams.width
             startHeight = layoutParams.height
-            // If using view scaling instead of window resizing:
-            // startWidth = binding.root.width
-            // startHeight = binding.root.height
-            scaleFactor = 1f // Reset scale factor at the beginning of a gesture
-            return true // We want to handle the scaling gesture
+            scaleFactor = 1f
+            return true
         }
 
         override fun onScale(detector: ScaleGestureDetector): Boolean {
-            scaleFactor *= detector.scaleFactor
+            if (!isResizing) return false // Should not happen if onScaleBegin was true
 
-            // Prevent excessive shrinking or growing if desired
-            scaleFactor = max(0.5f, min(scaleFactor, 3.0f)) // Example limits
+            scaleFactor = detector.scaleFactor // Use incremental scale factor
 
-            // --- Window Resizing Approach ---
-            if (startWidth > 0 && startHeight > 0) { // Ensure initial dimensions are valid
-                layoutParams.width = (startWidth * scaleFactor).toInt()
-                layoutParams.height = (startHeight * scaleFactor).toInt()
+            // Apply scale to current dimensions, not initial ones, for smoother interactive scaling
+            var newWidth = (layoutParams.width * scaleFactor).toInt()
+            var newHeight = (layoutParams.height * scaleFactor).toInt()
 
-                // Apply minimum size constraints (e.g., based on resources)
-                val minWidth = resources.getDimensionPixelSize(R.dimen.traffic_light_min_width)
-                val minHeight = resources.getDimensionPixelSize(R.dimen.traffic_light_min_height)
-                layoutParams.width = max(minWidth, layoutParams.width)
-                layoutParams.height = max(minHeight, layoutParams.height)
 
-                try {
-                    windowManager.updateViewLayout(binding.root, layoutParams)
-                } catch (e: IllegalArgumentException) {
-                    Log.e("TrafficLightActivity", "Error updating view layout during scale", e)
-                }
+            val minSizePx = resources.getDimensionPixelSize(R.dimen.traffic_light_min_width) // Assuming min_width can serve as general min_size
+            // No explicit max size from requirements, but good to have a practical limit
+            val practicalMaxSizePx = 현실적으로_화면_크기의_일정_비율 // (e.g., screenWidth * 0.9f) - replace with actual calculation
+
+            newWidth = max(minSizePx, newWidth)
+            newHeight = max(minSizePx, newHeight)
+            // newWidth = min(newWidth, practicalMaxSizePx) // If you add a max size
+            // newHeight = min(newHeight, practicalMaxSizePx) // If you add a max size
+
+
+            layoutParams.width = newWidth
+            layoutParams.height = newHeight
+
+            try {
+                windowManagerService.updateViewLayout(binding.root, layoutParams)
+            } catch (e: IllegalArgumentException) {
+                Log.e("TrafficLightActivity", "Error updating view layout during scale", e)
             }
-
-            // --- Alternative: View Scaling Approach (Comment out Window Resizing if using this) ---
-            // binding.root.scaleX = scaleFactor
-            // binding.root.scaleY = scaleFactor
-            // // Need to ensure layout handles scaling appropriately, may need adjustments
-
-            return true // The scale event was handled
+            return true
         }
 
         override fun onScaleEnd(detector: ScaleGestureDetector) {
             isResizing = false
-            // Optional: Persist size via ViewModel (Window Resizing)
-            // viewModel.updateWindowSize(layoutParams.width, layoutParams.height)
-
-            // Optional: Persist scale via ViewModel (View Scaling)
-            // viewModel.updateWindowScale(scaleFactor)
+            // Optional: Persist size via ViewModel
         }
     }
 
-    // Optional: Override onStop or onDestroy to save state if needed
-    // override fun onStop() {
-    //     super.onStop()
-    //     // Persist state if the app is stopped but not destroyed
-    //     viewModel.saveState()
-    // }
+    override fun onDestroy() {
+        super.onDestroy()
+        // Cleanup if needed
+    }
 }

@@ -39,6 +39,7 @@
     <string name="color_lightblue_accessible">Make your clock background light blue</string>
     <string name="color_violet">Violet</string>
     <string name="color_violet_accessible">Make your clock background violet</string>
+    <string name="save">Save</string>
     <string name="close">Close</string>
     <string name="cancel">Cancel</string>
     <string name="delete">Delete</string>
@@ -506,6 +507,17 @@
     <string name="setting_show_timeline">Show Timeline (Timed Mode)</string>
     <string name="setting_add_another">Add Another Traffic Light</string>
     <string name="dialog_close">Close</string>
+    <string name="min_db_label">Min:</string> <!-- Minimum -->
+    <string name="max_db_label">Max:</string> <!-- Maximum -->
+    <string name="db_unit">dB</string>
+    <string name="na_value">N/A</string> <!-- Not Applicable -->
+    <string name="dangerous_sound_alert_label">Dangerous Sound Alert</string>
+    <string name="dangerous_sound_alert_info_desc">Information about dangerous sound alert</string>
+    <string name="dangerous_sound_alert_info_title">Dangerous Sound Alert Information</string>
+    <string name="dangerous_sound_alert_info_message">"Check this box to display an alert that says \"Warning: Notify your instructor immediately.\" should your hardware\'s microphone report a sound of 150 decibels or higher. The US Occupational Safety and Health Organization projects the loudest classroom noise would reach 95 dB. 120 db is the sound of a car backfire. 150 dB is the sound of a gunshot. The Purramid is a software application dependent on the readings provided by your microphone. There is no guarantee that the sound detected is 150 db or what made the sound is a firearm. But this is the reality that US students live in, and we are committed to providing teachers any tools possible to make their classrooms places of learning and not fear."</string>
+    <string name="green_color_label">Green</string>
+    <string name="yellow_color_label">Yellow</string> <!-- Amber in UK -->
+    <string name="red_color_label">Red</string>
 
     '' ABOUT THIS APP ''
     <string name="version_number">Version 0.1</string> '' in dev ''
