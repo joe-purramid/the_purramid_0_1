@@ -1,3 +1,5 @@
+// AndroidManifest.xml
+
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.purramid.thepurramid">
@@ -5,6 +7,9 @@
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.INTERNET" />
+
 
     <application
         android:name=".PurramidApplication"
@@ -35,16 +40,14 @@
                 android:defaultHeight="300dp"
                 android:gravity="center" />
         </activity>
-
         <service android:name=".clock.ClockOverlayService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="dataSync">
             <intent-filter>
                 <action android:name="com.example.thepurramid.ClockOverlayService" />
-            </intent-filter> 
+            </intent-filter>
         </service>
-
         <activity android:name=".clock.ClockSettingsActivity"
             android:exported="false"
             android:label="@string/clock_settings_title"
@@ -55,82 +58,6 @@
                 android:defaultHeight="275dp"
                 android:gravity="center" />
         </activity>
-
-        <activity android:name=".randomizers.RandomizersHostActivity"
-            android:exported="false"
-            android:label="@string/randomizers_title"
-            android:parentActivityName=".MainActivity"
-            android:resizeableActivity="true"
-            android:windowLayoutInDisplayCutoutMode="shortEdges">
-            <layout android:defaultWidth="420dp"
-                android:defaultHeight="300dp"
-                android:gravity="center" />
-        </activity>
-
-        <activity
-            android:name=".randomizers.RandomizersHostActivity"
-            android:exported="false"
-            android:label="@string/randomizers_title" android:resizeableActivity="true"
-            android:windowLayoutInDisplayCutoutMode="shortEdges" >
-            <layout android:defaultWidth="840dp"
-                android:defaultHeight="700dp"
-                android:gravity="center" />
-        </activity>
-
-<!--        <activity
-            android:name=".randomizers.ui.RandomizerSettingsActivity"
-            android:exported="false"
-            android:label="@string/settings" android:parentActivityName=".MainActivity" android:resizeableActivity="true"
-            android:windowLayoutInDisplayCutoutMode="shortEdges" >
-            <layout android:defaultWidth="350dp"
-                android:defaultHeight="275dp"
-                android:gravity="center" />
-        </activity> -->
-
-        <activity
-            android:name=".randomizers.ui.ListEditorActivity"
-            android:exported="false"
-            android:label="@string/list_editor" android:parentActivityName=".randomizers.ui.RandomizerSettingsActivity" android:resizeableActivity="true"
-            android:windowLayoutInDisplayCutoutMode="shortEdges" >
-            <layout android:defaultWidth="700dp"
-                android:defaultHeight="600dp"
-                android:gravity="center" />
-        </activity>
-
-        <activity android:name=".screen_shade.ScreenShadeActivity"
-            android:exported="false"
-            android:label="@string/screen_shade_title"
-            android:parentActivityName=".MainActivity"
-            android:resizeableActivity="true"
-            android:windowLayoutInDisplayCutoutMode="shortEdges">
-            <layout android:defaultWidth="420dp"
-                android:defaultHeight="300dp"
-                android:gravity="center" />
-        </activity>
-
-        <service android:name=".screen_shade.ScreenShadeService"
-            android:enabled="true"
-            android:exported="false" />
-
-        <service android:name=".SpotlightService"
-            android:enabled="true"
-            android:exported="false" />
-
-        <activity android:name=".timers.TimersActivity"
-            android:exported="false"
-            android:label="@string/timers_title"
-            android:parentActivityName=".MainActivity"
-            android:resizeableActivity="true"
-            android:windowLayoutInDisplayCutoutMode="shortEdges">
-            <layout android:defaultWidth="420dp"
-                android:defaultHeight="300dp"
-                android:gravity="center" />
-        </activity>
-
-    <!--        <service android:name=".TimerService"
-                android:enabled="true"
-                android:exported="false" /> -->
-
         <activity android:name=".clock.ui.TimeZoneGlobeActivity"
             android:exported="false"
             android:label="@string/set_time_zone"
@@ -142,9 +69,59 @@
                 android:gravity="center" />
         </activity>
 
+        <activity
+            android:name=".randomizers.RandomizersHostActivity"
+            android:exported="false"
+            android:label="@string/randomizers_title"
+            android:resizeableActivity="true"
+            android:windowLayoutInDisplayCutoutMode="shortEdges" >
+            <layout android:defaultWidth="840dp"
+                android:defaultHeight="700dp"
+                android:gravity="center" />
+        </activity>
+        <activity
+            android:name=".randomizers.ui.ListEditorActivity"
+            android:exported="false"
+            android:label="@string/list_editor"
+            android:parentActivityName=".randomizers.ui.RandomizerSettingsActivity"
+            android:resizeableActivity="true"
+            android:windowLayoutInDisplayCutoutMode="shortEdges" >
+            <layout android:defaultWidth="700dp"
+                android:defaultHeight="600dp"
+                android:gravity="center" />
+        </activity>
+        <activity android:name=".screen_shade.ScreenShadeActivity"
+            android:exported="false"
+            android:label="@string/screen_shade_title"
+            android:parentActivityName=".MainActivity"
+            android:resizeableActivity="true"
+            android:windowLayoutInDisplayCutoutMode="shortEdges">
+            <layout android:defaultWidth="420dp"
+                android:defaultHeight="300dp"
+                android:gravity="center" />
+        </activity>
+        <service android:name=".screen_shade.ScreenShadeService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+        <service android:name=".spotlight.SpotlightService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+        <activity android:name=".timers.TimersActivity"
+            android:exported="false"
+            android:label="@string/timers_title"
+            android:parentActivityName=".MainActivity"
+            android:resizeableActivity="true"
+            android:windowLayoutInDisplayCutoutMode="shortEdges">
+            <layout android:defaultWidth="420dp"
+                android:defaultHeight="300dp"
+                android:gravity="center" />
+        </activity>
         <activity android:name=".traffic_light.TrafficLightActivity"
             android:exported="false"
             android:label="@string/traffic_light_title"
+            android:parentActivityName=".MainActivity"
             android:resizeableActivity="true"
             android:windowLayoutInDisplayCutoutMode="shortEdges">
             <layout android:defaultWidth="420dp"
@@ -152,22 +129,40 @@
                 android:gravity="center" />
         </activity>
 
+        <service android:name=".traffic_light.TrafficLightService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
+        <activity android:name=".AboutActivity"
+            android:exported="false"
+            android:label="@string/about"
+            android:parentActivityName=".MainActivity"
+            android:theme="@style/Theme.AppCompat.Light.Dialog"
+            android:resizeableActivity="true"
+            android:windowLayoutInDisplayCutoutMode="shortEdges">
+            <layout android:defaultWidth="600dp"
+                android:defaultHeight="500dp"
+                android:gravity="center" />
+        </activity>
+
         <receiver android:name=".PurramidWidgetProvider"
             android:exported="false"
-            android:label="@string/app_name"> <intent-filter>
-            <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-        </intent-filter>
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/purramid_widget_info" />
         </receiver>
-
         <activity
             android:name=".WidgetConfigActivity"
             android:exported="true"
-            android:theme="@style/Theme.AppCompat.Dialog"> <intent-filter>
-            <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE"/>
-        </intent-filter>
+            android:theme="@style/Theme.AppCompat.Dialog">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE"/>
+            </intent-filter>
         </activity>
 
     </application>

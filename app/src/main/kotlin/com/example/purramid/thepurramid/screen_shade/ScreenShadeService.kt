@@ -6,6 +6,7 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.graphics.drawable.GradientDrawable
@@ -22,18 +23,23 @@ import android.widget.LinearLayout
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.example.purramid.thepurramid.R
+import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class ScreenShadeService : Service() {
 
-    private var windowManager: WindowManager? = null
+    // Inject dependencies
+    @Inject lateinit var windowManager: WindowManager
+    @Inject lateinit var sharedPreferences: SharedPreferences // Assuming you have a Hilt module providing SharedPreferences("screen_shade_state", Context.MODE_PRIVATE)
+
     private val activeMasks = mutableListOf<MaskView>()
     private var floatingMenuView: LinearLayout? = null
     private var lastTouchedMask: MaskView? = null
     private var addButtonView: ImageView? = null
     private var isAllLocked = false
     private var imageChooserPendingIntent: PendingIntent? = null
-    private val prefs by lazy { getSharedPreferences("screen_shade_state", Context.MODE_PRIVATE) }
-    
+
     companion object {
         private const val CHANNEL_ID = "ScreenShadeServiceChannel"
         const val ACTION_START = "com.example.thepurramid0_1.ACTION_START_SHADE_SERVICE"
@@ -68,7 +74,6 @@ class ScreenShadeService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         createNotificationChannel()
         setupFloatingMenu()
         createImageChooserPendingIntent()
@@ -152,7 +157,7 @@ class ScreenShadeService : Service() {
     }
 
     private fun saveMaskState() {
-        val editor = prefs.edit()
+        val editor = sharedPreferences.edit()
         editor.putInt("mask_count", activeMasks.size)
         activeMasks.forEachIndexed { index, mask ->
             editor.putInt("mask_${index}_x", mask.params?.x ?: 0)
@@ -168,14 +173,14 @@ class ScreenShadeService : Service() {
     }
 
     private fun restoreMaskState() {
-        val maskCount = prefs.getInt("mask_count", 0)
+        val maskCount = sharedPreferences.getInt("mask_count", 0)
         for (i in 0 until maskCount) {
-            val x = prefs.getInt("mask_${i}_x", 0)
-            val y = prefs.getInt("mask_${i}_y", 0)
-            val width = prefs.getInt("mask_${i}_width", resources.displayMetrics.widthPixels)
-            val height = prefs.getInt("mask_${i}_height", resources.displayMetrics.heightPixels)
-            val locked = prefs.getBoolean("mask_${i}_locked", false)
-            val billboardUriString = prefs.getString("mask_${i}_billboard_uri", null)
+            val x = sharedPreferences.getInt("mask_${i}_x", 0)
+            val y = sharedPreferences.getInt("mask_${i}_y", 0)
+            val width = sharedPreferences.getInt("mask_${i}_width", resources.displayMetrics.widthPixels)
+            val height = sharedPreferences.getInt("mask_${i}_height", resources.displayMetrics.heightPixels)
+            val locked = sharedPreferences.getBoolean("mask_${i}_locked", false)
+            val billboardUriString = sharedPreferences.getString("mask_${i}_billboard_uri", null)
             val billboardUri = billboardUriString?.let { android.net.Uri.parse(it) }
 
             val newMask = MaskView(this).apply {
@@ -241,7 +246,6 @@ class ScreenShadeService : Service() {
 
             val params = WindowManager.LayoutParams(
                 WindowManager.LayoutParams.WRAP_CONTENT,
-                WindowManager.LayoutParams.WRAP_CONTENT,
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
                 } else {
@@ -253,13 +257,17 @@ class ScreenShadeService : Service() {
                 gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
                 y = resources.displayMetrics.heightPixels / 10 // Position near the top
             }
-            windowManager?.addView(this, params)
+            try { windowManager.addView(this, params) } catch (e: Exception) {
+                Log.e("ScreenShadeService", "Error setting up floating menu view", e)
+            }
         }
     }
 
     private fun removeFloatingMenu() {
         floatingMenuView?.let {
-            windowManager?.removeView(it)
+            try { windowManager.removeView(it) } catch (e: Exception) {
+                Log.e("ScreenShadeService", "Error removing floating menu view", e)
+            }
             floatingMenuView = null
         }
     }
@@ -547,22 +555,29 @@ class ScreenShadeService : Service() {
                 x = initialX
                 y = initialY
             }
-            windowManager?.addView(this, params)
+            try { windowManager.addView(this, params) } catch (e: Exception) {
+                Log.e("ScreenShadeService", "Error showing view", e)
+            }
         }
 
         fun hide() {
             try {
-                windowManager?.removeView(this)
-            } catch (e: IllegalArgumentException) {
-                // Handle the case where the view might not be attached
-                Log.e("MaskView", "Error removing view", e)
+                // Check if view is attached before trying to remove
+                if (this.isAttachedToWindow) {
+                    windowManager.removeView(this)
+                } else {
+                    Log.w("MaskView", "Attempted to remove view that was not attached.")
+                }
+            } catch (e: Exception) { // Catch specific exceptions like IllegalArgumentException if preferred
+                // Log the error with a tag and the exception details
+                Log.e("MaskView", "Error removing mask view", e)
             }
         }
 
         private fun updateViewLayout() {
             try {
-                params?.let { windowManager?.updateViewLayout(this, it) }
-            } catch (e: IllegalArgumentException) {
+                params?.let { windowManager.updateViewLayout(this, it) }
+            } catch (e: Exception) {
                 Log.e("MaskView", "Error updating view layout", e)
             }
         }

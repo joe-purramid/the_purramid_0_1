@@ -8,6 +8,7 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.example.purramid.thepurramid.data.db.CityEntity
 import com.example.purramid.thepurramid.data.db.CityDao
+import com.example.purramid.thepurramid.data.db.SpotlightStateEntity
 import com.example.purramid.thepurramid.data.db.TimeZoneBoundaryEntity
 import com.example.purramid.thepurramid.data.db.TimeZoneDao
 
@@ -25,8 +26,9 @@ import com.example.purramid.thepurramid.data.db.TimeZoneDao
         SpinSettingsEntity::class,
         TimeZoneBoundaryEntity::class,
         CityEntity::class
+        SpotlightStateEntity::class
     ],
-    version = 5, // Updated with Slots randomizer mode
+    version = 6, // Updated with Slots randomizer mode
     exportSchema = false // Set to true if you want to export the schema to a file for version control (recommended for production apps)
 )
 @TypeConverters(Converters::class) // Register the TypeConverters class
@@ -39,6 +41,7 @@ abstract class PurramidDatabase : RoomDatabase() {
     abstract fun randomizerDao(): RandomizerDao
     abstract fun timeZoneDao(): TimeZoneDao
     abstract fun cityDao(): CityDao
+    abstract fun spotlightDao(): SpotlightDao
 
     companion object {
         // Singleton prevents multiple instances of the database opening at once
@@ -53,8 +56,8 @@ abstract class PurramidDatabase : RoomDatabase() {
                     PurramidDatabase::class.java,
                     "purramid_database"
                 )
-                // IMPORTANT: Since you increased the version number, you need a migration strategy.
-                // .fallbackToDestructiveMigration() // OK for dev, deletes data on version change
+                // IMPORTANT: need a migration strategy.
+                // .fallbackToDestructiveMigration()
                 // For production, implement proper migrations: .addMigrations(MIGRATION_1_2, ...)
                 .fallbackToDestructiveMigration() // Replace with real migrations later
                 .build()

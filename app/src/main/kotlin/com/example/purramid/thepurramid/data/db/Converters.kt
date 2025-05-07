@@ -9,6 +9,7 @@ import com.example.purramid.thepurramid.randomizers.DiceSumResultType // Import 
 import com.example.purramid.thepurramid.randomizers.GraphDistributionType
 import com.example.purramid.thepurramid.randomizers.GraphLineStyle
 import com.example.purramid.thepurramid.randomizers.SlotsColumnState
+import com.example.purramid.thepurramid.spotlight.SpotlightView
 import java.util.UUID
 
 /**
@@ -114,6 +115,7 @@ class Converters {
             }
         }
     }
+
     // For Map<Int, Int> (Dice Pool, Colors, Modifiers)
     @TypeConverter
     fun fromIntIntMap(value: Map<Int, Int>?): String? {
@@ -182,5 +184,21 @@ class Converters {
         } catch (e: IllegalArgumentException) {
             Log.e("Converters", "Invalid GraphLineStyle string: $value", e)
             GraphLineStyle.SOLID // Default on error
-
         }
+    }
+
+    @TypeConverter
+    fun fromSpotlightShape(shape: SpotlightView.Spotlight.Shape?): String? {
+        return shape?.name
+    }
+
+    @TypeConverter
+    fun toSpotlightShape(shapeName: String?): SpotlightView.Spotlight.Shape? {
+        return try {
+            shapeName?.let { SpotlightView.Spotlight.Shape.valueOf(it) }
+        } catch (e: IllegalArgumentException) {
+            Log.e("Converters", "Invalid Spotlight.Shape string: $shapeName", e)
+            null // Return null if the string doesn't match an enum constant
+        }
+    }
+}

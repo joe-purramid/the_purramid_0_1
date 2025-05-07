@@ -17,9 +17,17 @@ import android.util.Log
 import android.view.Gravity
 import android.view.WindowManager
 import androidx.core.app.NotificationCompat
+import com.example.purramid.thepurramid.data.db.SpotlightDao
 import com.example.purramid.thepurramid.MainActivity // Or appropriate entry point
 import com.example.purramid.thepurramid.R
+import dagger.hilt.android.AndroidEntryPoint
 import java.util.concurrent.ConcurrentHashMap
+import javax.inject.Inject
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 // Define actions for controlling the service via Intents
 const val ACTION_START_SPOTLIGHT = "com.example.purramid.START_SPOTLIGHT"
@@ -29,12 +37,17 @@ const val ACTION_REMOVE_SPOTLIGHT = "com.example.purramid.REMOVE_SPOTLIGHT" // A
 const val ACTION_CHANGE_SHAPE = "com.example.purramid.CHANGE_SHAPE"     // Added
 const val EXTRA_SPOTLIGHT_ID = "spotlight_id"
 
+@AndroidEntryPoint
 class SpotlightService : Service() {
 
-    private lateinit var windowManager: WindowManager
+    // Inject dependencies
+    @Inject lateinit var windowManager: WindowManager
+    @Inject lateinit var spotlightDao: SpotlightDao // Inject DAO
+
     private val spotlightViews = ConcurrentHashMap<Int, Pair<SpotlightView, WindowManager.LayoutParams>>()
     private var nextSpotlightId = 1 // Simple ID generator
     private val handler = Handler(Looper.getMainLooper())
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main) // Scope for DB operations
 
     companion object {
         private const val TAG = "SpotlightService"
@@ -46,8 +59,8 @@ class SpotlightService : Service() {
     override fun onCreate() {
         super.onCreate()
         Log.d(TAG, "onCreate")
-        windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         createNotificationChannel()
+        loadSpotlightsFromDb()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -80,6 +93,93 @@ class SpotlightService : Service() {
         return START_STICKY
     }
 
+    // --- Database Operations ---
+    private fun loadSpotlightsFromDb() {
+        serviceScope.launch(Dispatchers.IO) {
+            val loadedEntities = spotlightDao.getAllSpotlights()
+            withContext(Dispatchers.Main) {
+                spotlightViews.clear() // Clear existing views before loading
+                if (loadedEntities.isNotEmpty()) {
+                    Log.d(TAG, "Loading ${loadedEntities.size} spotlights from DB")
+                    loadedEntities.forEach { entity ->
+                        // Update nextSpotlightId to avoid collisions
+                        nextSpotlightId = maxOf(nextSpotlightId, entity.id + 1)
+                        addSpotlightViewFromEntity(entity)
+                    }
+                } else {
+                    Log.d(TAG, "No spotlights found in DB, adding initial one.")
+                    // Add initial spotlight if DB is empty *after* checking
+                    if (spotlightViews.isEmpty()){ // Double check after async load
+                        addSpotlightView()
+                    }
+                }
+            }
+        }
+    }
+
+    private fun saveSpotlightToDb(spotlight: SpotlightView.Spotlight, id: Int) {
+        val entity = SpotlightStateEntity(
+            id = id,
+            centerX = spotlight.centerX,
+            centerY = spotlight.centerY,
+            radius = spotlight.radius,
+            shape = spotlight.shape.name, // Convert enum to string
+            width = spotlight.width,
+            height = spotlight.height,
+            size = spotlight.size
+        )
+        serviceScope.launch(Dispatchers.IO) {
+            try {
+                spotlightDao.insertOrUpdate(entity)
+                Log.d(TAG, "Saved spotlight $id state to DB.")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error saving spotlight $id to DB", e)
+            }
+        }
+    }
+
+    private fun deleteSpotlightFromDb(id: Int) {
+        serviceScope.launch(Dispatchers.IO) {
+            try {
+                spotlightDao.deleteSpotlightById(id) // Use a delete by ID method
+                Log.d(TAG, "Deleted spotlight $id from DB.")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error deleting spotlight $id from DB", e)
+            }
+        }
+    }
+
+    // Method to add view based on loaded entity data
+    private fun addSpotlightViewFromEntity(entity: SpotlightStateEntity) {
+        val context = this
+        val params = createLayoutParams(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT)
+
+        val spotlightView = SpotlightView(context, null).apply {
+            val spotlightData = SpotlightView.Spotlight(
+                centerX = entity.centerX,
+                centerY = entity.centerY,
+                radius = entity.radius,
+                shape = try { SpotlightView.Spotlight.Shape.valueOf(entity.shape) } catch (e: IllegalArgumentException) { SpotlightView.Spotlight.Shape.CIRCLE }, // Default if string is invalid
+                width = entity.width,
+                height = entity.height,
+                size = entity.size
+            )
+            this.spotlights = mutableListOf(spotlightData) // Set the loaded spotlight data
+            this.currentShape = spotlightData.shape // Sync global shape with loaded
+
+            interactionListener = createInteractionListener(entity.id, this, params) // Use helper
+            tag = entity.id
+        }
+
+        try {
+            windowManager.addView(spotlightView, params)
+            spotlightViews[entity.id] = Pair(spotlightView, params)
+            Log.d(TAG, "Restored spotlight view with ID: ${entity.id}")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error adding restored spotlight view ${entity.id}", e)
+        }
+    }
+
     private fun startForegroundService() {
         val notificationIntent = Intent(this, MainActivity::class.java) // Intent to open on notification tap
         val pendingIntent = PendingIntent.getActivity(
@@ -106,7 +206,6 @@ class SpotlightService : Service() {
         stopSelf()
     }
 
-
     private fun createLayoutParams(width: Int, height: Int, x: Int = 0, y: Int = 0): WindowManager.LayoutParams {
         return WindowManager.LayoutParams(
             width,
@@ -128,106 +227,139 @@ class SpotlightService : Service() {
     }
 
     private fun addSpotlightView() {
-        if (spotlightViews.size >= 4) { // Limit spotlights
+        if (spotlightViews.size >= 4) {
             Log.w(TAG, "Maximum number of spotlights reached.")
-            // Optionally show a Toast message
-            // Toast.makeText(this, "Maximum spotlights reached", Toast.LENGTH_SHORT).show()
-             return
+            return
         }
 
         val spotlightId = nextSpotlightId++
-        val context = this // Service context
-
-        // Create initial params (cover screen initially, adjust as needed)
+        val context = this
         val displayMetrics = resources.displayMetrics
         val screenWidth = displayMetrics.widthPixels
         val screenHeight = displayMetrics.heightPixels
-
-        // Position new spotlights slightly offset or centered
-        val initialX = (spotlightViews.size % 2) * 50 // Example positioning
-        val initialY = (spotlightViews.size / 2) * 50 // Example positioning
+        val initialX = (spotlightViews.size % 2) * 50
+        val initialY = (spotlightViews.size / 2) * 50
 
         val params = createLayoutParams(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT, initialX, initialY)
 
+        // Determine initial shape from the first existing spotlight or default to CIRCLE
+        val initialShape = spotlightViews.values.firstOrNull()?.first?.currentShape ?: SpotlightView.Spotlight.Shape.CIRCLE
+        val initialRadius = 150f
+        val initialSize = initialRadius * 2f
+        val initialWidth = if(initialShape == SpotlightView.Spotlight.Shape.OVAL || initialShape == SpotlightView.Spotlight.Shape.RECTANGLE) initialRadius * 2 * 1.5f else initialSize
+        val initialHeight = if(initialShape == SpotlightView.Spotlight.Shape.OVAL || initialShape == SpotlightView.Spotlight.Shape.RECTANGLE) initialRadius * 2 / 1.5f else initialSize
+
+
+        val spotlightData = SpotlightView.Spotlight(
+            centerX = (screenWidth / 2f), // Initial center
+            centerY = (screenHeight / 2f),// Initial center
+            radius = initialRadius,
+            shape = initialShape, // Use determined shape
+            width = initialWidth,
+            height = initialHeight,
+            size = if(initialShape == SpotlightView.Spotlight.Shape.SQUARE || initialShape == SpotlightView.Spotlight.Shape.RECTANGLE) maxOf(initialWidth, initialHeight) else initialSize
+        )
+
         val spotlightView = SpotlightView(context, null).apply {
-            // Set initial spotlight properties (e.g., centered in its overlay)
-            // Note: SpotlightView's onSizeChanged won't work the same way here.
-            // We need to manually calculate initial center/radius.
-            val initialRadius = 150f // Example radius
-            spotlights.clear() // Clear default spotlight
-            spotlights.add(SpotlightView.Spotlight(
-                 (screenWidth / 2f), // Centered initially
-                 (screenHeight / 2f),// Centered initially
-                 initialRadius,
-                 shape = SpotlightView.Spotlight.Shape.CIRCLE // Default shape
-            ))
-             // Set the listener to communicate back to the service
-             interactionListener = object : SpotlightView.SpotlightInteractionListener {
-                override fun requestUpdateLayout(viewParams: WindowManager.LayoutParams) {
-                    try {
-                        windowManager.updateViewLayout(this@apply, viewParams)
-                    } catch (e: Exception) { Log.e(TAG, "Error updating layout", e) }
-                }
-                 override fun requestTapPassThrough() {
-                    enableTapPassThrough(this@apply, params)
-                }
-                override fun requestClose() {
-                   removeSpotlightView(spotlightId)
-                }
-                 override fun requestShapeChange() {
-                     // Trigger global shape change, or implement per-spotlight
-                     changeGlobalShape()
-                 }
-                 override fun requestAddNew() {
-                     addSpotlightView()
-                 }
-            }
-            tag = spotlightId // Store ID for later retrieval if needed
+            this.spotlights = mutableListOf(spotlightData) // Set initial data
+            this.currentShape = initialShape // Sync view's global shape notion
+            interactionListener = createInteractionListener(spotlightId, this, params) // Use helper
+            tag = spotlightId
         }
 
+        // Save the new spotlight state to DB *before* adding the view
+        saveSpotlightToDb(spotlightData, spotlightId)
 
         try {
             windowManager.addView(spotlightView, params)
             spotlightViews[spotlightId] = Pair(spotlightView, params)
             Log.d(TAG, "Added spotlight view with ID: $spotlightId")
+            updateCanAddStateForAllViews() // Update add button state on other views
         } catch (e: Exception) {
             Log.e(TAG, "Error adding spotlight view", e)
-            nextSpotlightId-- // Decrement ID if add failed
+            nextSpotlightId-- // Decrement ID
+            // Attempt to delete the entry we just tried to save
+            deleteSpotlightFromDb(spotlightId)
         }
     }
 
-    // Modify removeSpotlightView to accept an optional flag
+    // Helper to create interaction listener
+    private fun createInteractionListener(
+        id: Int,
+        view: SpotlightView,
+        params: WindowManager.LayoutParams
+    ): SpotlightView.SpotlightInteractionListener {
+        return object : SpotlightView.SpotlightInteractionListener {
+            override fun requestUpdateLayout(viewParams: WindowManager.LayoutParams) {
+                try {
+                    // Check if view is still attached before updating
+                    if (view.isAttachedToWindow) {
+                        windowManager.updateViewLayout(view, viewParams)
+                        // Save position changes (debounce this?)
+                        // saveSpotlightPosition(id, viewParams.x, viewParams.y) // Need separate pos save later
+                    }
+                } catch (e: Exception) { Log.e(TAG, "Error updating layout for view $id", e) }
+            }
+            override fun requestTapPassThrough() {
+                enableTapPassThrough(view, params)
+            }
+            override fun requestClose() {
+                removeSpotlightView(id)
+            }
+            override fun requestShapeChange() {
+                changeGlobalShape()
+            }
+            override fun requestAddNew() {
+                addSpotlightView()
+            }
+        }
+    }
+
     private fun removeSpotlightView(id: Int, updateManager: Boolean = true) {
         spotlightViews[id]?.let { (view, _) ->
             try {
-                windowManager.removeView(view)
+                if (view.isAttachedToWindow) {
+                    windowManager.removeView(view)
+                }
                 Log.d(TAG, "Removed spotlight view with ID: $id")
             } catch (e: Exception) {
                 Log.e(TAG, "Error removing spotlight view $id", e)
             } finally {
-                if (updateManager) { // Avoid concurrent modification if called during iteration
-                   spotlightViews.remove(id)
+                deleteSpotlightFromDb(id) // Delete from DB
+                if (updateManager) {
+                    spotlightViews.remove(id)
+                    updateCanAddStateForAllViews() // Update other views' button state
                 }
             }
         }
-        // If removing the last spotlight, stop the service? Optional.
-         if (updateManager && spotlightViews.isEmpty()) {
-              // stopService() // Uncomment if service should stop when last spotlight closed
-         }
+        // Service stop logic...
+        if (updateManager && spotlightViews.isEmpty()) {
+            // stopService() // Optional: Stop if last spotlight is removed
+        }
+    }
+
+    private fun updateCanAddStateForAllViews() {
+        val canAdd = spotlightViews.size < 4
+        spotlightViews.values.forEach { (view, _) ->
+            view.updateCanAddSpotlights(canAdd)
+        }
     }
 
     private fun changeGlobalShape() {
-        // Simple cycling logic for demonstration
         val currentGlobalShape = spotlightViews.values.firstOrNull()?.first?.currentShape ?: SpotlightView.Spotlight.Shape.CIRCLE
         val nextShape = when (currentGlobalShape) {
             SpotlightView.Spotlight.Shape.CIRCLE -> SpotlightView.Spotlight.Shape.SQUARE
-            SpotlightView.Spotlight.Shape.SQUARE -> SpotlightView.Spotlight.Shape.CIRCLE
-             // Add OVAL/RECTANGLE if implemented
-             else -> SpotlightView.Spotlight.Shape.CIRCLE
+            SpotlightView.Spotlight.Shape.SQUARE -> SpotlightView.Spotlight.Shape.OVAL
+            SpotlightView.Spotlight.Shape.OVAL -> SpotlightView.Spotlight.Shape.RECTANGLE
+            SpotlightView.Spotlight.Shape.RECTANGLE -> SpotlightView.Spotlight.Shape.CIRCLE
         }
-        // Apply to all existing views
-        spotlightViews.values.forEach { (view, _) ->
-            view.setGlobalShape(nextShape) // Add this method to SpotlightView
+        spotlightViews.forEach { (id, pair) ->
+            val view = pair.first
+            view.setGlobalShape(nextShape) // Updates internal shape and dimensions
+            // Save the updated state (shape and dimensions) to DB
+            view.spotlights.firstOrNull()?.let { updatedData ->
+                saveSpotlightToDb(updatedData, id)
+            }
         }
     }
 
@@ -266,7 +398,9 @@ class SpotlightService : Service() {
     override fun onDestroy() {
         Log.d(TAG, "onDestroy")
         // Ensure all views are removed if service is destroyed unexpectedly
-        stopService()
+        serviceScope.coroutineContext.cancelChildren()
+        spotlightViews.keys.forEach { id -> removeSpotlightView(id, updateManager = false) }
+        spotlightViews.clear()
         super.onDestroy()
     }
 
