@@ -1,5 +1,5 @@
-// ClockOverlayService.kt (Refactored - Step 2b: Handle Button Row)
-package com.example.purramid.thepurramid.clock // Use your package name (Alphabetized Imports)
+// ClockOverlayService.kt
+package com.example.purramid.thepurramid.clock
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -25,129 +25,111 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.FrameLayout
-import android.widget.ImageButton // Added for new buttons
+import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
-import com.caverock.androidsvg.SVGImageView // If using SVG approach
+import androidx.lifecycle.LifecycleService
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.ViewModelStoreOwner
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.Observer
+import com.caverock.androidsvg.SVGImageView
 import com.example.purramid.thepurramid.MainActivity
 import com.example.purramid.thepurramid.R
+import com.example.purramid.thepurramid.data.db.ClockDao
+import com.example.purramid.thepurramid.data.db.ClockStateEntity
+import com.example.purramid.thepurramid.clock.viewmodel.ClockState
+import com.example.purramid.thepurramid.clock.viewmodel.ClockViewModel
+import com.example.purramid.thepurramid.clock.viewmodel.ClockViewModelFactory
+import dagger.hilt.android.AndroidEntryPoint
 import java.time.LocalTime
 import java.time.ZoneId
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap // Use ConcurrentHashMap for thread safety
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.math.max
+import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+iimport kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sqrt
 
+@AndroidEntryPoint
 class ClockOverlayService : Service(), ClockView.ClockInteractionListener {
 
-    private lateinit var windowManager: WindowManager
-    private lateinit var sharedPreferences: SharedPreferences
+    // --- Injected Dependencies ---
+    @Inject
+    lateinit var windowManager: WindowManager
+    @Inject
+    lateinit var clockDao: ClockDao
 
-    // Used ConcurrentHashMap for thread safety
-    private val activeClockViews = ConcurrentHashMap<Int, ViewGroup>() // Pair of ID and Root View ViewGroup
-    private val clockViewInstances = ConcurrentHashMap<Int, ClockView>() // Map ID to ClockView instance
-    private val clockLayoutParams = ConcurrentHashMap<Int, WindowManager.LayoutParams>() // Store LayoutParams per clock
+    // Inject Hilt's default ViewModel Factory which includes SavedStateHandle support
+    @Inject
+    lateinit var viewModelFactory: ViewModelProvider.Factory
 
-    // --- State Management ---
-    private data class ClockState(
-        var currentTime: LocalTime = LocalTime.MIN, // Current time displayed
-        var timeZoneId: ZoneId = ZoneId.systemDefault(),
-        var isPaused: Boolean = false,
-        var displaySeconds: Boolean = true,
-        var is24Hour: Boolean = false,
-        var clockColor: Int = Color.WHITE,
-        var mode: String = "digital", // "digital" or "analog"
-        var isNested: Boolean = false
-    )
-    private val clockStates = ConcurrentHashMap<Int, ClockState>() // Store state per clock ID
-    private val handler = Handler(Looper.getMainLooper()) // Central ticker handler
-    private var isTickerRunning = false
-    // --- End State Management ---
+    // --- ViewModel Management ---
+    private val viewModelStore = ViewModelStore()
+    override fun getViewModelStore(): ViewModelStore = viewModelStore
 
-    // Other properties
-    private val clockCounter = AtomicInteger(0)
-    private val nestedClockPositions = ConcurrentHashMap<Int, Int>() // ClockId to its nested column index
-    private var lastTouchDownTime: Long = 0
-    private var hasMovedBeyondSlopForTap: Boolean = false // Track if drag occurred during potential tap
+    // Map to hold ViewModel instances, keyed by clockId
+    private val clockViewModels = ConcurrentHashMap<Int, ClockViewModel>()
+
+    // Map to hold observer jobs, keyed by clockId, to manage observation lifecycle
+    private val stateObserverJobs = ConcurrentHashMap<Int, Job>()
+
+    // --- View Management ---
+    private val activeClockViews =
+        ConcurrentHashMap<Int, ViewGroup>() // Pair of ID and Root View ViewGroup
+    private val clockViewInstances =
+        ConcurrentHashMap<Int, ClockView>() // Map ID to ClockView instance
+    private val clockLayoutParams =
+        ConcurrentHashMap<Int, WindowManager.LayoutParams>() // Store LayoutParams per clock
+
+    // --- Other State ---
+    private val clockIdCounter = AtomicInteger(0) // Counter for new clock IDs
+    private val nestedClockPositions =
+        ConcurrentHashMap<Int, Int>() // clockId -> nested column index
+    private var isForeground = false // Track foreground state
 
     companion object {
         private const val TAG = "ClockOverlayService"
         private const val TICK_INTERVAL_MS = 1000L
+
         // Actions from SettingsActivity (ensure these match exactly)
         const val ACTION_NEST_CLOCK = "com.example.purramid.thepurramid.ACTION_NEST_CLOCK"
         const val EXTRA_CLOCK_ID = "clock_id"
         const val EXTRA_NEST_STATE = "nest_state"
         const val ACTION_ADD_NEW_CLOCK = "com.example.purramid.thepurramid.ACTION_ADD_NEW_CLOCK"
-        const val ACTION_UPDATE_CLOCK_SETTING = "com.example.purramid.thepurramid.ACTION_UPDATE_CLOCK_SETTING"
+        const val ACTION_UPDATE_CLOCK_SETTING =
+            "com.example.purramid.thepurramid.ACTION_UPDATE_CLOCK_SETTING"
         const val EXTRA_SETTING_TYPE = "setting_type"
         const val EXTRA_SETTING_VALUE = "setting_value"
+
         // Actions for Buttons
         const val ACTION_PAUSE_CLOCK = "com.example.purramid.thepurramid.ACTION_PAUSE_CLOCK"
         const val ACTION_PLAY_CLOCK = "com.example.purramid.thepurramid.ACTION_PLAY_CLOCK"
         const val ACTION_RESET_CLOCK = "com.example.purramid.thepurramid.ACTION_RESET_CLOCK"
         const val ACTION_OPEN_SETTINGS = "com.example.purramid.thepurramid.ACTION_OPEN_SETTINGS"
-    }
 
-    override fun onBind(intent: Intent?): IBinder? { return null }
+        // Notification constants
+        private const val NOTIFICATION_ID = 2 // Unique ID for this service
+        private const val CHANNEL_ID = "ClockOverlayServiceChannel"
+    }
 
     override fun onCreate() {
         super.onCreate()
         Log.d(TAG, "onCreate")
-        windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        sharedPreferences = getSharedPreferences("clock_settings", Context.MODE_PRIVATE)
-        startInForeground()
-        loadActiveClocksFromPrefs()
-        if (clockStates.isEmpty()) {
-            createNewClock(null)
-        } else {
-            startTickerIfNecessary()
-        }
-        updateActiveClockCountInPrefs()
+        createNotificationChannel()
+        loadAndRestoreClockStates()
     }
 
-    // --- Central Ticker Logic ---
-    private val tickerRunnable = object : Runnable {
-        override fun run() {
-            if (clockStates.isEmpty()) {
-                stopTicker()
-                return
-            }
-            clockStates.forEach { (id, state) ->
-                if (!state.isPaused) {
-                    try {
-                        val newTime = state.currentTime.plusSeconds(1)
-                        state.currentTime = newTime
-
-                        // Find the view and update its display
-                        clockViewInstances[id]?.updateDisplayTime(newTime)
-                    } catch (e: Exception) { Log.e(TAG, "Error updating time for clock $id", e) }
-                }
-                // Else: If paused, do nothing, time remains as it was (potentially manually set)
-            }
-            // Schedule the next tick
-            handler.postDelayed(this, TICK_INTERVAL_MS)
-        }
-    }
-    private fun startTickerIfNecessary() {
-        if (!isTickerRunning && !clockStates.isEmpty()) {
-            Log.d(TAG, "Starting ticker.")
-            isTickerRunning = true
-            handler.post(tickerRunnable)
-        }
-    }
-    private fun stopTicker() {
-         if (isTickerRunning) {
-            Log.d(TAG, "Stopping ticker.")
-            isTickerRunning = false
-            handler.removeCallbacks(tickerRunnable)
-        }
-    }
-    // --- End Ticker Logic ---
 
     private fun startInForeground() {
         val notificationId = 1
@@ -156,12 +138,14 @@ class ClockOverlayService : Service(), ClockView.ClockInteractionListener {
         val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(channelId, channelName, NotificationManager.IMPORTANCE_LOW)
+            val channel =
+                NotificationChannel(channelId, channelName, NotificationManager.IMPORTANCE_LOW)
             notificationManager.createNotificationChannel(channel)
         }
 
         val notificationIntent = Intent(this, MainActivity::class.java)
-        val pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE)
+        val pendingIntent =
+            PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE)
 
         val notification = NotificationCompat.Builder(this, channelId)
             .setContentTitle(getString(R.string.app_name))
@@ -174,137 +158,370 @@ class ClockOverlayService : Service(), ClockView.ClockInteractionListener {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        super.onStartCommand(intent, flags, startId)
         Log.d(TAG, "onStartCommand received action: ${intent?.action}")
+
         when (intent?.action) {
-            ACTION_ADD_NEW_CLOCK -> handleAddNewClock(intent)
-            ACTION_UPDATE_CLOCK_SETTING -> handleUpdateClockSetting(intent)
-            ACTION_NEST_CLOCK -> handleNestClock(intent)
+            ACTION_START_CLOCK -> {
+                startForegroundServiceIfNeeded()
+                // Loading happens in onCreate, ensure at least one clock exists
+                if (clockViewModels.isEmpty()) {
+                    handleAddNewClock(null) // Add a default clock if none were loaded
+                }
+            }
+
+            ACTION_ADD_NEW_CLOCK -> {
+                startForegroundServiceIfNeeded() // Ensure service is running
+                handleAddNewClock(intent)
+            }
+
+            ACTION_UPDATE_CLOCK_SETTING -> {
+                handleUpdateClockSetting(intent)
+            }
+
+            ACTION_NEST_CLOCK -> {
+                handleNestClock(intent)
+            }
             // Actions from Buttons
             ACTION_PAUSE_CLOCK -> handlePauseClock(intent)
             ACTION_PLAY_CLOCK -> handlePlayClock(intent)
             ACTION_RESET_CLOCK -> handleResetClock(intent)
             ACTION_OPEN_SETTINGS -> handleOpenSettings(intent)
-            else -> { startTickerIfNecessary(); Log.w(TAG, "Unhandled or null action received.") }
+            else -> {
+                startTickerIfNecessary(); Log.w(TAG, "Unhandled or null action received.")
+            }
         }
         return START_STICKY
     }
 
     override fun onDestroy() {
-        super.onDestroy()
         Log.d(TAG, "onDestroy called.")
-        stopTicker()
-        activeClockViews.keys.toList().forEach { id -> removeClockInternal(id, activeClockViews[id], false) }
-        activeClockViews.clear()
-        clockViewInstances.clear()
-        clockLayoutParams.clear()
-        clockStates.clear()
-        nestedClockPositions.clear()
+        // Clean up all clocks, observers, and ViewModels
+        clockViewModels.keys.forEach { id ->
+            removeClockInternal(
+                id,
+                saveState = false
+            )
+        } // Remove without saving final state
+        clockViewModels.clear()
+        stateObserverJobs.values.forEach { it.cancel() }
+        stateObserverJobs.clear()
+        viewModelStore.clear() // Clear the ViewModelStore
+        super.onDestroy()
+    }
+
+    // --- State Loading and Management ---
+
+    private fun loadAndRestoreClockStates() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            val savedStates = clockDao.getAllStates()
+            Log.d(TAG, "Found ${savedStates.size} saved clock states.")
+            if (savedStates.isNotEmpty()) {
+                var maxId = 0
+                savedStates.forEach { entity ->
+                    maxId = max(maxId, entity.clockId)
+                    // Create/Get ViewModel and add view on Main thread
+                    withContext(Dispatchers.Main) {
+                        createOrUpdateClockInstance(entity.clockId, entity)
+                    }
+                }
+                clockIdCounter.set(maxId + 1) // Set counter beyond highest loaded ID
+            } else {
+                // If no saved states, handle adding the first default clock via onStartCommand
+                Log.d(TAG, "No saved states found.")
+            }
+            // Ensure service is in foreground if clocks were loaded
+            withContext(Dispatchers.Main) {
+                if (clockViewModels.isNotEmpty()) {
+                    startForegroundServiceIfNeeded()
+                }
+            }
+        }
+    }
+
+    /**
+     * Gets or creates a ClockViewModel for a given ID and optionally initializes its state.
+     * Manages the observation of the ViewModel's state.
+     */
+    private fun createOrUpdateClockInstance(
+        clockId: Int,
+        initialStateEntity: ClockStateEntity? = null
+    ) {
+        Log.d(TAG, "Creating/Updating instance for clockId: $clockId")
+
+        // Check if ViewModel already exists
+        var viewModel = clockViewModels[clockId]
+        if (viewModel == null) {
+            // Create ViewModel using the Factory and SavedStateHandle (Hilt handles this)
+            // We need to provide the clockId to the SavedStateHandle *before* creation.
+            // This is tricky with Service scope. A custom factory or assisted inject might be needed.
+            // --- Simplification: Assume ViewModel loads its ID from SavedStateHandle set by Activity/Intent ---
+            // --- Or, pass ID during ViewModel creation if using custom factory ---
+            val defaultArgs = Bundle().apply { putInt(ClockViewModel.KEY_CLOCK_ID, clockId) }
+            val savedStateViewModelFactory =
+                androidx.lifecycle.SavedStateViewModelFactory(application, this, defaultArgs)
+
+            viewModel =
+                ViewModelProvider(this, savedStateViewModelFactory).get(ClockViewModel::class.java)
+
+            // If loading initial state, update the ViewModel (it might load itself too, check VM logic)
+            // This might be redundant if VM loads itself in init based on SavedStateHandle
+            // initialStateEntity?.let { viewModel.initializeStateFromEntity(it) } // Add method to VM if needed
+
+            clockViewModels[clockId] = viewModel
+            Log.d(TAG, "Created new ViewModel for clockId: $clockId")
+        } else {
+            Log.d(TAG, "Reusing existing ViewModel for clockId: $clockId")
+        }
+
+        // --- Setup View and Observation ---
+        val currentParams = clockLayoutParams[clockId] ?: createDefaultLayoutParams()
+        val rootView = activeClockViews[clockId]
+        val clockView = clockViewInstances[clockId]
+
+        if (rootView == null || clockView == null) {
+            // Inflate and set up the view if it doesn't exist
+            val newViewPair = inflateAndSetupClockView(clockId, currentParams, viewModel)
+            if (newViewPair != null) {
+                val (newRootView, newClockViewInstance) = newViewPair
+                activeClockViews[clockId] = newRootView
+                clockViewInstances[clockId] = newClockViewInstance
+                clockLayoutParams[clockId] = currentParams // Store params
+
+                // Add view to WindowManager
+                try {
+                    // Load position/size from initial state before adding
+                    val initialPosState = initialStateEntity ?: viewModel.uiState.value
+                    currentParams.x = initialPosState.windowX
+                    currentParams.y = initialPosState.windowY
+                    currentParams.width =
+                        if (initialPosState.windowWidth > 0) initialPosState.windowWidth else WindowManager.LayoutParams.WRAP_CONTENT
+                    currentParams.height =
+                        if (initialPosState.windowHeight > 0) initialPosState.windowHeight else WindowManager.LayoutParams.WRAP_CONTENT
+                    currentParams.gravity = Gravity.TOP or Gravity.START // Use absolute positioning
+
+                    windowManager.addView(newRootView, currentParams)
+                    Log.d(TAG, "Added clock view for ID: $clockId")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error adding clock view for ID: $clockId", e)
+                    // Clean up if addView fails
+                    clockViewModels.remove(clockId)
+                    activeClockViews.remove(clockId)
+                    clockViewInstances.remove(clockId)
+                    clockLayoutParams.remove(clockId)
+                    stateObserverJobs[clockId]?.cancel()
+                    stateObserverJobs.remove(clockId)
+                    return // Exit if view cannot be added
+                }
+            } else {
+                Log.e(TAG, "Failed to inflate/setup view for clock $clockId")
+                clockViewModels.remove(clockId) // Clean up VM if view fails
+                return
+            }
+        } else {
+            // View already exists, ensure params are stored
+            if (!clockLayoutParams.containsKey(clockId)) {
+                clockLayoutParams[clockId] = currentParams
+            }
+        }
+
+        // --- Start Observing StateFlow ---
+        stateObserverJobs[clockId]?.cancel() // Cancel previous observer job for this ID
+        stateObserverJobs[clockId] = lifecycleScope.launch {
+            viewModel.uiState.collectLatest { state ->
+                // Update View and LayoutParams on the main thread
+                withContext(Dispatchers.Main) {
+                    updateClockViewAndLayout(state)
+                }
+            }
+        }
+        Log.d(TAG, "Started observing ViewModel for clockId: $clockId")
+    }
+
+    /** Inflates the correct layout and sets up the ClockView instance */
+    private fun inflateAndSetupClockView(
+        clockId: Int,
+        params: WindowManager.LayoutParams,
+        viewModel: ClockViewModel // Pass the specific VM instance
+    ): Pair<ViewGroup, ClockView>? {
+        val inflater = LayoutInflater.from(this)
+        val currentMode = viewModel.uiState.value.mode // Get mode from VM state
+        val rootView: ViewGroup
+        val clockView: ClockView
+
+        try {
+            if (currentMode == "analog") {
+                // ... (inflate view_floating_clock_analog, find SVGs, setup clockView) ...
+                rootView = inflater.inflate(R.layout.view_floating_clock_analog, null) as ViewGroup
+                val frameLayout = rootView.findViewById<FrameLayout>(R.id.analogClockViewContainer)
+                    ?: throw IllegalStateException("Analog layout missing FrameLayout container")
+
+                clockView = ClockView(this, null).apply {
+                    layoutParams = FrameLayout.LayoutParams(
+                        FrameLayout.LayoutParams.MATCH_PARENT,
+                        FrameLayout.LayoutParams.MATCH_PARENT
+                    )
+                }
+                frameLayout.addView(clockView)
+
+                val clockFace =
+                    rootView.findViewById<com.caverock.androidsvg.SVGImageView>(R.id.clockFaceImageView)
+                val hourHand =
+                    rootView.findViewById<com.caverock.androidsvg.SVGImageView>(R.id.hourHandImageView)
+                val minuteHand =
+                    rootView.findViewById<com.caverock.androidsvg.SVGImageView>(R.id.minuteHandImageView)
+                val secondHand =
+                    rootView.findViewById<com.caverock.androidsvg.SVGImageView>(R.id.secondHandImageView)
+
+                if (clockFace != null && hourHand != null && minuteHand != null && secondHand != null) {
+                    clockView.setAnalogImageViews(clockFace, hourHand, minuteHand, secondHand)
+                } else {
+                    Log.w(
+                        TAG,
+                        "Analog layout missing required SVGImageView elements for clock $clockId"
+                    )
+                    clockView.setAnalogImageViews(null, null, null, null)
+                }
+
+            } else { // Digital
+                // ... (inflate view_floating_clock_digital, find clockView) ...
+                rootView = inflater.inflate(R.layout.view_floating_clock_digital, null) as ViewGroup
+                clockView = rootView.findViewById(R.id.digitalClockView)
+                    ?: throw IllegalStateException("Digital layout missing ClockView element")
+            }
+
+            // Common setup for ClockView
+            clockView.setClockId(clockId)
+            clockView.interactionListener = this // Service implements the listener
+
+            // Initial state application will happen via the observer
+            // clockView.updateState(viewModel.uiState.value) // Apply initial state
+
+            // Setup action buttons (Play/Pause, Reset, Settings)
+            setupActionButtons(clockId, rootView, viewModel)
+
+            return Pair(rootView, clockView)
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Error inflating/setting up view for clock $clockId (mode: $currentMode)", e)
+            return null
+        }
+    }
+
+    /** Updates the specific ClockView and its WindowManager LayoutParams based on state */
+    private fun updateClockViewAndLayout(state: ClockState) {
+        val clockId = state.clockId
+        val rootView = activeClockViews[clockId]
+        val clockView = clockViewInstances[clockId]
+        val params = clockLayoutParams[clockId]
+
+        if (clockView == null || params == null || rootView == null) {
+            Log.w(TAG, "Attempting to update non-existent view/params for clock $clockId")
+            return
+        }
+
+        // Check if mode changed - requires re-inflation
+        if (clockView.isAnalog != (state.mode == "analog")) {
+            Log.d(TAG, "Mode changed for clock $clockId. Re-inflating.")
+            removeClockInternal(clockId, saveState = false) // Remove existing view/VM observer
+            createOrUpdateClockInstance(clockId) // Recreate with new mode (VM loads state)
+            return // Exit update as view is being replaced
+        }
+
+        // Update ClockView properties
+        clockView.setClockColor(state.clockColor)
+        clockView.setIs24HourFormat(state.is24Hour)
+        clockView.setClockTimeZone(state.timeZoneId)
+        clockView.setDisplaySeconds(state.displaySeconds)
+        clockView.updateDisplayTime(state.currentTime) // Most frequent update
+
+        // Update WindowManager LayoutParams if needed
+        var layoutChanged = false
+        if (params.x != state.windowX || params.y != state.windowY) {
+            params.x = state.windowX
+            params.y = state.windowY
+            layoutChanged = true
+        }
+        val newWidth =
+            if (state.windowWidth > 0) state.windowWidth else WindowManager.LayoutParams.WRAP_CONTENT
+        val newHeight =
+            if (state.windowHeight > 0) state.windowHeight else WindowManager.LayoutParams.WRAP_CONTENT
+        if (params.width != newWidth || params.height != newHeight) {
+            params.width = newWidth
+            params.height = newHeight
+            layoutChanged = true
+        }
+
+        // Apply nesting visuals (positioning handled separately)
+        applyNestModeVisuals(clockId, rootView, state.isNested)
+
+        // Update layout in WindowManager only if changes occurred
+        if (layoutChanged && rootView.isAttachedToWindow) {
+            try {
+                windowManager.updateViewLayout(rootView, params)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error updating WindowManager layout for clock $clockId", e)
+            }
+        }
+
+        // Update Play/Pause button state based on VM's isPaused
+        updatePlayPauseButton(clockId, rootView, state.isPaused)
     }
 
     // --- Action Handling Methods ---
     private fun handleAddNewClock(intent: Intent?) {
-         if (clockStates.size >= 4) { Toast.makeText(this, "Maximum of 4 clocks reached.", Toast.LENGTH_SHORT).show(); return }
-         createNewClock(intent)
-         updateActiveClockCountInPrefs()
+        if (clockViewModels.size >= 4) {
+            Toast.makeText(this, "Maximum of 4 clocks reached.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val newClockId = clockIdCounter.incrementAndGet()
+        Log.d(TAG, "Handling Add New Clock request. New ID: $newClockId")
+
+        // Clone settings from intent if provided
+        val clonedSettings = loadClonedSettings(intent)
+
+        // Create/Get ViewModel and View for the new clock
+        createOrUpdateClockInstance(newClockId) // This will create VM and save default state
     }
+
     private fun handleUpdateClockSetting(intent: Intent?) {
         val clockId = intent?.getIntExtra(EXTRA_CLOCK_ID, -1) ?: -1
         val settingType = intent?.getStringExtra(EXTRA_SETTING_TYPE)
-        val state = clockStates[clockId]
+        val state = clockViewModels[clockId]
 
-        when (settingType) {
-            "mode" -> {
-                val newMode = intent.getStringExtra(EXTRA_SETTING_VALUE) ?: state.mode
-                if (newMode != state.mode) {
-                    Log.d(TAG, "Mode changed for clock $clockId to $newMode. Re-inflating view.")
-
-                    // --- Apply Rule: Reset time before changing mode ---
-                    try {
-                        state.currentTime = LocalTime.now(state.timeZoneId)
-                        state.isPaused = false // Ensure not paused after mode change
-                    } catch (e: Exception) { Log.e(TAG, "Error getting time on mode change reset", e) }
-                    // --- End Reset ---
-
-                    state.mode = newMode // Update state
-
-                    // Get references needed to remove the old view and add the new one
-                    val currentRootView = activeClockViews[clockId]
-                    val currentParams = clockLayoutParams[clockId]
-                    if (currentRootView == null || currentParams == null) {
-                        Log.e(TAG, "Cannot re-inflate, missing current view or params for clock $clockId")
-                        return // Exit if something is wrong
-                    }
-                }
-
-                // --- Re-inflation Logic ---
-                // 1. Remove the old view
-                try {
-                    windowManager.removeView(currentRootView)
-                    Log.d(TAG, "Removed old view for clock $clockId")
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error removing old view during mode change for $clockId", e)
-                }
-                activeClockViews.remove(clockId)
-                clockViewInstances.remove(clockId)
-
-                // 2. Inflate and set up the new view using the helper
-                val newViewPair = inflateAndSetupClockView(clockId, state, currentParams)
-
-                if (newViewPair != null) {
-                    val (newRootView, newClockView) = newViewPair
-
-                // 3. Add the new view
-                try {
-                    windowManager.addView(newRootView, currentParams)
-                    Log.d(TAG, "Added new view for clock $clockId")
-                    // 4. Update maps with new references
-                    activeClockViews[clockId] = newRootView
-                    clockViewInstances[clockId] = newClockView
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error adding new view during mode change for $clockId", e)
-                    removeClockInternal(clockId, null, true) // Attempt cleanup
-                    }
-                } else {
-                    Log.e(TAG, "Failed to inflate/setup new view for clock $clockId during mode change.")
-                    removeClockInternal(clockId, null, true) // Attempt cleanup
-                }
-                // --- End Re-inflation Logic ---
-            }
-
-            "color" -> {
-                val view = clockViewInstances[clockId] ?: return
-                val color = intent.getIntExtra(EXTRA_SETTING_VALUE, state.clockColor)
-                state.clockColor = color
-                view.setClockColor(color)
-            }
-            "24hour" -> {
-                val view = clockViewInstances[clockId] ?: return
-                val is24Hour = intent.getBooleanExtra(EXTRA_SETTING_VALUE, state.is24Hour)
-                state.is24Hour = is24Hour
-                view.setIs24HourFormat(is24Hour)
-            }
-            "time_zone" -> {
-                 val view = clockViewInstances[clockId] ?: return
-                 val zoneIdString = intent.getStringExtra(EXTRA_SETTING_VALUE) ?: state.timeZoneId.id
-                 try {
-                     val zoneId = ZoneId.of(zoneIdString)
-                     state.timeZoneId = zoneId
-                     view.setClockTimeZone(zoneId)
-                     if (!state.isPaused) {
-                         state.currentTime = LocalTime.now(zoneId)
-                         view.updateDisplayTime(state.currentTime)
-                     }
-                 } catch (e: Exception) { Log.e(TAG, "Invalid Zone ID: $zoneIdString", e) }
-            }
-            "seconds" -> {
-                val view = clockViewInstances[clockId] ?: return
-                val displaySeconds = intent.getBooleanExtra(EXTRA_SETTING_VALUE, state.displaySeconds)
-                state.displaySeconds = displaySeconds
-                view.setDisplaySeconds(displaySeconds)
-            }
-            else -> Log.w(TAG, "Unknown setting type: $settingType")
+        if (viewModel == null || settingType == null) {
+            Log.e(
+                TAG,
+                "Cannot update setting, invalid clockId ($clockId) or settingType ($settingType)"
+            )
+            return
         }
-        saveSpecificClockSetting(clockId, settingType, intent)
+
+        Log.d(TAG, "Updating setting '$settingType' for clock $clockId")
+
+        // Delegate update to the specific ViewModel instance
+        when (settingType) {
+            "mode" -> viewModel.updateMode(intent.getStringExtra(EXTRA_SETTING_VALUE) ?: "digital")
+            "color" -> viewModel.updateColor(intent.getIntExtra(EXTRA_SETTING_VALUE, Color.WHITE))
+            "24hour" -> viewModel.updateIs24Hour(intent.getBooleanExtra(EXTRA_SETTING_VALUE, false))
+            "time_zone" -> {
+                val zoneIdString = intent.getStringExtra(EXTRA_SETTING_VALUE)
+                try {
+                    zoneIdString?.let { viewModel.updateTimeZone(ZoneId.of(it)) }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Invalid Zone ID received: $zoneIdString", e)
+                }
+            }
+
+            "seconds" -> viewModel.updateDisplaySeconds(
+                intent.getBooleanExtra(
+                    EXTRA_SETTING_VALUE,
+                    true
+                )
+            )
+            // Nest state handled by ACTION_NEST_CLOCK
+            else -> Log.w(TAG, "Unknown setting type received: $settingType")
+        }
     }
 
     private fun handleNestClock(intent: Intent?) {
@@ -313,812 +530,164 @@ class ClockOverlayService : Service(), ClockView.ClockInteractionListener {
         val state = clockStates[clockId]
         val rootView = activeClockViews[clockId]
 
-        if (clockId != -1 && state != null && rootView != null) {
-            Log.d(TAG,"Setting nest state for clock $clockId to $shouldBeNested")
-            if (state.isNested != shouldBeNested) {
-                state.isNested = shouldBeNested
-                applyNestModeVisuals(clockId, rootView, shouldBeNested)
-                repositionNestedClocks()
-                sharedPreferences.edit().putBoolean("clock_${clockId}_nest", shouldBeNested).apply()
-            }
-        } else { Log.e(TAG, "Invalid data for ACTION_NEST_CLOCK") }
-    }
-
-    private fun handlePauseClock(intent: Intent?) {
-        val clockId = intent?.getIntExtra(EXTRA_CLOCK_ID, -1) ?: -1
-        clockStates[clockId]?.let {
-            if (!it.isPaused) {
-                it.isPaused = true
-                Log.d(TAG, "Paused clock $clockId")
-                updatePlayPauseButton(clockId)
-            }
-        }
-    }
-
-    private fun handlePlayClock(intent: Intent?) {
-        val clockId = intent?.getIntExtra(EXTRA_CLOCK_ID, -1) ?: -1
-        clockStates[clockId]?.let {
-            if (it.isPaused) {
-                it.isPaused = false
-                Log.d(TAG, "Playing clock $clockId")
-                updatePlayPauseButton(clockId)
-            }
-        }
-    }
-
-    private fun handleResetClock(intent: Intent?) {
-        val clockId = intent?.getIntExtra(EXTRA_CLOCK_ID, -1) ?: -1
-        clockStates[clockId]?.let { state ->
-            Log.d(TAG, "Resetting clock $clockId")
-            val wasPaused = state.isPaused
-            state.isPaused = false
-            try {
-                val now = LocalTime.now(state.timeZoneId)
-                state.currentTime = now
-                clockViewInstances[clockId]?.updateDisplayTime(now)
-            } catch (e: Exception) { Log.e(TAG, "Error getting time on reset", e) }
-            if (wasPaused) { updatePlayPauseButton(clockId) }
-        }
-    }
-
-    private fun handleOpenSettings(intent: Intent?) {
-        val clockId = intent?.getIntExtra(EXTRA_CLOCK_ID, -1) ?: -1
-        if (clockId != -1) {
-            Log.d(TAG, "Opening settings for clock $clockId")
-            // Optional: Could add highlight/dimming here if desired before opening settings
-            // highlightClock(clockId)
-            // dimOtherClocks(clockId)
-
-            // Create intent to launch ClockSettingsActivity
-            val settingsIntent = Intent(this, ClockSettingsActivity::class.java).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK) // Ensure a fresh instance
-                putExtra(ClockSettingsActivity.EXTRA_CLOCK_ID, clockId) // Pass the specific clock ID
-            }
-            try {
-                startActivity(settingsIntent)
-            } catch (e: Exception) {
-                Log.e(TAG, "Error starting ClockSettingsActivity", e)
-                Toast.makeText(this, "Could not open settings.", Toast.LENGTH_SHORT).show()
-            }
+        if (viewModel != null && rootView != null) {
+            Log.d(TAG, "Setting nest state for clock $clockId to $shouldBeNested")
+            viewModel.updateIsNested(shouldBeNested) // Update VM state (triggers save & observer)
+            // Visuals and repositioning are handled by the state observer calling updateClockViewAndLayout
+            repositionNestedClocks() // Reposition all nested clocks
         } else {
-            Log.e(TAG, "Invalid clockId received for ACTION_OPEN_SETTINGS")
+            Log.e(TAG, "Invalid data for ACTION_NEST_CLOCK: clockId=$clockId")
         }
     }
 
-    // --- Clock Creation / Deletion / Loading ---
-    private fun createNewClock(creationIntent: Intent?) {
-        val clockId = clockCounter.incrementAndGet()
-        // Determine initial settings
-        val initialState = ClockState(/* ... load from intent or prefs ... */)
-        val params = createLayoutParams(/* ... load from prefs or defaults ... */)
+    private fun removeClockInternal(clockIdToRemove: Int, saveState: Boolean = true) {
+        Log.d(TAG, "Removing clock internal: $clockIdToRemove")
+        val rootView = activeClockViews.remove(clockIdToRemove)
+        clockViewInstances.remove(clockIdToRemove)
+        clockLayoutParams.remove(clockIdToRemove)
+        stateObserverJobs[clockIdToRemove]?.cancel() // Cancel observer
+        stateObserverJobs.remove(clockIdToRemove)
+        val viewModel = clockViewModels.remove(clockIdToRemove)
 
-        // --- Use Helper Function ---
-        val newViewPair = inflateAndSetupClockView(clockId, initialState, params)
-
-        if (newViewPair != null) {
-            val (newRootView, newClockView) = newViewPair
-
-            // Store state and view references
-            clockStates[clockId] = initialState
-            activeClockViews[clockId] = rootView
-            clockViewInstances[clockId] = clockView
-            clockLayoutParams[clockId] = params
-
-            // Add to Window Manager
-            try { windowManager.addView(rootView, params); Log.d(TAG,"Added clock $clockId view.") }
-            catch (e: Exception) { /* ... handle error, cleanup ... */ return }
-
-            // Apply nesting visuals if needed
-            if (initialState.isNested) { /* ... */ }
-
-            // Save state to prefs, start ticker
-            saveNewClockToPrefs(clockId, initialState, params)
-            startTickerIfNecessary()
-        } else {
-            Log.e(TAG, "Failed to inflate/setup view for new clock $clockId")
-        }
-        updateActiveClockCountInPrefs() // Update count regardless of success? Maybe only on success.
-    }
-
-    private fun removeClock(clockIdToRemove: Int) {
-         val rootView = activeClockViews[clockIdToRemove]
-         removeClockInternal(clockIdToRemove, rootView, true)
-    }
-    private fun removeClockInternal(clockIdToRemove: Int, rootViewToRemove: View?, saveState: Boolean) {
-        Log.d(TAG, "Removing clock $clockIdToRemove")
-        if (rootViewToRemove != null) { /* ... try removeView ... */ }
-        // Remove from maps
-        activeClockViews.remove(clockIdToRemove); clockViewInstances.remove(clockIdToRemove);
-        clockLayoutParams.remove(clockIdToRemove); clockStates.remove(clockIdToRemove);
-        nestedClockPositions.remove(clockIdToRemove)
-        if (saveState) { /* ... remove from SharedPreferences ... */ }
-        repositionNestedClocks()
-        if (clockStates.isEmpty()) { stopTicker() }
-    }
-
-    private fun loadActiveClocksFromPrefs() {
-         val activeIds = sharedPreferences.getStringSet("active_clock_ids", emptySet()) ?: emptySet()
-         Log.d(TAG, "Loading active clock IDs from prefs: $activeIds")
-         activeIds.forEach { idStr ->
-             val id = idStr.toIntOrNull()
-             if (id != null) {
-                 clockCounter.updateAndGet { currentMax -> max(currentMax, id) } // Ensure counter is ahead
-                 val state = ClockState(/*... load from prefs ...*/)
-                 val params = createLayoutParams(/*... load from prefs ...*/)
-
-                 // --- Use Helper Function ---
-                 val loadedViewPair = inflateAndSetupClockView(id, state, params)
-
-                 if (loadedViewPair != null) {                                 
-                    val (rootView, clockView) = loadedViewPair
-                    // Store state and references
-                    clockStates[id] = state
-                    activeClockViews[id] = rootView
-                    clockViewInstances[id] = clockView
-                    clockLayoutParams[id] = params
-
-
-                     // Add to window ...
-                     try { windowManager.addView(rootView, params) } catch (e: Exception) { /*...*/ continue }
-         
-                 // Setup interactions
-                 setupActionButtons(id, rootView) // *** ADDED ***
-                 updatePlayPauseButton(id)     // *** ADDED ***
-                 setupWindowTouchListener(id, rootView)
-
-                    // Apply nesting ...
-                    if (state.isNested) { applyNestModeVisuals(id, rootView, true) }
-                 } else {
-                      Log.e(TAG, "Failed to inflate/setup view for loaded clock $id")
-                 }
-             }
-         }
-         repositionNestedClocks()
-     }
-
-     // --- Persistence Functions ---
-     private fun saveNewClockToPrefs(clockId: Int, state: ClockState, params: WindowManager.LayoutParams) {
-         val currentIds = sharedPreferences.getStringSet("active_clock_ids", emptySet())?.toMutableSet() ?: mutableSetOf()
-        currentIds.add(clockId.toString())
-
-        sharedPreferences.edit()
-            .putStringSet("active_clock_ids", currentIds)
-            .putString("clock_${clockId}_mode", state.mode)
-            .putInt("clock_${clockId}_color", state.clockColor)
-            .putString("clock_${clockId}_time_zone_id", state.timeZoneId.id)
-            .putBoolean("clock_${clockId}_display_seconds", state.displaySeconds)
-            .putBoolean("clock_${clockId}_24hour", state.is24Hour)
-            .putBoolean("clock_${clockId}_nest", state.isNested)
-            .putInt("clock_${clockId}_x", params.x)
-            .putInt("clock_${clockId}_y", params.y)
-            .putInt("clock_${clockId}_width", params.width)
-            .putInt("clock_${clockId}_height", params.height)
-            .apply()
-
-        // updateActiveClockCountInPrefs() 
-        // Called separately after this function executes
-     }
-     
-     private fun saveSpecificClockSetting(clockId: Int, settingType: String, intent: Intent?) { 
-        val editor = sharedPreferences.edit()
-        when (settingType) {
-            "mode" -> editor.putString("clock_${clockId}_mode", intent?.getStringExtra(
-                EXTRA_SETTING_VALUE
-            ))
-            "color" -> editor.putInt("clock_${clockId}_color", intent?.getIntExtra(
-                EXTRA_SETTING_VALUE, Color.WHITE) ?: Color.WHITE)
-            "24hour" -> editor.putBoolean("clock_${clockId}_24hour", intent?.getBooleanExtra(
-                EXTRA_SETTING_VALUE, false) ?: false)
-            "time_zone" -> editor.putString("clock_${clockId}_time_zone_id", intent?.getStringExtra(
-                EXTRA_SETTING_VALUE
-            ))
-            "seconds" -> editor.putBoolean("clock_${clockId}_display_seconds", intent?.getBooleanExtra(
-                EXTRA_SETTING_VALUE, true) ?: true)
-            // Nest state is saved separately in handleNestClock
-        }
-        editor.apply()
-     }
-
-     private fun saveClockPosition(clockId: Int, x: Int, y: Int) { 
-        sharedPreferences.edit()
-            .putInt("clock_${clockId}_x", x)
-            .putInt("clock_${clockId}_y", y)
-            .apply()
-        // Update internal state (params are stored in clockLayoutParams map)
-        clockLayoutParams[clockId]?.x = x
-        clockLayoutParams[clockId]?.y = y
-     }
-
-     private fun saveClockDimensions(clockId: Int, width: Int, height: Int) { 
-        sharedPreferences.edit()
-            .putInt("clock_${clockId}_width", width)
-            .putInt("clock_${clockId}_height", height)
-            .apply()
-        // Update internal state
-        clockLayoutParams[clockId]?.width = width
-        clockLayoutParams[clockId]?.height = height
-     }
-
-     private fun updateActiveClockCountInPrefs() { 
-        val count = clockStates.size
-         sharedPreferences.edit().putInt("active_clock_count", count).apply()
-         Log.d(TAG, "Active clock count updated to: $count")
-     }
-
-
-    // --- NEW: Helper Function for View Inflation and Setup ---
-    private fun inflateAndSetupClockView(clockId: Int, state: ClockState, params: WindowManager.LayoutParams): Pair<ViewGroup, ClockView>? {
-        val inflater = LayoutInflater.from(this)
-        val rootView: ViewGroup
-        val clockView: ClockView
-
-        try {
-            // Inflate layout based on mode
-            if (state.mode == "analog") {
-                rootView = inflater.inflate(R.layout.view_floating_clock_analog, null) as ViewGroup
-                val frameLayout = rootView.findViewById<FrameLayout>(R.id.analogClockViewContainer)
-                    ?: throw IllegalStateException("Analog layout missing FrameLayout container (analogClockViewContainer)")
-                // Create ClockView programmatically and add it
-                clockView = ClockView(this, null)
-                frameLayout.addView(clockView, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
-                // Find SVGs and set them on the view
-                val clockFace = rootView.findViewById<SVGImageView>(R.id.clockFaceImageView)
-                val hourHand = rootView.findViewById<SVGImageView>(R.id.hourHandImageView)
-                val minuteHand = rootView.findViewById<SVGImageView>(R.id.minuteHandImageView)
-                val secondHand = rootView.findViewById<SVGImageView>(R.id.secondHandImageView)
-                if (clockFace == null || hourHand == null || minuteHand == null || secondHand == null) {
-                     Log.w(TAG, "Analog layout missing required SVGImageView elements for clock $clockId")
-                     // Continue without SVGs? Or fail? Let's log and continue for now.
-                     clockView.setAnalogImageViews(null, null, null, null) // Indicate missing views
-                } else {
-                    clockView.setAnalogImageViews(clockFace, hourHand, minuteHand, secondHand)
+        // Remove view from window manager
+        rootView?.let {
+            if (it.isAttachedToWindow) {
+                try {
+                    windowManager.removeView(it)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error removing view for clock $clockIdToRemove", e)
                 }
-            } else { // Digital
-                rootView = inflater.inflate(R.layout.view_floating_clock_digital, null) as ViewGroup
-                clockView = rootView.findViewById(R.id.digitalClockView)
-                    ?: throw IllegalStateException("Digital layout missing ClockView element (digitalClockView)")
             }
-
-            // Configure the ClockView instance
-            clockView.setClockId(clockId)
-            clockView.setClockMode(state.mode == "analog")
-            clockView.setClockColor(state.clockColor)
-            clockView.setIs24HourFormat(state.is24Hour)
-            clockView.setClockTimeZone(state.timeZoneId)
-            clockView.setDisplaySeconds(state.displaySeconds)
-            // Update its display immediately (use current state time, not system time)
-            clockView.updateDisplayTime(state.currentTime)
-
-            clockView.interactionListener = this // Set the listener
-
-            // Setup interactions
-            setupActionButtons(clockId, rootView)
-            updatePlayPauseButton(clockId) // Set initial button state
-            setupWindowTouchListener(clockId, rootView) // Window drag/resize
-
-            return Pair(rootView, clockView)
-
-        } catch (e: Exception) {
-            Log.e(TAG, "Error inflating or setting up view for clock $clockId (mode: ${state.mode})", e)
-            return null // Return null on failure
         }
+
+        // Delete state from DB if requested (usually true unless stopping service)
+        if (saveState) { // 'saveState' here means 'persist the deletion'
+            viewModel?.deleteState() // Tell VM to delete its persisted state
+        }
+
+        // Clean up nesting position
+        nestedClockPositions.remove(clockIdToRemove)
+        repositionNestedClocks()
+
+        // Stop service if last clock is removed
+        if (clockViewModels.isEmpty()) {
+            stopService()
+        }
+    }
+
+    private fun stopService() {
+        Log.d(TAG, "Stopping service as no clocks are left.")
+        stopForeground(true)
+        stopSelf()
+        isForeground = false
     }
 
     // --- Implementation for ClockInteractionListener Methods ---
 
     override fun onTimeManuallySet(clockId: Int, newTime: LocalTime) {
-        clockStates[clockId]?.let { state ->
-            if (!state.isPaused) { // Only allow setting time if not paused? Or allow always? Let's allow always.
-                Log.d(TAG, "Manual time set for clock $clockId to $newTime")
-                state.currentTime = newTime // Update the authoritative time state
-                // Optionally save this manually set time? For now, it persists until reset/mode/zone change.
-                // We could add a flag 'isManuallySet' to ClockState if needed.
-            } else {
-                Log.d(TAG, "Manual time set ignored for clock $clockId because it is paused.")
-            }
-        }
+        clockViewModels[clockId]?.setManuallySetTime(newTime)
     }
 
     override fun onDragStateChanged(clockId: Int, isDragging: Boolean) {
-        clockStates[clockId]?.let { state ->
-            if (isDragging) {
-                if (!state.isPaused) {
-                    Log.d(TAG, "Pausing clock $clockId due to hand drag.")
-                    state.isPaused = true
-                    updatePlayPauseButton(clockId)
-                }
-            } else { // Drag finished
-                if (state.isPaused) {
-                    // Should we automatically resume after drag? Let's assume yes for now.
-                    Log.d(TAG, "Resuming clock $clockId after hand drag.")
-                    state.isPaused = false
-                    updatePlayPauseButton(clockId)
-                    // Ticker will automatically resume incrementing from the manually set time
-                }
-            }
+        // We might not need this callback anymore, or use it for visual feedback.
+        Log.d(TAG, "Clock $clockId drag state changed: $isDragging")
+    }
+
+    // --- Helper Functions ---
+
+    private fun createDefaultLayoutParams(): WindowManager.LayoutParams {
+        // Define default size, can be adjusted based on mode later
+        val defaultWidth = WindowManager.LayoutParams.WRAP_CONTENT
+        val defaultHeight = WindowManager.LayoutParams.WRAP_CONTENT
+        return WindowManager.LayoutParams(
+            defaultWidth, defaultHeight,
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY else WindowManager.LayoutParams.TYPE_PHONE,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+            PixelFormat.TRANSLUCENT
+        ).apply {
+            gravity = Gravity.CENTER // Start new clocks centered
         }
     }
 
-    // --- Interaction Handling ---
-    private fun setupWindowTouchListener(clockId: Int, rootView: View) {
-        rootView.setOnTouchListener(object : View.OnTouchListener {
-            // Variables for drag/resize logic
-            var initialX: Int = 0
-            var initialY: Int = 0
-            var initialTouchX: Float = 0f
-            var initialTouchY: Float = 0f
-            var initialWidth: Int = 0
-            var initialHeight: Int = 0
-            var initialDistance: Float = 0f
-            var pointerId1: Int = -1
-            var pointerId2: Int = -1
-            var mode: Int = 0 // 0=None, 1=Drag, 2=Resize
-            val DRAG = 1
-            val RESIZE = 2
-            // Get touch slop instance specific to the context for accuracy
-            val touchSlop = android.view.ViewConfiguration.get(applicationContext).scaledTouchSlop.toFloat()
-            var hasMovedBeyondSlopForTapDetect = false // Flag to distinguish tap from drag/resize
+    private fun setupActionButtons(clockId: Int, rootView: ViewGroup, viewModel: ClockViewModel) {
+        val btnPlayPause = rootView.findViewById<View>(R.id.buttonPlayPause)
+        val btnReset = rootView.findViewById<View>(R.id.buttonReset)
+        val btnSettings = rootView.findViewById<View>(R.id.buttonSettings)
 
-            // Cache screen dimensions for efficiency during drag
-            var screenWidth = 0
-            var screenHeight = 0
-
-            override fun onTouch(view: View, event: MotionEvent): Boolean {
-                val params = clockLayoutParams[clockId] ?: return false
-
-                when (event.actionMasked) {
-                    MotionEvent.ACTION_DOWN -> {
-                        // Record initial state
-                        initialX = params.x
-                        initialY = params.y
-                        initialTouchX = event.rawX // Use raw coordinates for screen position
-                        initialTouchY = event.rawY
-                        pointerId1 = event.getPointerId(0)
-                        mode = DRAG // Assume dragging initially
-                        hasMovedBeyondSlopForTapDetect = false // Reset flag
-                        lastTouchDownTime = SystemClock.elapsedRealtime() // For tap detection
-
-                        // Get screen dimensions on touch down
-                        val displayMetrics = resources.displayMetrics
-                        screenWidth = displayMetrics.widthPixels
-                        screenHeight = displayMetrics.heightPixels
-                        // Note: For perfect boundary checks, might need to account for status/nav bars.
-                        // Using full screenHeight is simpler for now.
-
-                        return true // Consume event to detect move/up actions
-                    }
-                    
-                    MotionEvent.ACTION_POINTER_DOWN -> { /* ... set mode=RESIZE, set hasMoved flag ... */ return true }
-                    MotionEvent.ACTION_MOVE -> {
-                        // ... (check for slop movement, set hasMoved flag) ...
-                        if (!hasMovedBeyondSlopForTapDetect) return true
-                        if (mode == DRAG) { /* ... Drag logic ... */ }
-                        else if (mode == RESIZE) { /* ... Resize logic ... */ }
-                        return true
-                    }
-                    
-                    MotionEvent.ACTION_POINTER_DOWN -> {
-                         // Switch to resize mode if a second finger touches down
-                         if (event.pointerCount == 2) {
-                             pointerId2 = event.getPointerId(1)
-                             initialDistance = distance(event, 0, 1) // Calculate initial distance between fingers
-                             initialWidth = params.width // Store initial size for scaling
-                             initialHeight = params.height
-                             if (initialDistance > 10f) { // Threshold to avoid noise
-                                 mode = RESIZE
-                                 hasMovedBeyondSlopForTapDetect = true // Starting resize means it's not a tap
-                             }
-                         }
-                         return true // Consume pointer down events
-                    }
-
-                    MotionEvent.ACTION_MOVE -> {
-                        // Calculate movement delta
-                        val dx = event.rawX - initialTouchX
-                        val dy = event.rawY - initialTouchY
-
-                        // Check if movement has exceeded the touch slop threshold
-                        if (!hasMovedBeyondSlopForTapDetect) {
-                            if (sqrt(dx * dx + dy * dy) > touchSlop) {
-                                hasMovedBeyondSlopForTapDetect = true // Flag that significant movement occurred
-                            }
-                        }
-
-                        // Only perform drag/resize if movement is significant (beyond slop)
-                        if (!hasMovedBeyondSlopForTapDetect) return true
-
-                        if (mode == DRAG && event.pointerCount == 1) {
-                            // Calculate potential new coordinates
-                            var newX = initialX + dx.toInt()
-                            var newY = initialY + dy.toInt()
-
-                            // --- Boundary Check Logic ---
-                            val viewWidth = view.width
-                            val viewHeight = view.height
-                            newX = max(0, min(newX, screenWidth - viewWidth))
-                            newY = max(0, min(newY, screenHeight - viewHeight))
-                            // --- End Boundary Check ---
-
-                            params.x = newX
-                            params.y = newY
-                            try { windowManager.updateViewLayout(view, params) }
-                            catch (e: Exception) { Log.e(TAG,"UpdateViewLayout (Drag) Error", e) }
-                            return true // Consume move event during drag
-
-                        } else if (mode == RESIZE && event.pointerCount >= 2) {
-                            val index1 = event.findPointerIndex(pointerId1)
-                            val index2 = event.findPointerIndex(pointerId2)
-                            if (index1 != -1 && index2 != -1) {
-                                 val newDistance = distance(event, index1, index2)
-                                 if (initialDistance > 10f) { // Avoid division by zero/small values
-                                     val scaleFactor = newDistance / initialDistance
-                                     var newWidth = (initialWidth * scaleFactor).toInt()
-                                     var newHeight = (initialHeight * scaleFactor).toInt()
-
-                                     // Min/Max size constraints
-                                     val minSize = dpToPx(50)
-                                     val maxSize = dpToPx(500) // Example max size
-
-                                     // Boundary check for resize (prevent resizing past screen edge)
-                                     newWidth = max(minSize, min(newWidth, min(maxSize, screenWidth - params.x)))
-                                     newHeight = max(minSize, min(newHeight, min(maxSize, screenHeight - params.y)))
-
-                                     params.width = newWidth
-                                     params.height = newHeight
-                                     try { windowManager.updateViewLayout(view, params) }
-                                     catch (e: Exception) { Log.e(TAG,"UpdateViewLayout (Resize) Error", e) }
-                                 }
-                            }
-                            return true // Consume move event during resize
-                        }
-                    }
-                    
-                    MotionEvent.ACTION_POINTER_UP -> {
-                        // Handle one finger lifting during a resize gesture
-                        if (mode == RESIZE) {
-                            // Optional: Could switch back to DRAG mode if one finger remains,
-                            // but simply ending the resize and saving state is simpler.
-                            saveClockDimensions(clockId, params.width, params.height)
-                            mode = 0 // Reset mode
-                        }
-                        return true // Consume pointer up events
-                    }
-                    
-                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                         // Finger lifted or gesture cancelled
-                         if (mode == DRAG && hasMovedBeyondSlopForTapDetect) {
-                             // Save final position after dragging
-                             saveClockPosition(clockId, params.x, params.y)
-                         } else if (mode == RESIZE && hasMovedBeyondSlopForTapDetect) {
-                             // Final dimensions should have been saved on ACTION_POINTER_UP
-                             // If ACTION_UP happens with 2 fingers (less common), save here too.
-                             saveClockDimensions(clockId, params.width, params.height)
-                         } else if (!hasMovedBeyondSlopForTapDetect) {
-                             // Movement didn't exceed slop, treat as a tap on the background
-                             Log.d(TAG, "Tap detected on clock $clockId background, ignored.")
-                             // We don't trigger the old tooltip/menu here anymore
-                         }
-                         // Reset state variables
-                         mode = 0
-                         pointerId1 = -1
-                         pointerId2 = -1
-                         hasMovedBeyondSlopForTapDetect = false
-                         return true // Event handled
-                    }
-                }
-                // If none of the above conditions handled the event
-                return false
-            }
-
-             // Helper for distance calculation between two pointers
-             private fun distance(event: MotionEvent, pointerIndex1: Int, pointerIndex2: Int): Float {
-                 val x = event.getX(pointerIndex1) - event.getX(pointerIndex2)
-                 val y = event.getY(pointerIndex1) - event.getY(pointerIndex2)
-                 return sqrt(x * x + y * y)
-             }
-
-             // Helper to convert DP to PX (needed for min/max size)
-             private fun dpToPx(dp: Int): Int {
-                 return TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp.toFloat(), resources.displayMetrics).toInt()
-             }
-        })
-    }
-    
-    // --- Setup Listeners for Action Buttons ---
-    private fun setupActionButtons(clockId: Int, rootView: ViewGroup) {
-        val buttonPlayPause = rootView.findViewById<ImageButton>(R.id.buttonPlayPause)
-        val buttonReset = rootView.findViewById<ImageButton>(R.id.buttonReset)
-        val buttonSettings = rootView.findViewById<ImageButton>(R.id.buttonSettings)
-
-        buttonPlayPause?.setOnClickListener {
-            val state = clockStates[clockId] ?: return@setOnClickListener
-            val action = if (state.isPaused) ACTION_PLAY_CLOCK else ACTION_PAUSE_CLOCK
-            val intent = Intent(this, ClockOverlayService::class.java).apply {
-                this.action = action
-                putExtra(EXTRA_CLOCK_ID, clockId)
-            }
-            startService(intent)
+        btnPlayPause?.setOnClickListener {
+            val currentState = viewModel.uiState.value
+            viewModel.setPaused(!currentState.isPaused) // Toggle pause state
         }
-
-        buttonReset?.setOnClickListener {
-            val intent = Intent(this, ClockOverlayService::class.java).apply {
-                this.action = ACTION_RESET_CLOCK
-                putExtra(EXTRA_CLOCK_ID, clockId)
-            }
-            startService(intent)
+        btnReset?.setOnClickListener {
+            viewModel.resetTime()
         }
-
-        buttonSettings?.setOnClickListener {
-             val intent = Intent(this, ClockOverlayService::class.java).apply {
-                 this.action = ACTION_OPEN_SETTINGS
-                 putExtra(EXTRA_CLOCK_ID, clockId)
-             }
-             startService(intent)
+        btnSettings?.setOnClickListener {
+            // Launch ClockSettingsActivity for this specific clockId
+            val settingsIntent = Intent(this, ClockSettingsActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                putExtra(ClockViewModel.KEY_CLOCK_ID, clockId) // Pass ID to settings
+            }
+            startActivity(settingsIntent)
         }
     }
 
-    // --- NEW: Update Play/Pause Button Visual State ---
-    private fun updatePlayPauseButton(clockId: Int) {
-         activeClockViews[clockId]?.let { rootView ->
-             val button = rootView.findViewById<ImageButton>(R.id.buttonPlayPause)
-             val state = clockStates[clockId]
-             if (button != null && state != null) {
-                 if (state.isPaused) {
-                     button.setImageResource(R.drawable.ic_play)
-                     button.contentDescription = getString(R.string.play)
-                 } else {
-                     button.setImageResource(R.drawable.ic_pause)
-                     button.contentDescription = getString(R.string.pause)
-                 }
-             }
-         }
+    private fun updatePlayPauseButton(clockId: Int, rootView: ViewGroup, isPaused: Boolean) {
+        val button = rootView.findViewById<android.widget.ImageButton>(R.id.buttonPlayPause)
+        button?.apply {
+            setImageResource(if (isPaused) R.drawable.ic_play else R.drawable.ic_pause)
+            contentDescription = getString(if (isPaused) R.string.play else R.string.pause)
+        }
     }
 
-    // --- Nesting Logic, Utility, UI Feedback (Remain the same) ---
     private fun applyNestModeVisuals(clockId: Int, clockRootView: ViewGroup, isNested: Boolean) {
-        // Combines logic from applyNestMode and applyNestingToClockOnCreation
-        val configState = clockStates[clockId] ?: return // Use config from state map
-        val params = clockLayoutParams[clockId] ?: return
-
-        val displayMetrics = resources.displayMetrics
-        val density = displayMetrics.density
-
-        // Define nested state appearance
-        val nestedScale = 0.3f
-        val nestedWidthDp = 60f
-        val nestedWidthPx = (nestedWidthDp * density).toInt()
-        val nestedHeightPx = nestedWidthPx // Assume roughly square when nested
-
-        // Define un-nested state appearance (use saved dimensions or WRAP_CONTENT)
-        val unNestedWidth = sharedPreferences.getInt("clock_${clockId}_width", WindowManager.LayoutParams.WRAP_CONTENT)
-        val unNestedHeight = sharedPreferences.getInt("clock_${clockId}_height", WindowManager.LayoutParams.WRAP_CONTENT)
-        val unNestedX = sharedPreferences.getInt("clock_${clockId}_x", 50) // Restore saved X
-        val unNestedY = sharedPreferences.getInt("clock_${clockId}_y", 50) // Restore saved Y
-
-        // Find standard action buttons
-        val buttonPlayPause = clockRootView.findViewById<View>(R.id.buttonPlayPause)
-        val buttonReset = clockRootView.findViewById<View>(R.id.buttonReset)
-        val buttonSettings = clockRootView.findViewById<View>(R.id.buttonSettings)
-
-        if (isNested) {
-            // --- Apply Nested State ---
-
-            // Hide standard action buttons
-            buttonPlayPause?.visibility = View.GONE
-            buttonReset?.visibility = View.GONE
-            buttonSettings?.visibility = View.GONE            
-            
-            // Scale down the view
-            clockRootView.scaleX = nestedScale
-            clockRootView.scaleY = nestedScale
-
-            // Set fixed small size (position is handled by repositionNestedClocks)
-            params.width = nestedWidthPx
-            params.height = nestedHeightPx
-
-            // Add to nested positions map if not already there
-            if (!nestedClockPositions.containsKey(clockId)) {
-                nestedClockPositions[clockId] = nestedClockPositions.size // Assign next available index
-            }
-
-            // --- Add Exit Nest Button ---
-            addExitNestButton(clockId, clockRootView)
-
-        } else {           
-            // --- Apply Un-nested State ---
-            // Restore standard action buttons
-            buttonPlayPause?.visibility = View.VISIBLE
-            buttonReset?.visibility = View.VISIBLE
-            buttonSettings?.visibility = View.VISIBLE
-
-            // Ensure Play/Pause button state is correct
-            updatePlayPauseButton(clockId)
-
-            // Restore scale
-            clockRootView.scaleX = 1.0f
-            clockRootView.scaleY = 1.0f
-
-            // Restore size and position
-            params.width = unNestedWidth
-            params.height = unNestedHeight
-            params.x = unNestedX
-            params.y = unNestedY
-            params.gravity = Gravity.TOP or Gravity.START // Ensure gravity is reset
-
-            // Remove from nested positions map
-            nesedClockPositions.remove(clockId)
-
-            // --- Remove Exit Nest Button ---
-            val exitButton = clockRootView.findViewWithTag<View>("exit_nest_button_$clockId")
-            exitButton?.let {
-                clockRootView.removeView(it)
-                Log.d(TAG, "Removed Exit Nest button for clock $clockId")
-            }
-        }
-
-        // Update the view layout
-        try {
-            windowManager.updateViewLayout(clockRootView, params)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error updating layout for nest mode change", e)
-        }
-    }
-    
-    // --- Helper: Adds the Exit Nest button dynamically ---
-    private fun addExitNestButton(clockId: Int, clockRootView: ViewGroup) {
-        // Check if button already exists (shouldn't happen if logic is correct, but safe check)
-        if (clockRootView.findViewWithTag<View>("exit_nest_button_$clockId") != null) {
-            Log.w(TAG, "Exit Nest button already exists for clock $clockId")
-            return
-        }
-
-        val buttonSizePx = (25f * resources.displayMetrics.density).toInt() // Adjust size as needed
-        val buttonMarginPx = (4f * resources.displayMetrics.density).toInt()
-
-        val exitNestButton = TextView(this).apply {
-            text = "X" // Simple text "X" - replace with ImageButton if you have an icon
-            tag = "exit_nest_button_$clockId" // Set tag to find it later
-            setTextColor(Color.parseColor("#FF6666")) // Reddish color for close
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f) // Adjust size
-            gravity = Gravity.CENTER
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                setColor(Color.argb(180, 60, 60, 60)) // Semi-transparent dark background
-                setSize(buttonSizePx, buttonSizePx)
-            }
-            // Ensure it's clickable
-            isClickable = true
-            isFocusable = true
-
-            setOnClickListener {
-                Log.d(TAG, "Exit Nest button clicked for clock $clockId")
-                // Send intent back to service to un-nest this clock
-                val unNestIntent = Intent(this@ClockOverlayService, ClockOverlayService::class.java).apply {
-                    action = ACTION_NEST_CLOCK
-                    putExtra(EXTRA_CLOCK_ID, clockId)
-                    putExtra(EXTRA_NEST_STATE, false) // Explicitly set nest state to false
-                }
-                ContextCompat.startForegroundService(this@ClockOverlayService, unNestIntent)
-            }
-        }
-
-        // Add the button to the root view
-        // Using LinearLayout requires careful placement, FrameLayout is easier for overlays.
-        // Assuming root is LinearLayout for now, adding with specific layout params.
-        // This might need adjustment depending on the exact structure of your XML root.
-        val buttonParams = LinearLayout.LayoutParams(buttonSizePx, buttonSizePx).apply {
-            // Try placing it at the top-end within the LinearLayout
-            // This positioning might be imperfect in LinearLayout; FrameLayout is better.
-            gravity = Gravity.TOP or Gravity.END
-            setMargins(buttonMarginPx, buttonMarginPx, buttonMarginPx, buttonMarginPx)
-        }
-
-        try {
-            clockRootView.addView(exitNestButton, buttonParams)
-            Log.d(TAG, "Added Exit Nest button for clock $clockId")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error adding Exit Nest button", e)
-            // This might fail if clockRootView isn't a ViewGroup or has restrictions
-        }
+        // TODO: Implement visual changes for nesting (scaling, hiding buttons)
+        // Similar logic to TrafficLightService's implementation
+        Log.d(TAG, "Applying nest visuals for $clockId: $isNested (TODO)")
     }
 
     private fun repositionNestedClocks() {
-        val displayMetrics = resources.displayMetrics
-        val density = displayMetrics.density
-        val screenWidth = displayMetrics.widthPixels
-        val nestedMarginPx = (10f * density).toInt() // Margin from edge
-        val nestedSpacingPx = (8f * density).toInt() // Spacing between clocks
-        val nestedWidthDp = 60f // Base width before scaling
-        val scale = 0.3f
-        val scaledWidthPx = (nestedWidthDp * density * scale).toInt() // Effective width after scaling
-        val scaledHeightPx = scaledWidthPx // Assume square after scaling
-
-        // Get the list of currently nested clocks, sorted by their assigned index
-        val currentlyNested = nestedClockPositions.entries
-            .sortedBy { it.value } // Sort by the stored index (0, 1, 2...)
-            .mapNotNull { entry ->
-                activeClockViews[entry.key]?.let { view ->
-                    // Triple contains: clockId, the rootView, the assigned index
-                    Triple(entry.key, view, entry.value)
-                }
-            }
-
-        // Recalculate positions based on the sorted list
-        currentlyNested.forEach { (id, rootView, index) ->
-            val params = clockLayoutParams[id] ?: return@forEach
-            val nestedY = nestedMarginPx + (index * (scaledHeightPx + nestedSpacingPx))
-
-            params.gravity = Gravity.TOP or Gravity.END // Align to top-right
-            params.x = nestedMarginPx // Use margin for X (distance from right edge)
-            params.y = nestedY
-
-            // Also ensure the size is correct for nested state
-            params.width = scaledWidthPx
-            params.height = scaledHeightPx
-
-            try {
-                 windowManager.updateViewLayout(rootView, params)
-            } catch (e: Exception) {
-                 Log.e(TAG, "Error repositioning nested clock $id", e)
-             }
-        }
-         Log.d(TAG, "Repositioned ${currentlyNested.size} nested clocks.")
+        // TODO: Implement repositioning logic based on nestedClockPositions map
+        // Similar logic to TrafficLightService's implementation
+        Log.d(TAG, "Repositioning nested clocks (TODO)")
     }
-    
-    private fun createLayoutParams(x: Int, y: Int, width: Int, height: Int): WindowManager.LayoutParams { 
-        return WindowManager.LayoutParams(
-            width,
-            height,
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY else WindowManager.LayoutParams.TYPE_PHONE,
-            // Flag explanation:
-            // FLAG_NOT_FOCUSABLE: Prevents the window from taking focus (e.g., keyboard)
-            // FLAG_NOT_TOUCH_MODAL: Allows touches outside the window to go to views behind it. Essential for overlay.
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
-            PixelFormat.TRANSLUCENT // Allow transparency
-        ).apply {
-            gravity = Gravity.TOP or Gravity.START // Use absolute positioning from top-left
-            this.x = x // Set initial X position
-            this.y = y // Set initial Y position
-        }
-    }
-    
-    private fun highlightClock(clockId: Int) { 
-        activeClockViews[clockId]?.let { view ->
-            // Apply a temporary highlight effect
-            // Example: Using foreground requires API 23+
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                val highlightDrawable = ContextCompat.getDrawable(this,
-                    R.drawable.clock_highlight_border
-                )
-                view.foreground = highlightDrawable
-            }
-            // Consider a fallback for older APIs if needed
-        }
-    }
-    
-    private fun resetClockHighlight() { 
-        activeClockViews.values.forEach { view ->
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                view.foreground = null
-            }
-            // Reset fallback if used
-        }
-    }
-    
-    private fun dimOtherClocks(activeClockId: Int) { 
-        activeClockViews.forEach { (id, view) ->
-            if (id != activeClockId) {
-                view.alpha = 0.6f // Dim inactive clocks (adjust value as needed)
-            } else {
-                view.alpha = 1.0f // Ensure active clock is not dimmed
-            }
-        }
-    }
-    
-    private fun resetClockDimming() { 
-        activeClockViews.values.forEach { view ->
-            view.alpha = 1.0f
+
+    // --- Foreground Service Methods ---
+    private fun startForegroundServiceIfNeeded() {
+        if (!isForeground) {
+            val notificationIntent = Intent(this, MainActivity::class.java)
+            val pendingIntentFlags =
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            val pendingIntent =
+                PendingIntent.getActivity(this, 0, notificationIntent, pendingIntentFlags)
+
+            val notification: Notification = NotificationCompat.Builder(this, CHANNEL_ID)
+                .setContentTitle(getString(R.string.app_name))
+                .setContentText("Floating clock(s) active")
+                .setSmallIcon(R.drawable.ic_clock)
+                .setContentIntent(pendingIntent)
+                .build()
+
+            startForeground(NOTIFICATION_ID, notification)
+            isForeground = true
+            Log.d(TAG, "Service started in foreground.")
         }
     }
 
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val serviceChannel = NotificationChannel(
+                CHANNEL_ID,
+                "Clock Overlay Service Channel", // Channel name
+                NotificationManager.IMPORTANCE_LOW // Low importance for overlays
+            )
+            val manager = getSystemService(NotificationManager::class.java)
+            manager?.createNotificationChannel(serviceChannel)
+        }
+    }
+
+    // --- Not Used ---
+    override fun onBind(intent: Intent): IBinder? {
+        super.onBind(intent) // Needed for LifecycleService
+        return null
+    }
 }

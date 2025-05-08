@@ -3,6 +3,7 @@ package com.example.purramid.thepurramid.data.db
 
 import android.content.Context
 import com.example.purramid.thepurramid.data.db.PurramidDatabase
+import com.example.purramid.thepurramid.data.db.ClockDao
 import com.example.purramid.thepurramid.data.db.CityDao
 import com.example.purramid.thepurramid.data.db.IoDispatcher
 import com.example.purramid.thepurramid.data.db.RandomizerDao
@@ -28,6 +29,12 @@ object DatabaseModule {
     @Singleton // Ensures only one instance of the DAO is created
     fun provideRandomizerDao(database: PurramidDatabase): RandomizerDao {
         return database.randomizerDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideClockDao(database: PurramidDatabase): ClockDao {
+        return database.clockDao()
     }
 
     @Provides

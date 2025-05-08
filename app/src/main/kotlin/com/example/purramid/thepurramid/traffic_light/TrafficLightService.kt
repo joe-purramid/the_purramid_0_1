@@ -92,7 +92,7 @@ class TrafficLightService : LifecycleService(), ViewModelStoreOwner { // Inherit
         }
     }
 
-    private fun setupLayoutParams() {
+    private fun setupDefaultLayoutParams() {
         val defaultWidth = resources.getDimensionPixelSize(R.dimen.traffic_light_default_width)
         val defaultHeight = resources.getDimensionPixelSize(R.dimen.traffic_light_default_height)
 
@@ -185,7 +185,6 @@ class TrafficLightService : LifecycleService(), ViewModelStoreOwner { // Inherit
     private fun addOverlayViewIfNeeded() {
         if (overlayView == null) {
             overlayView = TrafficLightOverlayView(this).apply {
-                // Set listener to handle interactions (taps) from the view
                 interactionListener = object : TrafficLightOverlayView.InteractionListener {
                     override fun onLightTapped(color: LightColor) {
                         viewModel.handleLightTap(color)
@@ -198,34 +197,36 @@ class TrafficLightService : LifecycleService(), ViewModelStoreOwner { // Inherit
                         val intent = Intent(this@TrafficLightService, TrafficLightActivity::class.java).apply {
                             action = TrafficLightActivity.ACTION_SHOW_SETTINGS
                             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
-                            // Pass the correct instance ID back to the activity
                             putExtra(TrafficLightActivity.EXTRA_INSTANCE_ID, viewModel.uiState.value.instanceId)
                         }
+                        try { startActivity(intent) }
+                        catch (e: Exception) { Log.e(TAG, "Error starting TrafficLightActivity for settings", e)}
+                    }
+                    override fun onMove(rawDeltaX: Float, rawDeltaY: Float) {
+                        if (!isViewAdded) return
+                        layoutParams.x += rawDeltaX.toInt()
+                        layoutParams.y += rawDeltaY.toInt()
+                        try { windowManager.updateViewLayout(this@apply, layoutParams) }
+                        catch (e: Exception) { Log.e(TAG, "Error updating layout on move", e) }
+                    }
+                    override fun onMoveFinished() {
+                        viewModel.saveWindowPosition(layoutParams.x, layoutParams.y)
+                    }
+                    // --- Implement Resize Callbacks ---
+                    override fun onResize(newWidth: Int, newHeight: Int) {
+                        if (!isViewAdded) return
+                        layoutParams.width = newWidth
+                        layoutParams.height = newHeight
                         try {
-                            startActivity(intent)
+                            windowManager.updateViewLayout(this@apply, layoutParams)
                         } catch (e: Exception) {
-                            Log.e(TAG, "Error starting TrafficLightActivity for settings", e)
-                            // TODO Decide on error messaging standard (toast? snackbar? nothing?)
-                            // Handler(Looper.getMainLooper()).post { Toast.makeText(applicationContext, "Cannot open settings", Toast.LENGTH_SHORT).show() }
+                            Log.e(TAG, "Error updating layout on resize", e)
                         }
                     }
-
-                    // Handle window movement requests from the view's touch handler
-                     override fun onMove(deltaX: Int, deltaY: Int) {
-                         if (!isViewAdded) return
-                         layoutParams.x += rawDeltaX.toInt()
-                         layoutParams.y += rawDeltaY.toInt()
-                         try {
-                             windowManager.updateViewLayout(this@apply, layoutParams)
-                         } catch (e: Exception) {
-                             Log.e(TAG, "Error updating layout on move", e)
-                         }
-                     }
-                     override fun onMoveFinished() {
-                         // Save final position
-                         viewModel.saveWindowPosition(layoutParams.x, layoutParams.y)
-                     }
-                     // Add onResize if implementing resizing
+                    override fun onResizeFinished(finalWidth: Int, finalHeight: Int) {
+                        viewModel.saveWindowSize(finalWidth, finalHeight)
+                    }
+                    // --- End Resize Callbacks ---
                 }
             }
         }
@@ -237,13 +238,12 @@ class TrafficLightService : LifecycleService(), ViewModelStoreOwner { // Inherit
                 Log.d(TAG, "Traffic Light overlay view added.")
             } catch (e: Exception) {
                 Log.e(TAG, "Error adding overlay view", e)
-                overlayView = null // Reset if failed
+                overlayView = null
             }
         } else if (!initialParamsSet) {
             Log.d(TAG, "Overlay view creation deferred until initial state is loaded.")
         }
     }
-
 
     private fun removeOverlayView() {
         overlayView?.let {

@@ -6,6 +6,7 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import com.example.purramid.thepurramid.data.db.ClockStateEntity
 import com.example.purramid.thepurramid.data.db.CityEntity
 import com.example.purramid.thepurramid.data.db.CityDao
 import com.example.purramid.thepurramid.data.db.SpotlightStateEntity
@@ -21,16 +22,17 @@ import com.example.purramid.thepurramid.data.db.TrafficLightStateEntity
 @Database(
     entities = [
         // List all your entity classes here
+        ClockStateEntity::class,
+        TimeZoneBoundaryEntity::class,
+        CityEntity::class,
         RandomizerInstanceEntity::class,
         SpinItemEntity::class,
         SpinListEntity::class,
         SpinSettingsEntity::class,
-        TimeZoneBoundaryEntity::class,
-        CityEntity::class
-        SpotlightStateEntity::class
+        SpotlightStateEntity::class,
         TrafficLightStateEntity::class
     ],
-    version = 7, // Updated with Slots randomizer mode
+    version = 8, // Updated with Slots randomizer mode
     exportSchema = false // Set to true if you want to export the schema to a file for version control (recommended for production apps)
 )
 @TypeConverters(Converters::class) // Register the TypeConverters class
@@ -40,9 +42,10 @@ abstract class PurramidDatabase : RoomDatabase() {
      * Abstract function to get the Data Access Objects
      * Room will generate the implementation.
      */
-    abstract fun randomizerDao(): RandomizerDao
+    abstract fun clockDao(): ClockDao
     abstract fun timeZoneDao(): TimeZoneDao
     abstract fun cityDao(): CityDao
+    abstract fun randomizerDao(): RandomizerDao
     abstract fun spotlightDao(): SpotlightDao
     abstract fun trafficLightDao(): TrafficLightDao
 
