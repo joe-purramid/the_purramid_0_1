@@ -24,9 +24,7 @@ import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 
-/**
- * Represents the UI state for a single clock instance.
- */
+// --- ClockState Data Class (keep as defined previously) ---
 data class ClockState(
     val clockId: Int,
     val timeZoneId: ZoneId = ZoneId.systemDefault(),
@@ -40,28 +38,25 @@ data class ClockState(
     val windowY: Int = 0,
     val windowWidth: Int = -1,
     val windowHeight: Int = -1,
-    val currentTime: LocalTime = LocalTime.now(), // Current time to display
-    val manuallySetTime: LocalTime? = null // Stores time if manually set by user drag
+    val currentTime: LocalTime = LocalTime.now(),
+    val manuallySetTime: LocalTime? = null
 )
+
 
 @HiltViewModel
 class ClockViewModel @Inject constructor(
     private val clockDao: ClockDao,
-    private val savedStateHandle: SavedStateHandle // Hilt injects this
+    private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
     companion object {
-        // Key to retrieve clockId from SavedStateHandle (must match what Service/Activity passes)
         const val KEY_CLOCK_ID = "clockId"
         private const val TAG = "ClockViewModel"
-        private const val TICK_INTERVAL_MS = 100L // Update more frequently for smoother seconds
+        private const val TICK_INTERVAL_MS = 100L
     }
 
-    // Get the clockId passed via SavedStateHandle
     private val clockId: Int? = savedStateHandle[KEY_CLOCK_ID]
-
-    // Default state (used if loading fails or it's a new clock)
-    private val defaultState = ClockState(clockId ?: -1) // Use -1 if ID is somehow null
+    private val defaultState = ClockState(clockId ?: -1)
 
     private val _uiState = MutableStateFlow(defaultState)
     val uiState: StateFlow<ClockState> = _uiState.asStateFlow()
@@ -74,9 +69,7 @@ class ClockViewModel @Inject constructor(
             loadInitialState(clockId)
         } else {
             Log.e(TAG, "Invalid clockId ($clockId), ViewModel will use default state but not persist.")
-            // Start ticker even with default state if ID is invalid? Or wait for valid ID?
-            // Let's start it, it will use system time.
-             startTicker()
+            startTicker() // Start ticker even with default state
         }
     }
 
@@ -84,20 +77,20 @@ class ClockViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             val entity = clockDao.getById(id)
             withContext(Dispatchers.Main) {
-                if (entity != null) {
+                val initialState = if (entity != null) {
                     Log.d(TAG, "Loaded state from DB for clock $id")
-                    val loadedState = mapEntityToState(entity)
-                    _uiState.value = loadedState
-                    // Start ticker after state is loaded
-                    startTicker()
+                    mapEntityToState(entity)
                 } else {
                     Log.w(TAG, "No saved state found for clock $id, initializing with defaults.")
-                    // Initialize with default state for this new instance ID
-                    val initialState = ClockState(clockId = id, currentTime = LocalTime.now(ZoneId.systemDefault()))
-                    _uiState.value = initialState
-                    // Save the initial default state to the DB
-                    saveState(initialState) // Save immediately
-                    startTicker() // Start ticker for the new clock
+                    ClockState(clockId = id, currentTime = LocalTime.now(ZoneId.systemDefault())).also {
+                        // Save the initial default state to the DB immediately
+                        saveState(it)
+                    }
+                }
+                _uiState.value = initialState
+                // Start ticker only if not paused according to loaded state
+                if (!initialState.isPaused) {
+                    startTicker()
                 }
             }
         }
@@ -105,58 +98,66 @@ class ClockViewModel @Inject constructor(
 
     // --- Ticker Logic ---
     private fun startTicker() {
-        tickerJob?.cancel() // Cancel any existing job
-        tickerJob = viewModelScope.launch(Dispatchers.Main) { // Use Main dispatcher for UI state updates
+        if (tickerJob?.isActive == true) return // Don't start if already running
+        tickerJob = viewModelScope.launch(Dispatchers.Main) {
+            Log.d(TAG, "Ticker starting for clock $clockId...")
             while (isActive) {
                 _uiState.update { currentState ->
-                    if (!currentState.isPaused) {
-                        // If manually set time exists, increment that, otherwise use system time
-                        val timeToUpdate = currentState.manuallySetTime ?: LocalTime.now(currentState.timeZoneId)
-                        // Increment logic needs care for LocalTime - handle potential day rollover if needed
-                        // For simplicity, let's just fetch current time if not manually set.
-                        val newTime = currentState.manuallySetTime?.plusNanos(TICK_INTERVAL_MS * 1_000_000)
-                                      ?: LocalTime.now(currentState.timeZoneId)
-
-                        currentState.copy(currentTime = newTime.truncatedTo(ChronoUnit.NANOS)) // Update with new time
-                    } else {
-                        currentState // No change if paused
-                    }
+                    // Ticker only runs if not paused, so we just update time
+                    val timeToUpdate = currentState.manuallySetTime ?: currentState.currentTime // Use manual time if set, else last known time
+                    // Increment the time by the tick interval
+                    val newTime = timeToUpdate.plusNanos(TICK_INTERVAL_MS * 1_000_000)
+                    currentState.copy(currentTime = newTime.truncatedTo(ChronoUnit.NANOS))
                 }
                 delay(TICK_INTERVAL_MS)
             }
+            Log.d(TAG, "Ticker coroutine ended for clock $clockId")
         }
-         Log.d(TAG, "Ticker started for clock $clockId")
     }
 
     private fun stopTicker() {
-        tickerJob?.cancel()
+        if (tickerJob?.isActive == true) {
+            tickerJob?.cancel()
+            Log.d(TAG, "Ticker stopped for clock $clockId")
+        }
         tickerJob = null
-         Log.d(TAG, "Ticker stopped for clock $clockId")
     }
 
     // --- State Update Actions ---
 
-    fun setPaused(isPaused: Boolean) {
-        if (_uiState.value.isPaused == isPaused) return
-        _uiState.update {
-            // If resuming, clear manually set time and sync to current time zone time
-            val newTime = if (!isPaused) LocalTime.now(it.timeZoneId) else it.currentTime
-            val manualTime = if (!isPaused) null else it.manuallySetTime // Clear manual time on resume
-            it.copy(isPaused = isPaused, currentTime = newTime, manuallySetTime = manualTime)
+    /**
+     * Pauses or resumes the clock's timekeeping.
+     * When resuming, the clock continues from the time it was paused at.
+     */
+    fun setPaused(shouldPause: Boolean) {
+        if (_uiState.value.isPaused == shouldPause) return // No change needed
+
+        _uiState.update { currentState ->
+            // When pausing, keep the current time.
+            // When resuming, keep the current time (don't reset to now).
+            // Clear manually set time ONLY when resuming from a manually set state.
+            val manualTime = if (!shouldPause && currentState.manuallySetTime != null) null else currentState.manuallySetTime
+            currentState.copy(isPaused = shouldPause, manuallySetTime = manualTime)
         }
-        if (isPaused) {
-            stopTicker() // Stop ticker when paused
+
+        if (shouldPause) {
+            stopTicker()
         } else {
-            startTicker() // Restart ticker when resumed
+            startTicker() // Resuming starts the ticker from the current time
         }
-        saveState(_uiState.value)
+        saveState(_uiState.value) // Save the paused state
     }
 
+
+    /**
+     * Resets the clock to the current actual time in its time zone,
+     * clears any manually set time, and ensures it's running.
+     */
     fun resetTime() {
         _uiState.update {
             it.copy(
-                currentTime = LocalTime.now(it.timeZoneId),
-                isPaused = false, // Ensure not paused after reset
+                currentTime = LocalTime.now(it.timeZoneId), // Reset to actual current time
+                isPaused = false, // Ensure not paused
                 manuallySetTime = null // Clear manually set time
             )
         }
@@ -164,79 +165,86 @@ class ClockViewModel @Inject constructor(
         saveState(_uiState.value)
     }
 
-    // Called by the View/Service when user finishes dragging a hand
+    /**
+     * Sets a specific time, usually from user interaction (dragging hands).
+     * This action implies the clock should be paused.
+     */
     fun setManuallySetTime(manualTime: LocalTime) {
-         if (!_uiState.value.isPaused) {
-             Log.w(TAG, "Attempted to set manual time while clock is running. Pausing first.")
-             setPaused(true) // Force pause if not already paused
-         }
-         _uiState.update {
-             it.copy(
-                 manuallySetTime = manualTime,
-                 currentTime = manualTime // Update display time immediately
-             )
-         }
-        saveState(_uiState.value) // Save the manually set time
+        // Ensure clock is paused before accepting manual time
+        if (!_uiState.value.isPaused) {
+            Log.d(TAG, "Pausing clock $clockId before setting manual time.")
+            stopTicker() // Stop ticker explicitly
+        }
+        _uiState.update {
+            it.copy(
+                manuallySetTime = manualTime,
+                currentTime = manualTime, // Update display time immediately
+                isPaused = true // Ensure it's marked as paused
+            )
+        }
+        saveState(_uiState.value) // Save the manually set time and paused state
     }
 
 
-    // --- Settings Updates (Called from Settings UI/Service) ---
-
-    fun updateMode(newMode: String) { // "digital" or "analog"
+    // --- Settings Updates (Remain the same, call saveState) ---
+    fun updateMode(newMode: String) {
         if (_uiState.value.mode == newMode) return
-        // Reset time when changing mode to avoid visual glitches
         val resetTime = LocalTime.now(_uiState.value.timeZoneId)
         _uiState.update { it.copy(mode = newMode, currentTime = resetTime, manuallySetTime = null, isPaused = false) }
-        startTicker() // Ensure ticker runs after mode change
+        startTicker()
         saveState(_uiState.value)
     }
-
     fun updateColor(newColor: Int) {
         if (_uiState.value.clockColor == newColor) return
         _uiState.update { it.copy(clockColor = newColor) }
         saveState(_uiState.value)
     }
-
     fun updateIs24Hour(is24: Boolean) {
         if (_uiState.value.is24Hour == is24) return
         _uiState.update { it.copy(is24Hour = is24) }
         saveState(_uiState.value)
     }
-
     fun updateTimeZone(zoneId: ZoneId) {
         if (_uiState.value.timeZoneId == zoneId) return
-        // Update time immediately to reflect new zone, clear manual time
         val newTime = LocalTime.now(zoneId)
         _uiState.update { it.copy(timeZoneId = zoneId, currentTime = newTime, manuallySetTime = null) }
-        // Ticker will continue with the new zone
         saveState(_uiState.value)
     }
-
     fun updateDisplaySeconds(display: Boolean) {
         if (_uiState.value.displaySeconds == display) return
         _uiState.update { it.copy(displaySeconds = display) }
         saveState(_uiState.value)
     }
-
     fun updateIsNested(isNested: Boolean) {
         if (_uiState.value.isNested == isNested) return
         _uiState.update { it.copy(isNested = isNested) }
         saveState(_uiState.value)
     }
-
     fun updateWindowPosition(x: Int, y: Int) {
         if (_uiState.value.windowX == x && _uiState.value.windowY == y) return
         _uiState.update { it.copy(windowX = x, windowY = y) }
         saveState(_uiState.value)
     }
-
     fun updateWindowSize(width: Int, height: Int) {
         if (_uiState.value.windowWidth == width && _uiState.value.windowHeight == height) return
         _uiState.update { it.copy(windowWidth = width, windowHeight = height) }
         saveState(_uiState.value)
     }
 
-    // --- Persistence ---
+    // --- Persistence (Remains the same) ---
+    private fun saveState(state: ClockState) { /* ... */ }
+    fun deleteState() { /* ... */ }
+
+    // --- Mappers (Remain the same) ---
+    private fun mapEntityToState(entity: ClockStateEntity): ClockState { /* ... */ }
+    private fun mapStateToEntity(state: ClockState): ClockStateEntity { /* ... */ }
+
+    // --- Cleanup (Remains the same) ---
+    override fun onCleared() { /* ... */ }
+
+    // --- Reimplementations of removed methods for clarity ---
+
+    // Persistence
     private fun saveState(state: ClockState) {
         val currentId = state.clockId
         if (currentId == -1) {
@@ -250,12 +258,11 @@ class ClockViewModel @Inject constructor(
                 Log.d(TAG, "Saved state for clock $currentId")
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to save state for clock $currentId", e)
-                // TODO: Consider notifying UI about save failure
             }
         }
     }
 
-     fun deleteState() {
+    fun deleteState() {
         val currentId = clockId
         if (currentId == null || currentId == -1) {
             Log.w(TAG, "Cannot delete state, invalid clockId: $currentId")
@@ -271,12 +278,12 @@ class ClockViewModel @Inject constructor(
         }
     }
 
-
-    // --- Mappers ---
+    // Mappers
     private fun mapEntityToState(entity: ClockStateEntity): ClockState {
         val timeZone = try { ZoneId.of(entity.timeZoneId) } catch (e: Exception) { ZoneId.systemDefault() }
-        val manualTime = entity.manuallySetTimeSeconds?.let { LocalTime.ofSecondOfDay(it % (24 * 3600)) } // Convert seconds back to LocalTime
-        val currentTime = manualTime ?: LocalTime.now(timeZone) // Use manual time if set, else current time
+        val manualTime = entity.manuallySetTimeSeconds?.let { LocalTime.ofSecondOfDay(it % (24 * 3600)) }
+        // If paused and has manual time, load that. Otherwise load current time for the zone.
+        val initialCurrentTime = if (entity.isPaused && manualTime != null) manualTime else LocalTime.now(timeZone)
 
         return ClockState(
             clockId = entity.clockId,
@@ -291,14 +298,15 @@ class ClockViewModel @Inject constructor(
             windowY = entity.windowY,
             windowWidth = entity.windowWidth,
             windowHeight = entity.windowHeight,
-            currentTime = currentTime, // Set initial current time
-            manuallySetTime = manualTime // Set loaded manual time
+            currentTime = initialCurrentTime.truncatedTo(ChronoUnit.NANOS), // Start with loaded/current time
+            manuallySetTime = manualTime
         )
     }
 
     private fun mapStateToEntity(state: ClockState): ClockStateEntity {
-        // Convert manually set LocalTime to total seconds of the day for storage
-        val manualTimeSeconds = state.manuallySetTime?.toSecondOfDay()?.toLong()
+        // Store the time that should persist when paused (either manually set or the time it was paused at)
+        val timeToPersist = state.manuallySetTime ?: state.currentTime
+        val timeToPersistSeconds = timeToPersist.toSecondOfDay().toLong()
 
         return ClockStateEntity(
             clockId = state.clockId,
@@ -313,16 +321,16 @@ class ClockViewModel @Inject constructor(
             windowY = state.windowY,
             windowWidth = state.windowWidth,
             windowHeight = state.windowHeight,
-            manuallySetTimeSeconds = manualTimeSeconds // Store as Long?
+            // Save the manual time if set, otherwise save the current displayed time IF PAUSED
+            manuallySetTimeSeconds = if (state.isPaused) timeToPersistSeconds else null
         )
     }
 
-    // --- Cleanup ---
+    // Cleanup
     override fun onCleared() {
         Log.d(TAG, "ViewModel cleared for clockId: $clockId")
         stopTicker()
-        // State should ideally be saved on every change, but a final save could be added here if needed.
-        // saveState(_uiState.value)
         super.onCleared()
     }
+
 }
