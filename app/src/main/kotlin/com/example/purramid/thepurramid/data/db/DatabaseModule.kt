@@ -53,6 +53,12 @@ object DatabaseModule {
 
     @Provides
     @Singleton
+    fun provideScreenShadeDao(database: PurramidDatabase): ScreenShadeDao { // Added
+        return database.screenShadeDao()
+    }
+
+    @Provides
+    @Singleton
     fun provideSpotlightDao(database: PurramidDatabase): SpotlightDao {
         return database.spotlightDao()
     }

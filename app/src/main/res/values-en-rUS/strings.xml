@@ -473,10 +473,13 @@
 
 
     '' SCREEN SHADE APP ''
+    <string name="screen_shade_settings_title">Screen Shade Settings</string>
     <string name="add_another_screen">Add another Screen</string>
+    <string name="max_masks_reached_snackbar">Maximum number of screen shades reached.</string>
     <string name="lock_unlock">Lock/Unlock</string>
     <string name="lock_unlock_all">Lock/Unlock All</string>
     <string name="billboard">Billboard</string>
+    <string name="cannot_open_image_picker">Cannot open image picker</string>
 
 
     '' SPOTLIGHT APP ''

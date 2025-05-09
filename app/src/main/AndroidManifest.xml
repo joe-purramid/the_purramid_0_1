@@ -97,11 +97,12 @@
             android:exported="false"
             android:label="@string/screen_shade_title"
             android:parentActivityName=".MainActivity"
+            android:theme="@style/Theme.ThePurramid"
             android:resizeableActivity="true"
+            android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation"
             android:windowLayoutInDisplayCutoutMode="shortEdges">
             <layout android:defaultWidth="420dp"
-                android:defaultHeight="300dp"
-                android:gravity="center" />
+                android:defaultHeight="500dp" android:gravity="center" />
         </activity>
 
         <service android:name=".screen_shade.ScreenShadeService"

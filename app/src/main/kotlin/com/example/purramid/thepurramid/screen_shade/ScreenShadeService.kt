@@ -1,615 +1,475 @@
 // ScreenShadeService.kt
 package com.example.purramid.thepurramid.screen_shade
 
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.app.Service
+import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
-import android.graphics.Color
 import android.graphics.PixelFormat
-import android.graphics.drawable.GradientDrawable
+import android.net.Uri
 import android.os.Build
+import android.os.Bundle
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
+import android.util.DisplayMetrics
 import android.util.Log
 import android.view.Gravity
-import android.view.MotionEvent
 import android.view.View
-import android.view.ViewGroup
 import android.view.WindowManager
-import android.widget.ImageView
-import android.widget.LinearLayout
+import android.widget.Toast // Retain for cases where Snackbar isn't feasible from service
 import androidx.core.app.NotificationCompat
-import androidx.core.content.ContextCompat
+import androidx.lifecycle.AbstractSavedStateViewModelFactory
+import androidx.lifecycle.LifecycleService
+import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.ViewModelStoreOwner
+import androidx.lifecycle.lifecycleScope
+import com.example.purramid.thepurramid.MainActivity
 import com.example.purramid.thepurramid.R
+import com.example.purramid.thepurramid.data.db.ScreenShadeDao // For restoring state
+import com.example.purramid.thepurramid.di.HiltViewModelFactory // Assuming Hilt Factory for custom creation
+import com.example.purramid.thepurramid.screen_shade.ui.MaskView
+import com.example.purramid.thepurramid.screen_shade.viewmodel.ScreenShadeViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 
+// Actions for ScreenShadeService
+const val ACTION_START_SCREEN_SHADE = "com.example.purramid.screen_shade.ACTION_START"
+const val ACTION_STOP_SCREEN_SHADE_SERVICE = "com.example.purramid.screen_shade.ACTION_STOP_SERVICE"
+const val ACTION_ADD_NEW_MASK_INSTANCE = "com.example.purramid.screen_shade.ACTION_ADD_NEW_INSTANCE"
+const val ACTION_REQUEST_IMAGE_CHOOSER = "com.example.purramid.screen_shade.ACTION_REQUEST_IMAGE_CHOOSER" // Service sends to Activity
+const val ACTION_BILLBOARD_IMAGE_SELECTED = "com.example.purramid.screen_shade.ACTION_BILLBOARD_IMAGE_SELECTED" // Activity sends to Service
+const val EXTRA_MASK_INSTANCE_ID = ScreenShadeViewModel.KEY_INSTANCE_ID // From ViewModel
+const val EXTRA_IMAGE_URI = "com.example.purramid.screen_shade.EXTRA_IMAGE_URI"
+
 @AndroidEntryPoint
-class ScreenShadeService : Service() {
+class ScreenShadeService : LifecycleService(), ViewModelStoreOwner {
 
-    // Inject dependencies
     @Inject lateinit var windowManager: WindowManager
-    @Inject lateinit var sharedPreferences: SharedPreferences // Assuming you have a Hilt module providing SharedPreferences("screen_shade_state", Context.MODE_PRIVATE)
+    @Inject lateinit var viewModelFactory: ViewModelProvider.Factory // Hilt provides default factory
+    @Inject lateinit var screenShadeDao: ScreenShadeDao // Inject DAO for state restoration
 
-    private val activeMasks = mutableListOf<MaskView>()
-    private var floatingMenuView: LinearLayout? = null
-    private var lastTouchedMask: MaskView? = null
-    private var addButtonView: ImageView? = null
-    private var isAllLocked = false
-    private var imageChooserPendingIntent: PendingIntent? = null
+    // Injected SharedPreferences (provide this via a Hilt module)
+    @Inject @ScreenShadePrefs lateinit var servicePrefs: SharedPreferences
+
+
+    private val _viewModelStore = ViewModelStore()
+    override fun getViewModelStore(): ViewModelStore = _viewModelStore
+
+    private val activeMaskViewModels = ConcurrentHashMap<Int, ScreenShadeViewModel>()
+    private val activeMaskViews = ConcurrentHashMap<Int, MaskView>()
+    private val maskLayoutParams = ConcurrentHashMap<Int, WindowManager.LayoutParams>()
+    private val stateObserverJobs = ConcurrentHashMap<Int, Job>()
+
+    private val instanceIdCounter = AtomicInteger(0)
+    private var isForeground = false
+    private var imageChooserTargetInstanceId: Int? = null
 
     companion object {
+        private const val TAG = "ScreenShadeService"
+        private const val NOTIFICATION_ID = 6
         private const val CHANNEL_ID = "ScreenShadeServiceChannel"
-        const val ACTION_START = "com.example.thepurramid0_1.ACTION_START_SHADE_SERVICE"
-        const val ACTION_STOP = "com.example.thepurramid0_1.ACTION_STOP_SHADE_SERVICE"
-        const val ACTION_ADD_MASK = "com.example.thepurramid0_1.ACTION_ADD_MASK"
-        const val ACTION_LOCK_MASK = "com.example.thepurramid0_1.ACTION_LOCK_MASK"
-        const val ACTION_LOCK_ALL = "com.example.thepurramid0_1.ACTION_LOCK_ALL"
-        private const val BILLBOARD_REQUEST_CODE = 020219
-        const val ACTION_LAUNCH_IMAGE_CHOOSER = "com.example.thepurramid0_1.ACTION_LAUNCH_IMAGE_CHOOSER"
-        const val EXTRA_PENDING_INTENT = "com.example.thepurramid0_1.EXTRA_PENDING_INTENT"
-        const val ACTION_IMAGE_SELECTED = "com.example.thepurramid0_1.ACTION_IMAGE_SELECTED"
-        const val EXTRA_IMAGE_URI = "com.example.thepurramid0_1.EXTRA_IMAGE_URI"
-        private var billboardTargetMask: MaskView? = null
-        private const val MAX_MASKS = 4
-    }
-
-    init {
-        setBackgroundColor(Color.BLACK)
-        setOnTouchListener(onTouchListener)
-        yellowBorder = GradientDrawable().apply {
-            setStroke(dpToPx(3), Color.YELLOW)
-            setColor(Color.TRANSPARENT)
-        }
-        // Initialize the ImageView for the billboard
-        billboardImageView = ImageView(serviceContext).apply {
-            scaleType = ImageView.ScaleType.FIT_CENTER // To preserve aspect ratio
-            visibility = View.GONE
-        }
-        addView(billboardImageView)
-        setupCloseButton() // Initialize the close button
+        const val MAX_MASKS = 4 // Shared constant for max masks
+        const val PREFS_NAME_FOR_ACTIVITY = ScreenShadeActivity.PREFS_NAME // For Activity to read count
+        const val KEY_ACTIVE_COUNT_FOR_ACTIVITY = ScreenShadeActivity.KEY_ACTIVE_COUNT
+        const val KEY_LAST_INSTANCE_ID = "last_instance_id_screenshade"
     }
 
     override fun onCreate() {
         super.onCreate()
+        Log.d(TAG, "onCreate")
         createNotificationChannel()
-        setupFloatingMenu()
-        createImageChooserPendingIntent()
-        restoreMaskState() // Restore saved mask state
-        if (activeMasks.isEmpty()) {
-            addMask(isFullScreen = true) // Add an initial full-screen mask if no saved state
+        loadLastInstanceId()
+        loadAndRestoreMaskStates() // Attempt to restore any previously active masks
+    }
+
+    private fun loadLastInstanceId() {
+        val lastId = servicePrefs.getInt(KEY_LAST_INSTANCE_ID, 0)
+        instanceIdCounter.set(lastId)
+        Log.d(TAG, "Loaded last instance ID for ScreenShade: $lastId")
+    }
+
+    private fun saveLastInstanceId() {
+        servicePrefs.edit().putInt(KEY_LAST_INSTANCE_ID, instanceIdCounter.get()).apply()
+        Log.d(TAG, "Saved last instance ID for ScreenShade: ${instanceIdCounter.get()}")
+    }
+
+    private fun updateActiveInstanceCountInPrefs() {
+        servicePrefs.edit().putInt(KEY_ACTIVE_COUNT_FOR_ACTIVITY, activeMaskViewModels.size).apply()
+        Log.d(TAG, "Updated active ScreenShade mask count: ${activeMaskViewModels.size}")
+    }
+
+    private fun loadAndRestoreMaskStates() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            val persistedStates = screenShadeDao.getAllStates()
+            if (persistedStates.isNotEmpty()) {
+                Log.d(TAG, "Found ${persistedStates.size} persisted screen shade states. Restoring...")
+                var maxId = instanceIdCounter.get()
+                persistedStates.forEach { entity ->
+                    maxId = max(maxId, entity.instanceId)
+                    // Initialize ViewModel for this persisted ID.
+                    // The ViewModel's init block will load the specific state from DB.
+                    // The view will be created/updated when the ViewModel emits its state.
+                    launch(Dispatchers.Main) { // Ensure VM init is on main if it touches LiveData immediately
+                        initializeViewModel(entity.instanceId, Bundle().apply { putInt(ScreenShadeViewModel.KEY_INSTANCE_ID, entity.instanceId) })
+                    }
+                }
+                instanceIdCounter.set(maxId) // Ensure counter is beyond highest loaded ID
+            }
+
+            // Ensure service is in foreground if any masks were restored or become active via VM loading
+            if (activeMaskViewModels.isNotEmpty()) { // Check after potential restorations
+                startForegroundServiceIfNeeded()
+            }
         }
     }
 
-    private fun createImageChooserPendingIntent() {
-        val imageIntent = Intent(Intent.ACTION_GET_CONTENT).apply {
-            type = "image/*"
-            putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("image/jpeg", "image/png", "image/bmp", "image/gif", "image/webp"))
-        }
-        imageChooserPendingIntent = PendingIntent.getActivity(
-            this,
-            BILLBOARD_REQUEST_CODE,
-            imageIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-    }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        when (intent?.action) {
-            ACTION_START -> {
-                startForegroundService()
-                if (activeMasks.isEmpty()) {
-                    addMask() // Add an initial full-screen mask
+        super.onStartCommand(intent, flags, startId)
+        val action = intent?.action
+        Log.d(TAG, "onStartCommand: Action: $action")
+
+        when (action) {
+            ACTION_START_SCREEN_SHADE -> {
+                startForegroundServiceIfNeeded()
+                if (activeMaskViewModels.isEmpty() && servicePrefs.getInt(KEY_ACTIVE_COUNT_FOR_ACTIVITY, 0) == 0) {
+                    Log.d(TAG, "No active masks (from map and prefs), adding a new default one.")
+                    handleAddNewMaskInstance()
+                } else {
+                    Log.d(TAG, "Screen Shade started, existing instances will be managed by their ViewModels.")
                 }
             }
-            ACTION_STOP -> {
-                removeAllMasks()
-                removeFloatingMenu()
-                stopForeground(true)
-                stopSelf()
+            ACTION_ADD_NEW_MASK_INSTANCE -> {
+                startForegroundServiceIfNeeded()
+                handleAddNewMaskInstance()
             }
-            ACTION_ADD_MASK -> {
-                if (activeMasks.size < MAX_MASKS) {
-                    addMask()
+            ACTION_STOP_SCREEN_SHADE_SERVICE -> {
+                stopAllInstancesAndService()
+            }
+            ACTION_BILLBOARD_IMAGE_SELECTED -> {
+                val uriString = intent.getStringExtra(EXTRA_IMAGE_URI)
+                val targetId = imageChooserTargetInstanceId ?: intent.getIntExtra(EXTRA_MASK_INSTANCE_ID, -1)
+
+                if (targetId != -1) {
+                    activeMaskViewModels[targetId]?.setBillboardImageUri(uriString) // ViewModel handles null URI
+                } else {
+                    Log.w(TAG, "Billboard image selected but no targetInstanceId found.")
                 }
-            }
-            ACTION_LOCK_MASK -> {
-                lastTouchedMask?.apply {
-                    isLocked = !isLocked
-                    updateBorderVisibility()
-                }
-            }
-            ACTION_LOCK_ALL -> {
-                isAllLocked = !isAllLocked
-                activeMasks.forEach { it.isLocked = isAllLocked }
-                activeMasks.forEach { it.updateBorderVisibility() }
-            }
-            ACTION_BILLBOARD -> {
-                lastTouchedMask?.let {
-                    Log.d("ScreenShadeService", "Requesting image selection for mask: $it, PendingIntent: $imageChooserPendingIntent")
-                    val broadcastIntent = Intent(ACTION_LAUNCH_IMAGE_CHOOSER)
-                    broadcastIntent.putExtra(EXTRA_PENDING_INTENT, imageChooserPendingIntent)
-                    sendBroadcast(broadcastIntent)
-                    billboardTargetMask = it
-                }
+                imageChooserTargetInstanceId = null // Clear target
             }
         }
         return START_STICKY
     }
 
-    // Method to handle the received image URI
-    fun handleImageSelected(uri: android.net.Uri?) {
-        billboardTargetMask?.setBillboardImage(uri)
-        billboardTargetMask = null // Clear the target mask
-    }
-    
-    override fun onDestroy() {
-        super.onDestroy()
-        saveMaskState() // Save the current mask state
-        removeAllMasks()
-        removeFloatingMenu()
-    }
-
-    override fun onBind(intent: Intent?): IBinder? {
-        return null
-    }
-
-    private fun saveMaskState() {
-        val editor = sharedPreferences.edit()
-        editor.putInt("mask_count", activeMasks.size)
-        activeMasks.forEachIndexed { index, mask ->
-            editor.putInt("mask_${index}_x", mask.params?.x ?: 0)
-            editor.putInt("mask_${index}_y", mask.params?.y ?: 0)
-            editor.putInt("mask_${index}_width", mask.width)
-            editor.putInt("mask_${index}_height", mask.height)
-            editor.putBoolean("mask_${index}_locked", mask.isLocked)
-            mask.currentImageUri?.let { uri ->
-                editor.putString("mask_${index}_billboard_uri", uri.toString())
-            } ?: editor.remove("mask_${index}_billboard_uri")
+    private fun handleAddNewMaskInstance() {
+        if (activeMaskViewModels.size >= MAX_MASKS) {
+            Log.w(TAG, "Maximum number of masks ($MAX_MASKS) reached.")
+            // The settings UI should display the Snackbar. Service just doesn't add.
+            return
         }
-        editor.apply()
+
+        val newInstanceId = instanceIdCounter.incrementAndGet()
+        Log.d(TAG, "Adding new mask instance with ID: $newInstanceId")
+
+        // Initialize VM (it will create default state and save it via its init block)
+        val initialArgs = Bundle().apply { putInt(ScreenShadeViewModel.KEY_INSTANCE_ID, newInstanceId) }
+        initializeViewModel(newInstanceId, initialArgs)
+        // View creation/update is handled by the ViewModel's state observer
+
+        saveLastInstanceId()
+        updateActiveInstanceCountInPrefs()
+        startForegroundServiceIfNeeded() // Ensure foreground if adding the first mask
     }
 
-    private fun restoreMaskState() {
-        val maskCount = sharedPreferences.getInt("mask_count", 0)
-        for (i in 0 until maskCount) {
-            val x = sharedPreferences.getInt("mask_${i}_x", 0)
-            val y = sharedPreferences.getInt("mask_${i}_y", 0)
-            val width = sharedPreferences.getInt("mask_${i}_width", resources.displayMetrics.widthPixels)
-            val height = sharedPreferences.getInt("mask_${i}_height", resources.displayMetrics.heightPixels)
-            val locked = sharedPreferences.getBoolean("mask_${i}_locked", false)
-            val billboardUriString = sharedPreferences.getString("mask_${i}_billboard_uri", null)
-            val billboardUri = billboardUriString?.let { android.net.Uri.parse(it) }
-
-            val newMask = MaskView(this).apply {
-                isLocked = locked
-                setBillboardImage(billboardUri)
+    private fun initializeViewModel(id: Int, initialArgs: Bundle?): ScreenShadeViewModel {
+        return activeMaskViewModels.computeIfAbsent(id) {
+            Log.d(TAG, "Creating ScreenShadeViewModel for ID: $id")
+            // Use Hilt's default factory which handles SavedStateHandle injection via AbstractSavedStateViewModelFactory
+            val factory = object : AbstractSavedStateViewModelFactory(this, initialArgs ?: Bundle().apply { putInt(ScreenShadeViewModel.KEY_INSTANCE_ID, id) }) {
+                override fun <T : ViewModel> create(key: String, modelClass: Class<T>, handle: SavedStateHandle): T {
+                    @Suppress("UNCHECKED_CAST")
+                    return ScreenShadeViewModel(screenShadeDao, handle) as T // Manually pass deps if not using Hilt factory directly here
+                    // For Hilt, if ViewModel is @HiltViewModel, this can be simpler with default ViewModelProvider
+                }
             }
-            activeMasks.add(newMask)
-            newMask.show(x, y, width, height)
+            // Corrected ViewModelProvider instantiation
+            ViewModelProvider(this, HiltViewModelFactory(this, initialArgs ?: Bundle().apply { putInt(ScreenShadeViewModel.KEY_INSTANCE_ID, id) }, viewModelFactory))
+                .get(ScreenShadeViewModel::class.java)
+                .also { vm ->
+                    observeViewModelState(id, vm)
+                }
         }
+    }
+
+    private fun observeViewModelState(instanceId: Int, viewModel: ScreenShadeViewModel) {
+        stateObserverJobs[instanceId]?.cancel()
+        stateObserverJobs[instanceId] = lifecycleScope.launch {
+            viewModel.uiState.collectLatest { state ->
+                Log.d(TAG, "State update for Mask ID $instanceId: Pos=(${state.x},${state.y}), Size=(${state.width}x${state.height}), Locked=${state.isLocked}, Controls=${state.isControlsVisible}")
+                addOrUpdateMaskView(instanceId, state)
+            }
+        }
+        Log.d(TAG, "Started observing ViewModel for Mask ID $instanceId")
+    }
+
+    private fun addOrUpdateMaskView(instanceId: Int, state: ScreenShadeState) {
+        Handler(Looper.getMainLooper()).post { // Ensure UI operations on Main thread
+            var maskView = activeMaskViews[instanceId]
+            var params = maskLayoutParams[instanceId]
+
+            if (maskView == null) {
+                Log.d(TAG, "Creating new MaskView UI for ID: $instanceId")
+                params = createDefaultLayoutParams(state) // Create params based on initial state
+                maskView = MaskView(this, instanceId = instanceId).apply {
+                    setLayerType(View.LAYER_TYPE_HARDWARE, null)
+                    interactionListener = createMaskInteractionListener(instanceId, this, params)
+                }
+                activeMaskViews[instanceId] = maskView
+                maskLayoutParams[instanceId] = params
+
+                try {
+                    windowManager.addView(maskView, params)
+                    Log.d(TAG, "Added MaskView ID $instanceId to WindowManager.")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error adding MaskView ID $instanceId to WindowManager", e)
+                    activeMaskViews.remove(instanceId)
+                    maskLayoutParams.remove(instanceId)
+                    stateObserverJobs[instanceId]?.cancel()
+                    activeMaskViewModels.remove(instanceId)?.onCleared() // Clean up VM
+                    updateActiveInstanceCountInPrefs()
+                    return@post
+                }
+            }
+
+            maskView.updateState(state)
+
+            // Update WindowManager.LayoutParams if position/size changed in state
+            var layoutNeedsUpdate = false
+            if (params!!.x != state.x || params.y != state.y) {
+                params.x = state.x
+                params.y = state.y
+                layoutNeedsUpdate = true
+            }
+            val newWidth = if (state.width <= 0) WindowManager.LayoutParams.MATCH_PARENT else state.width
+            val newHeight = if (state.height <= 0) WindowManager.LayoutParams.MATCH_PARENT else state.height
+            if (params.width != newWidth || params.height != newHeight) {
+                params.width = newWidth
+                params.height = newHeight
+                layoutNeedsUpdate = true
+            }
+
+            if (layoutNeedsUpdate && maskView.isAttachedToWindow) {
+                try {
+                    windowManager.updateViewLayout(maskView, params)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error updating WindowManager layout for Mask ID $instanceId", e)
+                }
+            }
+        }
+    }
+
+    private fun removeMaskInstance(instanceId: Int) {
+        Handler(Looper.getMainLooper()).post {
+            Log.d(TAG, "Removing Mask instance ID: $instanceId")
+            val maskView = activeMaskViews.remove(instanceId)
+            maskLayoutParams.remove(instanceId)
+            stateObserverJobs[instanceId]?.cancel()
+            stateObserverJobs.remove(instanceId)
+            val viewModel = activeMaskViewModels.remove(instanceId)
+
+            maskView?.let {
+                if (it.isAttachedToWindow) {
+                    try { windowManager.removeView(it) }
+                    catch (e: Exception) { Log.e(TAG, "Error removing MaskView ID $instanceId", e) }
+                }
+            }
+            viewModel?.deleteState() // Tell ViewModel to delete its persisted state
+            updateActiveInstanceCountInPrefs()
+
+            if (activeMaskViewModels.isEmpty()) {
+                Log.d(TAG, "No active masks left, stopping service.")
+                stopService()
+            }
+        }
+    }
+
+    private fun createMaskInteractionListener(
+        instanceId: Int,
+        maskView: MaskView,
+        params: WindowManager.LayoutParams
+    ): MaskView.InteractionListener {
+        return object : MaskView.InteractionListener {
+            override fun onMaskMoved(id: Int, x: Int, y: Int) {
+                activeMaskViewModels[id]?.updatePosition(x, y)
+            }
+            override fun onMaskResized(id: Int, width: Int, height: Int) {
+                activeMaskViewModels[id]?.updateSize(width, height)
+            }
+            override fun onLockToggled(id: Int) {
+                activeMaskViewModels[id]?.toggleLock()
+            }
+            override fun onCloseRequested(id: Int) {
+                removeMaskInstance(id)
+            }
+            override fun onBillboardTapped(id: Int) {
+                imageChooserTargetInstanceId = id
+                val activityIntent = Intent(this@ScreenShadeService, ScreenShadeActivity::class.java).apply {
+                    action = ScreenShadeActivity.ACTION_LAUNCH_IMAGE_CHOOSER_FROM_SERVICE
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                try {
+                    startActivity(activityIntent)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Could not start ScreenShadeActivity for image chooser", e)
+                    Toast.makeText(this@ScreenShadeService, "Could not open image picker.", Toast.LENGTH_SHORT).show()
+                    imageChooserTargetInstanceId = null
+                }
+            }
+            override fun onColorChangeRequested(id: Int) {
+                // Color changing is removed for now, as masks are opaque black.
+                // If this is re-added, call ViewModel: activeMaskViewModels[id]?.updateColor(newColor)
+                Log.d(TAG, "Color change requested for $id (currently no-op for opaque masks)")
+            }
+            override fun onControlsToggled(id: Int) {
+                activeMaskViewModels[id]?.toggleControlsVisibility()
+            }
+        }
+    }
+
+    private fun createDefaultLayoutParams(initialState: ScreenShadeState): WindowManager.LayoutParams {
+        val displayMetrics = DisplayMetrics()
+        windowManager.defaultDisplay.getMetrics(displayMetrics)
+        val screenWidth = displayMetrics.widthPixels
+        val screenHeight = displayMetrics.heightPixels
+
+        // Default to full screen if width/height are invalid or 0
+        val width = if (initialState.width <= 0) screenWidth else initialState.width
+        val height = if (initialState.height <= 0) screenHeight else initialState.height
+
+        // Ensure x and y are within bounds if dimensions are smaller than screen
+        // If it's full screen, x/y should be 0.
+        val x = if (width >= screenWidth) 0 else initialState.x.coerceIn(0, screenWidth - width)
+        val y = if (height >= screenHeight) 0 else initialState.y.coerceIn(0, screenHeight - height)
+
+
+        return WindowManager.LayoutParams(
+            width, height,
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY else WindowManager.LayoutParams.TYPE_SYSTEM_ALERT,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+            PixelFormat.TRANSLUCENT // Important for overlays
+        ).apply {
+            gravity = Gravity.TOP or Gravity.START
+            this.x = x
+            this.y = y
+        }
+    }
+
+    private fun stopAllInstancesAndService() {
+        Log.d(TAG, "Stopping all instances and Screen Shade service.")
+        activeMaskViewModels.keys.toList().forEach { id -> removeMaskInstance(id) }
+        // removeMaskInstance calls stopService if map becomes empty. Ensure it's called if map is already empty.
+        if (activeMaskViewModels.isEmpty()) {
+            stopService()
+        }
+    }
+
+    private fun stopService() {
+        Log.d(TAG, "stopService called for Screen Shade")
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
+        isForeground = false
+    }
+
+    private fun startForegroundServiceIfNeeded() {
+        if (isForeground) return
+        val notification = createNotification()
+        try {
+            startForeground(NOTIFICATION_ID, notification)
+            isForeground = true
+            Log.d(TAG, "ScreenShadeService started in foreground.")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error starting foreground service for ScreenShade", e)
+        }
+    }
+
+    private fun createNotification(): Notification {
+        val notificationIntent = Intent(this, ScreenShadeActivity::class.java).apply {
+            action = ACTION_START_SCREEN_SHADE // Action to re-evaluate if service should show UI
+        }
+        val pendingIntentFlags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        val pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, pendingIntentFlags)
+
+        return NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle("Screen Shade Active") // More specific title
+            .setContentText("Tap to manage screen shades.") // More specific text
+            .setSmallIcon(R.drawable.ic_shade)
+            .setContentIntent(pendingIntent)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .build()
     }
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val serviceChannel = NotificationChannel(
+            val channel = NotificationChannel(
                 CHANNEL_ID,
-                "Screen Mask Service",
+                "Screen Shade Service Channel",
                 NotificationManager.IMPORTANCE_LOW
             )
-            val manager = getSystemService(NotificationManager::class.java)
-            manager?.createNotificationChannel(serviceChannel)
+            getSystemService(NotificationManager::class.java)?.createNotificationChannel(channel)
         }
     }
 
-    private fun startForegroundService() {
-        val notificationIntent = Intent(this, ScreenShadeActivity::class.java)
-        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Screen Mask Active")
-            .setContentText("Tap to interact with masks.")
-            .setSmallIcon(R.drawable.ic_shade) // Use your shade icon
-            // .setContentIntent(pendingIntent) // You can add a PendingIntent to open the settings
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .build()
-        startForeground(1, notification)
+    override fun onDestroy() {
+        Log.d(TAG, "onDestroy")
+        stateObserverJobs.values.forEach { it.cancel() }
+        stateObserverJobs.clear()
+        activeMaskViews.keys.toList().forEach { id ->
+            val view = activeMaskViews.remove(id)
+            maskLayoutParams.remove(id)
+            view?.let {
+                if (it.isAttachedToWindow) {
+                    try { windowManager.removeView(it) } catch (e:Exception) { Log.e(TAG, "Error removing view on destroy for $id")}
+                }
+            }
+        }
+        activeMaskViewModels.clear()
+        saveLastInstanceId()
+        _viewModelStore.clear() // Clear the ViewModelStore
+        super.onDestroy()
     }
 
-    private fun setupFloatingMenu() {
-        floatingMenuView = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            setBackgroundColor(Color.parseColor("#80000000")) // Semi-transparent dark background
-            // Add buttons with icons and click listeners
-            addButton(R.drawable.ic_add_circle, R.string.add_another_screen) {
-                if (activeMasks.size < MAX_MASKS) {
-                    addMask()
-                }
-            }
-            addButton(R.drawable.ic_lock, R.string.lock_unlock) {
-                lastTouchedMask?.apply {
-                    isLocked = !isLocked
-                    updateBorderVisibility()
-                }
-            }
-            addButton(R.drawable.ic_lock_all, R.string.lock_unlock_all) {
-                isAllLocked = !isAllLocked
-                activeMasks.forEach { it.isLocked = isAllLocked }
-                activeMasks.forEach { it.updateBorderVisibility() }
-            }
-            addButton(R.drawable.ic_billboard, R.string.billboard) {
-                lastTouchedMask?.let {
-                    // TODO: Launch billboard activity, pass a reference or ID of the mask
-                    Log.d("ScreenShadeService", "Billboard button clicked for mask: $it")
-                }
-            }
-
-            val params = WindowManager.LayoutParams(
-                WindowManager.LayoutParams.WRAP_CONTENT,
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-                } else {
-                    WindowManager.LayoutParams.TYPE_SYSTEM_OVERLAY
-                },
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE, // So it doesn't take focus
-                PixelFormat.TRANSLUCENT
-            ).apply {
-                gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-                y = resources.displayMetrics.heightPixels / 10 // Position near the top
-            }
-            try { windowManager.addView(this, params) } catch (e: Exception) {
-                Log.e("ScreenShadeService", "Error setting up floating menu view", e)
-            }
-        }
-    }
-
-    private fun removeFloatingMenu() {
-        floatingMenuView?.let {
-            try { windowManager.removeView(it) } catch (e: Exception) {
-                Log.e("ScreenShadeService", "Error removing floating menu view", e)
-            }
-            floatingMenuView = null
-        }
-    }
-
-    private fun LinearLayout.addButton(iconResId: Int, onClick: () -> Unit) {
-        val button = ImageView(context).apply {
-            setImageDrawable(ContextCompat.getDrawable(context, iconResId))
-            setPadding(dpToPx(10), dpToPx(10), dpToPx(10), dpToPx(10))
-            setOnClickListener { onClick() }
-            setOnLongClickListener {
-                Toast.makeText(context, getString(nameResId), Toast.LENGTH_SHORT).show()
-                true // Consume the long-press event
-                }
-        }
-        val layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-        addView(button, layoutParams)
-        return button // Return the ImageView so we can hold a reference if needed
-    }
-
-    private fun addMask(creatorMask: MaskView? = null) {
-        if (activeMasks.size >= MAX_MASKS) {
-            return
-        }
-
-        val newMask = MaskView(this)
-        activeMasks.add(newMask)
-
-        val initialWidth = creatorMask?.width ?: resources.displayMetrics.widthPixels
-        val initialHeight = creatorMask?.height ?: resources.displayMetrics.heightPixels
-
-        val initialX = if (creatorMask != null) {
-            resources.displayMetrics.widthPixels / 2 - initialWidth / 2
-        } else 0
-        val initialY = if (creatorMask != null) {
-            resources.displayMetrics.heightPixels / 2 - initialHeight / 2
-        } else 0
-
-        val offset = activeMasks.size * 20 // Simple offset for new masks
-        newMask.show(initialX + offset, initialY + offset, initialWidth, initialHeight)
-
-        if (activeMasks.size == MAX_MASKS) {
-            updateAddButtonState() // Disable the "add new mask" button
-            // Log.d("ScreenShadeService", "Max masks reached")
-        }
-    }
-
-    private fun removeMask(maskToRemove: MaskView) {
-        if (activeMasks.contains(maskToRemove)) {
-            activeMasks.remove(maskToRemove)
-            maskToRemove.hide()
-            updateAddButtonState() // Update the "add" button state
-        }
-    }
-
-    private fun removeAllMasks() {
-        activeMasks.forEach { it.hide() }
-        activeMasks.clear()
-    }
-
-    private fun updateAddButtonState() {
-        addButtonView?.isEnabled = activeMasks.size < MAX_MASKS
-        addButtonView?.alpha = if (addButtonView?.isEnabled == true) 1.0f else 0.5f
-    }
-
-    private fun dpToPx(dp: Int): Int {
-        return (dp * resources.displayMetrics.density).toInt()
-    }
-
-    // Inner class to represent a single screen mask
-    inner class MaskView(val serviceContext: Context) : View(serviceContext) {
-        private var params: WindowManager.LayoutParams? = null
-        private var currentX = 0
-        private var currentY = 0
-        private var initialTouchX = 0f
-        private var initialTouchY = 0f
-        var isLocked = false
-        private val resizeHandleSize = dpToPx(20)
-        private var currentlyResizing = false
-        private var resizeDirection: ResizeDirection? = null
-        private var yellowBorder: GradientDrawable? = null
-        private var borderFadeAnimator: android.animation.ObjectAnimator? = null
-        private var billboardImageView: ImageView? = null
-        private var currentImageUri: android.net.Uri? = null
-        private val paddingFraction = 0.05f
-        private var closeButton: ImageView? = null
-        
-        init {
-            setBackgroundColor(Color.BLACK)
-            setOnTouchListener(onTouchListener)
-
-            // Initialize the yellow border
-            yellowBorder = GradientDrawable().apply {
-                setStroke(dpToPx(3), Color.YELLOW)
-                setColor(Color.TRANSPARENT)
-            }
-
-            // Initialize the ImageView for the billboard
-            billboardImageView = ImageView(serviceContext).apply {
-                scaleType = ImageView.ScaleType.FIT_CENTER // To preserve aspect ratio
-                visibility = View.GONE
-            }
-            addView(billboardImageView)
-
-            // Initialize the close button
-            setupCloseButton()
-        }
-
-        enum class ResizeDirection {
-            LEFT, TOP, RIGHT, BOTTOM, TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT, MOVE
-        }
-
-        override fun onDraw(canvas: android.graphics.Canvas?) {
-            super.onDraw(canvas)
-            if (isLocked) {
-                background = yellowBorder
-            } else {
-                background = GradientDrawable().apply { setColor(Color.BLACK) }
-            }
-        }
-
-        fun updateBorderVisibility() {
-            if (isLocked) {
-                // Start fade-in then fade-out animation
-                yellowBorder?.alpha = 255
-                borderFadeAnimator?.cancel()
-                borderFadeAnimator = android.animation.ObjectAnimator.ofInt(yellowBorder, "alpha", 255, 0).apply {
-                    duration = 1000 // Fade out over 1 second (0.5s delay + 1s fade)
-                    startDelay = 500
-                    addUpdateListener { invalidate() }
-                    start()
-                }
-                invalidate() // Redraw to show initial border
-            } else {
-                borderFadeAnimator?.cancel()
-                background = GradientDrawable().apply { setColor(Color.BLACK) }
-                invalidate()
-            }
-        }
-
-    private fun setupCloseButton() {
-        closeButton = ImageView(serviceContext).apply {
-            setImageDrawable(ContextCompat.getDrawable(serviceContext, R.drawable.ic_close)) // Use your close icon
-            setPadding(dpToPx(5), dpToPx(5), dpToPx(5), dpToPx(5))
-            visibility = View.VISIBLE // Initially visible
-            setOnClickListener {
-                if (isLocked) {
-                    Toast.makeText(serviceContext, "Unlock this screen shade to close.", Toast.LENGTH_SHORT).show()
-                } else {
-                    (serviceContext as? ScreenShadeService)?.removeMaskView(this@MaskView)
-                }
-            }
-        }
-        val closeButtonSize = dpToPx(24)
-        val layoutParams = LayoutParams(closeButtonSize, closeButtonSize).apply {
-            gravity = Gravity.TOP or Gravity.END // Position in the top-right
-            marginEnd = dpToPx(8) // Inset from the right
-            topMargin = dpToPx(8) // Inset from the top
-        }
-        addView(closeButton, layoutParams)
-    }
-
-        private val onTouchListener = OnTouchListener { v, event ->
-            lastTouchedMask = this // Update the last touched mask
-
-            when (event.action) {
-                MotionEvent.ACTION_DOWN -> {
-                    initialTouchX = event.rawX
-                    initialTouchY = event.rawY
-                    currentX = params?.x ?: 0
-                    currentY = params?.y ?: 0
-                    currentlyResizing = false
-                    resizeDirection = getResizeDirection(event.x.toInt(), event.y.toInt())
-
-                    if (resizeDirection != ResizeDirection.MOVE) {
-                        currentlyResizing = true
-                    }
-
-                    return true
-                }
-                MotionEvent.ACTION_MOVE -> {
-                    if (isLocked) return@OnTouchListener true // Don't move or resize if locked
-
-                    val deltaX = event.rawX - initialTouchX
-                    val deltaY = event.rawY - initialTouchY
-
-                    if (currentlyResizing && resizeDirection != null) {
-                        updateSizeAndPosition(deltaX, deltaY, resizeDirection!!)
-                    } else if (resizeDirection == ResizeDirection.MOVE) {
-                        params?.x = currentX + deltaX.toInt()
-                        params?.y = currentY + deltaY.toInt()
-                        updateViewLayout()
-                    }
-                    return true
-                }
-                MotionEvent.ACTION_UP -> {
-                    currentlyResizing = false
-                    resizeDirection = null
-                    return true
-                }
-                else -> false
-            }
-        }
-
-        private fun getResizeDirection(x: Int, y: Int): ResizeDirection {
-            val left = 0
-            val top = 0
-            val right = width
-            val bottom = height
-
-            val touchSlop = dpToPx(10) // Sensitivity for touch
-
-            return when {
-                x < left + touchSlop && y < top + touchSlop -> ResizeDirection.TOP_LEFT
-                x > right - touchSlop && y < top + touchSlop -> ResizeDirection.TOP_RIGHT
-                x < left + touchSlop && y > bottom - touchSlop -> ResizeDirection.BOTTOM_LEFT
-                x > right - touchSlop && y > bottom - touchSlop -> ResizeDirection.BOTTOM_RIGHT
-                x < left + touchSlop -> ResizeDirection.LEFT
-                x > right - touchSlop -> ResizeDirection.RIGHT
-                y < top + touchSlop -> ResizeDirection.TOP
-                y > bottom - touchSlop -> ResizeDirection.BOTTOM
-                else -> ResizeDirection.MOVE
-            }
-        }
-
-        private fun updateSizeAndPosition(deltaX: Float, deltaY: Float, direction: ResizeDirection) {
-            params?.apply {
-                when (direction) {
-                    ResizeDirection.LEFT -> {
-                        width -= deltaX.toInt()
-                        x += deltaX.toInt()
-                    }
-                    ResizeDirection.TOP -> {
-                        height -= deltaY.toInt()
-                        y += deltaY.toInt()
-                    }
-                    ResizeDirection.RIGHT -> {
-                        width += deltaX.toInt()
-                    }
-                    ResizeDirection.BOTTOM -> {
-                        height += deltaY.toInt()
-                    }
-                    ResizeDirection.TOP_LEFT -> {
-                        width -= deltaX.toInt()
-                        x += deltaX.toInt()
-                        height -= deltaY.toInt()
-                        y += deltaY.toInt()
-                    }
-                    ResizeDirection.TOP_RIGHT -> {
-                        width += deltaX.toInt()
-                        height -= deltaY.toInt()
-                        y += deltaY.toInt()
-                    }
-                    ResizeDirection.BOTTOM_LEFT -> {
-                        width -= deltaX.toInt()
-                        x += deltaX.toInt()
-                        height += deltaY.toInt()
-                    }
-                    ResizeDirection.BOTTOM_RIGHT -> {
-                        width += deltaX.toInt()
-                        height += deltaY.toInt()
-                    }
-                    else -> return // Should not happen
-                }
-                // Ensure minimum size
-                if (width < dpToPx(50)) width = dpToPx(50)
-                if (height < dpToPx(50)) height = dpToPx(50)
-            }
-            updateViewLayout()
-        }
-
-        fun show(initialX: Int, initialY: Int, initialWidth: Int, initialHeight: Int) {
-            params = WindowManager.LayoutParams(
-                initialWidth,
-                initialHeight,
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-                } else {
-                    WindowManager.LayoutParams.TYPE_SYSTEM_OVERLAY
-                },
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                        WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                PixelFormat.TRANSLUCENT
-            ).apply {
-                gravity = Gravity.TOP or Gravity.LEFT
-                x = initialX
-                y = initialY
-            }
-            try { windowManager.addView(this, params) } catch (e: Exception) {
-                Log.e("ScreenShadeService", "Error showing view", e)
-            }
-        }
-
-        fun hide() {
-            try {
-                // Check if view is attached before trying to remove
-                if (this.isAttachedToWindow) {
-                    windowManager.removeView(this)
-                } else {
-                    Log.w("MaskView", "Attempted to remove view that was not attached.")
-                }
-            } catch (e: Exception) { // Catch specific exceptions like IllegalArgumentException if preferred
-                // Log the error with a tag and the exception details
-                Log.e("MaskView", "Error removing mask view", e)
-            }
-        }
-
-        private fun updateViewLayout() {
-            try {
-                params?.let { windowManager.updateViewLayout(this, it) }
-            } catch (e: Exception) {
-                Log.e("MaskView", "Error updating view layout", e)
-            }
-        }
-        fun setBillboardImage(uri: android.net.Uri?) {
-            currentImageUri = uri
-            if (uri != null) {
-                billboardImageView?.visibility = View.VISIBLE
-                // Load the image using a library that handles various formats including GIF
-                Glide.with(serviceContext)
-                    .load(uri)
-                    .into(billboardImageView!!)
-                applyImagePadding()
-            } else {
-                billboardImageView?.visibility = View.GONE
-            }
-        }
-
-        private fun applyImagePadding() {
-            billboardImageView?.layoutParams = LayoutParams(
-                LayoutParams.MATCH_PARENT,
-                LayoutParams.MATCH_PARENT
-            ).apply {
-                val padding = (width * paddingFraction).toInt()
-                setMargins(padding, padding, padding, padding)
-            }
-        }
-
-        override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
-            super.onSizeChanged(w, h, oldw, oldh)
-            if (currentImageUri != null && billboardImageView?.visibility == View.VISIBLE) {
-                applyImagePadding()
-            }
-        }
+    override fun onBind(intent: Intent): IBinder? {
+        super.onBind(intent)
+        return null
     }
 }
+
+// Add a Hilt qualifier for ScreenShade specific SharedPreferences if not already globally defined
+@javax.inject.Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class ScreenShadePrefs
+
+// Add to your DI module (e.g., AppModule.kt or a new ServiceModule.kt)
+/*
+@Module
+@InstallIn(ServiceComponent::class) // Or SingletonComponent if prefs are app-wide
+object ScreenShadeServiceModule {
+    @Provides
+    @ScreenShadePrefs
+    fun provideScreenShadePreferences(@ApplicationContext context: Context): SharedPreferences {
+        return context.getSharedPreferences(ScreenShadeService.PREFS_NAME_FOR_ACTIVITY, Context.MODE_PRIVATE)
+    }
+}
+*/
