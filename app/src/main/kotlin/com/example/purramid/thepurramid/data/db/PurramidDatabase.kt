@@ -12,6 +12,8 @@ import com.example.purramid.thepurramid.data.db.CityDao
 import com.example.purramid.thepurramid.data.db.SpotlightStateEntity
 import com.example.purramid.thepurramid.data.db.TimeZoneBoundaryEntity
 import com.example.purramid.thepurramid.data.db.TimeZoneDao
+import com.example.purramid.thepurramid.data.db.TimerStateEntity
+import com.example.purramid.thepurramid.data.db.TimerDao
 import com.example.purramid.thepurramid.data.db.TrafficLightStateEntity
 
 
@@ -32,7 +34,7 @@ import com.example.purramid.thepurramid.data.db.TrafficLightStateEntity
         SpotlightStateEntity::class,
         TrafficLightStateEntity::class
     ],
-    version = 8, // Updated with Slots randomizer mode
+    version = 9, // Updated with Slots randomizer mode
     exportSchema = false // Set to true if you want to export the schema to a file for version control (recommended for production apps)
 )
 @TypeConverters(Converters::class) // Register the TypeConverters class
@@ -47,6 +49,7 @@ abstract class PurramidDatabase : RoomDatabase() {
     abstract fun cityDao(): CityDao
     abstract fun randomizerDao(): RandomizerDao
     abstract fun spotlightDao(): SpotlightDao
+    abstract fun timerDao(): TimerDao
     abstract fun trafficLightDao(): TrafficLightDao
 
     companion object {

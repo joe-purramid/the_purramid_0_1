@@ -38,6 +38,7 @@
                 android:defaultHeight="300dp"
                 android:gravity="center" />
         </activity>
+
         <service android:name=".clock.ClockOverlayService"
             android:enabled="true"
             android:exported="false"
@@ -46,6 +47,7 @@
                 <action android:name="com.example.thepurramid.ClockOverlayService" />
             </intent-filter>
         </service>
+
         <activity android:name=".clock.ClockSettingsActivity"
             android:exported="false"
             android:label="@string/clock_settings_title"
@@ -56,6 +58,7 @@
                 android:defaultHeight="275dp"
                 android:gravity="center" />
         </activity>
+
         <activity android:name=".clock.ui.TimeZoneGlobeActivity"
             android:exported="false"
             android:label="@string/set_time_zone"
@@ -77,6 +80,7 @@
                 android:defaultHeight="700dp"
                 android:gravity="center" />
         </activity>
+
         <activity
             android:name=".randomizers.ui.ListEditorActivity"
             android:exported="false"
@@ -88,6 +92,7 @@
                 android:defaultHeight="600dp"
                 android:gravity="center" />
         </activity>
+
         <activity android:name=".screen_shade.ScreenShadeActivity"
             android:exported="false"
             android:label="@string/screen_shade_title"
@@ -98,14 +103,17 @@
                 android:defaultHeight="300dp"
                 android:gravity="center" />
         </activity>
+
         <service android:name=".screen_shade.ScreenShadeService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
+
         <service android:name=".spotlight.SpotlightService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
+
         <activity android:name=".timers.TimersActivity"
             android:exported="false"
             android:label="@string/timers_title"
@@ -116,6 +124,12 @@
                 android:defaultHeight="300dp"
                 android:gravity="center" />
         </activity>
+
+        <service android:name=".timers.service.TimersService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
         <activity android:name=".traffic_light.TrafficLightActivity"
             android:exported="false"
             android:label="@string/traffic_light_title"

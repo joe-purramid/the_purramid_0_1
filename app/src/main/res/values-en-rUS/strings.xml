@@ -486,10 +486,18 @@
 
 
     '' TIMERS APP ''
+    <string name="timer_settings_title">Timer Settings</string>
     <string name="timer_mode">Timer Type</string>
+    <string name="stopwatch">Stopwatch</string>
+    <string name="countdown">Countdown</string>
     <string name="set_time">Set Time</string>
+    <string name="set_duration_label">Set Duration</string>
+    <string name="hours_short">Hours</string>
+    <string name="minutes_short">Minutes</string>
+    <string name="seconds_short">Seconds</string>
     <string name="hundredths">Hundredths</string>
     <string name="play_music">Play music</string>
+    <string name="play_sound_on_finish">Play Sound on Finish</string>
     <string name="lap">Lap times</string>
     <string name="no_laps_recorded">No laps recorded</string>
     <string name="sounds">Stopwatch sounds</string>

@@ -208,6 +208,25 @@ class Converters {
     }
 
     @TypeConverter
+    fun fromLongList(value: List<Long>?): String? {
+        return value?.let { gson.toJson(it) } ?: "[]" // Store empty list as "[]"
+    }
+
+    @TypeConverter
+    fun toLongList(value: String?): List<Long>? {
+        if (value.isNullOrEmpty()) {
+            return emptyList()
+        }
+        return try {
+            val listType = object : TypeToken<List<Long>>() {}.type
+            gson.fromJson(value, listType)
+        } catch (e: Exception) {
+            Log.e("Converters", "Could not convert JSON to List<Long>: $value", e)
+            emptyList() // Return empty list on error
+        }
+    }
+
+    @TypeConverter
     fun fromTrafficLightMode(mode: TrafficLightMode?): String? {
         return mode?.name ?: TrafficLightMode.MANUAL_CHANGE.name // Default if null
     }

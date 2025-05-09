@@ -9,6 +9,7 @@ import com.example.purramid.thepurramid.data.db.IoDispatcher
 import com.example.purramid.thepurramid.data.db.RandomizerDao
 import com.example.purramid.thepurramid.data.db.SpotlightDao
 import com.example.purramid.thepurramid.data.db.TimeZoneDao
+import com.example.purramid.thepurramid.data.db.TimerDao
 import com.example.purramid.thepurramid.data.db.TrafficLightDao
 import dagger.Module
 import dagger.Provides
@@ -54,6 +55,12 @@ object DatabaseModule {
     @Singleton
     fun provideSpotlightDao(database: PurramidDatabase): SpotlightDao {
         return database.spotlightDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideTimerDao(database: PurramidDatabase): TimerDao {
+        return database.timerDao()
     }
 
     @Provides
