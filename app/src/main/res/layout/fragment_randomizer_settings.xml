@@ -200,6 +200,15 @@
             android:text="@string/dice_pool"
             app:icon="@drawable/ic_dice_pool"/>
 
+        <Button
+            android:id="@+id/buttonConfigureDiceColors"
+            style="@style/Widget.MaterialComponents.Button.TextButton.Icon"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/setting_dice_configure_colors"
+            app:icon="@drawable/ic_color_palette" />
+
         <com.google.android.material.switchmaterial.SwitchMaterial
             android:id="@+id/switchUseDicePips"
             android:layout_width="match_parent"

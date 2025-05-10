@@ -23,6 +23,7 @@ import com.example.purramid.thepurramid.R
 import com.example.purramid.thepurramid.clock.viewmodel.ClockViewModel // For EXTRA_CLOCK_ID key
 import com.example.purramid.thepurramid.databinding.ActivityClockSettingsBinding // Import binding
 import com.example.purramid.thepurramid.clock.ui.TimeZoneGlobeActivity // Ensure this import is correct
+import com.example.purramid.thepurramid.ui.PurramidPalette
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
 import java.time.ZoneId
@@ -49,13 +50,6 @@ class ClockSettingsActivity : AppCompatActivity() {
     private lateinit var uiStatePrefs: SharedPreferences
     private lateinit var serviceStatePrefs: SharedPreferences
 
-
-    private val colors = listOf(
-        Color.WHITE, Color.BLACK, 0xFFDAA520.toInt(), 0xFF008080.toInt(), 0xFFADD8E6.toInt(), 0xFFEE82EE.toInt()
-    )
-    private val outlineColors = listOf(
-        Color.BLACK, Color.WHITE, Color.BLACK, Color.BLACK, Color.BLACK, Color.WHITE
-    )
 
     private val timeZoneResultLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -100,7 +94,6 @@ class ClockSettingsActivity : AppCompatActivity() {
         val savedMode = uiStatePrefs.getString("clock_${idToLoad}_mode", "digital")
         binding.modeToggleButton.isChecked = (savedMode == "analog")
 
-        selectedColor = uiStatePrefs.getInt("clock_${idToLoad}_color", Color.WHITE)
         setupColorPalette()
 
         val is24Hour = uiStatePrefs.getBoolean("clock_${idToLoad}_24hour", false)
