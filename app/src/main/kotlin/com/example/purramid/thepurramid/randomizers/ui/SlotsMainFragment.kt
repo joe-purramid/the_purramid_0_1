@@ -87,9 +87,8 @@ class SlotsMainFragment : Fragment() {
 
     private fun setupUIListeners() {
         binding.slotsCloseButton.setOnClickListener {
-            // TODO: Call viewModel.handleManualClose() here once it's implemented
-            // viewModel.handleManualClose()
-            activity?.finish()
+            viewModel.handleManualClose() // Call ViewModel to clean up DB
+            activity?.finish() // Finish the hosting RandomizersHostActivity
         }
         binding.slotsSettingsButton.setOnClickListener {
             viewModel.instanceId?.let { id ->

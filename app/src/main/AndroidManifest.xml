@@ -110,6 +110,19 @@
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
+        <activity android:name=".spotlight.SpotlightActivity"
+            android:exported="false"
+            android:label="@string/spotlight_title"
+            android:parentActivityName=".MainActivity"
+            android:theme="@style/Theme.ThePurramid"
+            android:resizeableActivity="true"
+            android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation"
+            android:windowLayoutInDisplayCutoutMode="shortEdges">
+            <layout android:defaultWidth="500dp"
+                android:defaultHeight="400dp"
+                android:gravity="center" />
+        </activity>
+
         <service android:name=".spotlight.SpotlightService"
             android:enabled="true"
             android:exported="false"
@@ -135,11 +148,12 @@
             android:exported="false"
             android:label="@string/traffic_light_title"
             android:parentActivityName=".MainActivity"
+            android:theme="@style/Theme.ThePurramid"
+            android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation"
             android:resizeableActivity="true"
             android:windowLayoutInDisplayCutoutMode="shortEdges">
             <layout android:defaultWidth="420dp"
-                android:defaultHeight="300dp"
-                android:gravity="center" />
+                android:defaultHeight="500dp" android:gravity="center" />
         </activity>
 
         <service android:name=".traffic_light.TrafficLightService"

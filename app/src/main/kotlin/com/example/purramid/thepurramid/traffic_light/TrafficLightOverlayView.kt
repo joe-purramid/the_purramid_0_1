@@ -1,7 +1,6 @@
 // TrafficLightOverlayView.kt
 package com.example.purramid.thepurramid.traffic_light
 
-import android.animation.Animator
 import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
@@ -9,14 +8,13 @@ import android.content.Context
 import android.graphics.Rect
 import android.util.AttributeSet
 import android.util.Log
-import android.view.animation.LinearInterpolator
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.View
 import android.view.ViewConfiguration
 import android.widget.FrameLayout
-import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.constraintlayout.widget.ConstraintLayout // If your root is ConstraintLayout
 import androidx.core.view.isVisible
 import com.example.purramid.thepurramid.R
 import com.example.purramid.thepurramid.databinding.TrafficLightOverlayViewBinding
@@ -24,67 +22,74 @@ import com.example.purramid.thepurramid.traffic_light.viewmodel.LightColor
 import com.example.purramid.thepurramid.traffic_light.viewmodel.Orientation
 import com.example.purramid.thepurramid.traffic_light.viewmodel.TrafficLightState
 import kotlin.math.abs
-import kotlin.math.max // Import max
-import kotlin.math.min // Import min
+import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.sqrt
 
 class TrafficLightOverlayView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
-    defStyleAttr: Int = 0
-) : FrameLayout(context, attrs, defStyleAttr) { // Use FrameLayout or ConstraintLayout as base
+    defStyleAttr: Int = 0,
+    private val instanceId: Int // Added instanceId to constructor
+) : FrameLayout(context, attrs, defStyleAttr) { // Or ConstraintLayout if your XML root is that
 
     private val binding: TrafficLightOverlayViewBinding
     var interactionListener: InteractionListener? = null
 
-    // --- Touch Handling Variables ---
+    // Touch Handling Variables
     private var initialTouchX: Float = 0f
     private var initialTouchY: Float = 0f
+    private var initialViewX: Int = 0 // To store initial WindowManager.LayoutParams.x
+    private var initialViewY: Int = 0 // To store initial WindowManager.LayoutParams.y
     private var isMoving = false
     private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop.toFloat()
-    private val viewBoundsRect = Rect()
-    private var scaleFactor = 1f
-    private var isResizing = false
-    private var minSizePx = resources.getDimensionPixelSize(R.dimen.traffic_light_min_size)
-    private var maxSizePx = resources.displayMetrics.widthPixels
+    private val viewBoundsRect = Rect() // For checking child view bounds
 
-    // --- Blinking Variables ---
+    // Resize/Scale Handling Variables
+    private var scaleGestureDetector: ScaleGestureDetector
+    private var initialViewWidth: Int = 0
+    private var initialViewHeight: Int = 0
+    private var scaleFactor = 1f
+    private var isResizingWithScale = false // Flag for pinch-to-zoom resizing
+    private val minSizePx = resources.getDimensionPixelSize(R.dimen.traffic_light_min_size)
+    // No explicit maxSizePx here, WindowManager will clip if it exceeds screen
+
+    // Blinking Variables
     private var blinkingAnimator: ObjectAnimator? = null
     private var currentlyBlinkingView: View? = null
-    private val blinkDuration = 750L // milliseconds for one blink cycle (on -> off -> on)
+    private val blinkDuration = 750L
 
     interface InteractionListener {
-        fun onLightTapped(color: LightColor)
-        fun onCloseRequested()
-        fun onSettingsRequested()
-        fun onMove(rawDeltaX: Float, rawDeltaY: Float)
-        fun onMoveFinished()
-        fun onResize(newWidth: Int, newHeight: Int)
-        fun onResizeFinished(finalWidth: Int, finalHeight: Int)
+        fun onLightTapped(instanceId: Int, color: LightColor)
+        fun onCloseRequested(instanceId: Int)
+        fun onSettingsRequested(instanceId: Int)
+        fun onMove(instanceId: Int, rawDeltaX: Float, rawDeltaY: Float) // Delta for WM
+        fun onMoveFinished(instanceId: Int) // To save final position
+        fun onResize(instanceId: Int, newWidth: Int, newHeight: Int) // For WM
+        fun onResizeFinished(instanceId: Int, finalWidth: Int, finalHeight: Int) // To save final size
     }
 
     init {
         binding = TrafficLightOverlayViewBinding.inflate(LayoutInflater.from(context), this, true)
         setupInternalListeners()
-        setupScaleDetector()
-        setupTouchListener() // Setup touch listener for the overlay view itself
-        if (minSizePx <= 0) minSizePx = 100 // Fallback min size
+        scaleGestureDetector = ScaleGestureDetector(context, ScaleListener())
+        setupOverlayTouchListener() // Setup touch listener for the overlay view itself
     }
 
     private fun setupInternalListeners() {
-        // --- Vertical Lights ---
-        binding.lightRedVerticalOverlay.setOnClickListener { interactionListener?.onLightTapped(LightColor.RED) }
-        binding.lightYellowVerticalOverlay.setOnClickListener { interactionListener?.onLightTapped(LightColor.YELLOW) }
-        binding.lightGreenVerticalOverlay.setOnClickListener { interactionListener?.onLightTapped(LightColor.GREEN) }
+        // Vertical Lights
+        binding.lightRedVerticalOverlay.setOnClickListener { interactionListener?.onLightTapped(instanceId, LightColor.RED) }
+        binding.lightYellowVerticalOverlay.setOnClickListener { interactionListener?.onLightTapped(instanceId, LightColor.YELLOW) }
+        binding.lightGreenVerticalOverlay.setOnClickListener { interactionListener?.onLightTapped(instanceId, LightColor.GREEN) }
 
-        // --- Horizontal Lights ---
-        binding.lightRedHorizontalOverlay.setOnClickListener { interactionListener?.onLightTapped(LightColor.RED) }
-        binding.lightYellowHorizontalOverlay.setOnClickListener { interactionListener?.onLightTapped(LightColor.YELLOW) }
-        binding.lightGreenHorizontalOverlay.setOnClickListener { interactionListener?.onLightTapped(LightColor.GREEN) }
+        // Horizontal Lights
+        binding.lightRedHorizontalOverlay.setOnClickListener { interactionListener?.onLightTapped(instanceId, LightColor.RED) }
+        binding.lightYellowHorizontalOverlay.setOnClickListener { interactionListener?.onLightTapped(instanceId, LightColor.YELLOW) }
+        binding.lightGreenHorizontalOverlay.setOnClickListener { interactionListener?.onLightTapped(instanceId, LightColor.GREEN) }
 
-        // --- Buttons ---
-        binding.overlayButtonClose.setOnClickListener { interactionListener?.onCloseRequested() }
-        binding.overlayButtonSettings.setOnClickListener { interactionListener?.onSettingsRequested() }
+        // Buttons
+        binding.overlayButtonClose.setOnClickListener { interactionListener?.onCloseRequested(instanceId) }
+        binding.overlayButtonSettings.setOnClickListener { interactionListener?.onSettingsRequested(instanceId) }
     }
 
     fun updateState(state: TrafficLightState) {
@@ -95,17 +100,14 @@ class TrafficLightOverlayView @JvmOverloads constructor(
         val activeColor = state.activeLight
         val blinkEnabled = state.isBlinkingEnabled
 
-        // Get the views for the current orientation
         val redView = if (isVertical) binding.lightRedVerticalOverlay else binding.lightRedHorizontalOverlay
         val yellowView = if (isVertical) binding.lightYellowVerticalOverlay else binding.lightYellowHorizontalOverlay
         val greenView = if (isVertical) binding.lightGreenVerticalOverlay else binding.lightGreenHorizontalOverlay
 
-        // Update activation state
         redView.isActivated = activeColor == LightColor.RED
         yellowView.isActivated = activeColor == LightColor.YELLOW
         greenView.isActivated = activeColor == LightColor.GREEN
 
-        // Determine which view should blink (if any)
         val viewToBlink: View? = when (activeColor) {
             LightColor.RED -> redView
             LightColor.YELLOW -> yellowView
@@ -113,93 +115,81 @@ class TrafficLightOverlayView @JvmOverloads constructor(
             null -> null
         }
 
-        // Stop previous blinking if the blinking view changes or blinking is disabled
-        if (currentlyBlinkingView != null && (currentlyBlinkingView != viewToBlink || !blinkEnabled)) {
+        // Stop previous blinking if conditions change
+        if (currentlyBlinkingView != null && (currentlyBlinkingView != viewToBlink || !blinkEnabled || activeColor == null)) {
             stopBlinking(currentlyBlinkingView!!)
         }
 
-        // Stop blinking on newly inactive views and reset alpha
-        if (activeColor != LightColor.RED) stopBlinking(redView); redView.alpha = 1f
-        if (activeColor != LightColor.YELLOW) stopBlinking(yellowView); yellowView.alpha = 1f
-        if (activeColor != LightColor.GREEN) stopBlinking(greenView); greenView.alpha = 1f
+        // Ensure non-active lights are not blinking and have full alpha
+        if (activeColor != LightColor.RED) { stopBlinking(redView); redView.alpha = 1f }
+        if (activeColor != LightColor.YELLOW) { stopBlinking(yellowView); yellowView.alpha = 1f }
+        if (activeColor != LightColor.GREEN) { stopBlinking(greenView); greenView.alpha = 1f }
 
-        // Start new blinking if needed
-        if (blinkEnabled && viewToBlink != null && currentlyBlinkingView != viewToBlink) {
-            startBlinking(viewToBlink)
+
+        if (blinkEnabled && viewToBlink != null) {
+            if (currentlyBlinkingView != viewToBlink) { // Only start if not already blinking this view
+                startBlinking(viewToBlink)
+            }
         } else if (!blinkEnabled && viewToBlink != null) {
-            // Ensure alpha is reset if blinking is turned off while light is active
+            // If blinking got disabled but a light is active, ensure its alpha is full
+            stopBlinking(viewToBlink) // Stop just in case
             viewToBlink.alpha = 1f
         }
     }
 
-    // --- Setup Scale Detector ---
-    private fun setupScaleDetector() {
-        scaleGestureDetector = ScaleGestureDetector(context, ScaleListener())
-    }
-
-    // --- Blinking Logic ---
     private fun startBlinking(view: View) {
-        stopBlinking(view) // Ensure any previous animation on this view is stopped
-
-        // Simple blink: Fade out and back in repeatedly
+        stopBlinking(view) // Stop any existing animation on this view first
         blinkingAnimator = ObjectAnimator.ofFloat(view, View.ALPHA, 1f, 0.3f, 1f).apply {
             duration = blinkDuration
             repeatCount = ValueAnimator.INFINITE
-            repeatMode = ValueAnimator.RESTART // Restart animation from beginning
-            interpolator = LinearInterpolator() // Constant speed fade
+            repeatMode = ValueAnimator.RESTART
+            interpolator = LinearInterpolator()
+            start()
         }
         currentlyBlinkingView = view
-        blinkingAnimator?.start()
-        Log.d("OverlayView", "Started blinking for: ${view.id}")
     }
 
     private fun stopBlinking(view: View) {
-        if (currentlyBlinkingView == view && blinkingAnimator != null) {
+        if (currentlyBlinkingView == view && blinkingAnimator?.isRunning == true) {
             blinkingAnimator?.cancel()
-            blinkingAnimator = null
-            view.alpha = 1f // Reset alpha to fully visible
+        }
+        // Always reset alpha if we are stopping blinking for this view
+        view.alpha = 1f
+        if (currentlyBlinkingView == view) {
             currentlyBlinkingView = null
-            Log.d("OverlayView", "Stopped blinking for: ${view.id}")
-        } else if (view.alpha != 1f) {
-            // Ensure alpha is reset even if it wasn't the 'currentlyBlinkingView' tracked
-            view.animate().cancel() // Cancel potential other animations
-            view.alpha = 1f
+            blinkingAnimator = null
         }
     }
 
-    // --- Touch Handling for Movement ---
     @SuppressLint("ClickableViewAccessibility")
-    private fun setupTouchListener() {
+    private fun setupOverlayTouchListener() {
         this.setOnTouchListener { _, event ->
-            // Check if touch is on an interactive element first
-            if (isTouchOnInteractiveElement(event)) {
-                // If ACTION_DOWN is on button/light, let it proceed but don't start move/scale
-                if (event.actionMasked == MotionEvent.ACTION_DOWN) {
-                    isMoving = false
-                    isResizing = false // Reset flags
-                }
+            // Check if touch is on an interactive element first (buttons, lights)
+            if (isTouchOnInteractiveElement(event) && event.actionMasked == MotionEvent.ACTION_DOWN) {
+                // If ACTION_DOWN is on button/light, let it proceed but don't start move/scale for the whole overlay
+                isMoving = false
+                isResizingWithScale = false
                 return@setOnTouchListener false // Let the child handle its click
             }
 
-            // Let ScaleGestureDetector inspect the event first
             val scaleConsumed = scaleGestureDetector.onTouchEvent(event)
-
             var moveConsumed = false
-            // If not resizing, handle potential move gesture
-            if (!isResizing) {
+
+            if (!isResizingWithScale) { // Don't move if currently scaling
                 moveConsumed = handleMoveGesture(event)
             }
 
-            // Reset isResizing flag on ACTION_UP/CANCEL, managed by ScaleListener's onScaleEnd
             if (event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL) {
                 if (isMoving) {
-                    interactionListener?.onMoveFinished()
+                    interactionListener?.onMoveFinished(instanceId)
                     isMoving = false
                 }
-                // isResizing is reset in ScaleListener.onScaleEnd
+                if (isResizingWithScale) { // isResizingWithScale is set in ScaleListener
+                    interactionListener?.onResizeFinished(instanceId, width, height)
+                    isResizingWithScale = false
+                }
             }
-
-            // Consume the event if it was handled by scale or move, or if it's ACTION_DOWN
+            // Consume if scale or move handled it, or if it's ACTION_DOWN to prepare for gestures
             scaleConsumed || moveConsumed || event.actionMasked == MotionEvent.ACTION_DOWN
         }
     }
@@ -207,130 +197,107 @@ class TrafficLightOverlayView @JvmOverloads constructor(
     private fun handleMoveGesture(event: MotionEvent): Boolean {
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
-                // Record initial touch point for potential move
-                initialTouchX = event.rawX
+                initialTouchX = event.rawX // Screen coordinates
                 initialTouchY = event.rawY
+                // initialViewX and initialViewY will be set by the service when params are known
+                // For now, we just pass deltas. The service knows the current WM params.x/y
                 isMoving = false
-                return true // Indicate interest in subsequent events
+                return true // Interested in subsequent move events
             }
             MotionEvent.ACTION_MOVE -> {
-                if (event.pointerCount > 1) {
-                    // If more pointers go down during a potential move, stop the move check
+                if (event.pointerCount > 1) { // If multi-touch starts, stop considering it a move
                     isMoving = false
                     return false
                 }
+                val deltaX = event.rawX - initialTouchX
+                val deltaY = event.rawY - initialTouchY
 
-                val currentX = event.rawX
-                val currentY = event.rawY
-                val deltaX = currentX - initialTouchX
-                val deltaY = currentY - initialTouchY
-
-                if (!isMoving) {
+                if (!isMoving) { // Check for slop if not already moving
                     if (sqrt(deltaX * deltaX + deltaY * deltaY) > touchSlop) {
                         isMoving = true
                     }
                 }
 
                 if (isMoving) {
-                    interactionListener?.onMove(deltaX, deltaY)
-                    // Update initial touch points for the next delta
-                    initialTouchX = currentX
-                    initialTouchY = currentY
-                    return true // Consumed event as move
+                    interactionListener?.onMove(instanceId, deltaX, deltaY)
+                    // Update initial touch points for the next delta calculation for continuous drag
+                    initialTouchX = event.rawX
+                    initialTouchY = event.rawY
+                    return true
                 }
             }
-            // UP/CANCEL handled in the main onTouchListener
-        }
-        return false // Event not consumed by move logic here
-    }
-
-    // Helper to check if touch is within the bounds of any interactive child
-    private fun isTouchOnInteractiveElement(event: MotionEvent): Boolean {
-        val x = event.x.toInt()
-        val y = event.y.toInt()
-
-        // Check buttons first as they are smaller targets
-        if (isTouchInsideTarget(x, y, binding.overlayButtonClose)) return true
-        if (isTouchInsideTarget(x, y, binding.overlayButtonSettings)) return true
-
-        // Check currently visible light container
-        if (binding.trafficLightVerticalContainerOverlay.isVisible) {
-            if (isTouchInsideTarget(x, y, binding.lightRedVerticalOverlay)) return true
-            if (isTouchInsideTarget(x, y, binding.lightYellowVerticalOverlay)) return true
-            if (isTouchInsideTarget(x, y, binding.lightGreenVerticalOverlay)) return true
-        } else if (binding.trafficLightHorizontalContainerOverlay.isVisible) {
-            if (isTouchInsideTarget(x, y, binding.lightRedHorizontalOverlay)) return true
-            if (isTouchInsideTarget(x, y, binding.lightYellowHorizontalOverlay)) return true
-            if (isTouchInsideTarget(x, y, binding.lightGreenHorizontalOverlay)) return true
         }
         return false
     }
 
-    private fun isTouchInsideTarget(x: Int, y: Int, target: View): Boolean {
-        target.getHitRect(viewBoundsRect) // Get bounds relative to this view's parent
-        return target.isVisible && viewBoundsRect.contains(x, y)
+    // Helper to check if touch is within the bounds of any interactive child
+    private fun isTouchOnInteractiveElement(event: MotionEvent): Boolean {
+        val x = event.x.toInt() // Coordinates relative to this TrafficLightOverlayView
+        val y = event.y.toInt()
+
+        val interactiveViews = listOfNotNull(
+            binding.overlayButtonClose, binding.overlayButtonSettings,
+            binding.lightRedVerticalOverlay, binding.lightYellowVerticalOverlay, binding.lightGreenVerticalOverlay,
+            binding.lightRedHorizontalOverlay, binding.lightYellowHorizontalOverlay, binding.lightGreenHorizontalOverlay
+        )
+
+        for (view in interactiveViews) {
+            if (view.isVisible) {
+                view.getHitRect(viewBoundsRect) // Gets rect relative to this parent view
+                if (viewBoundsRect.contains(x, y)) {
+                    return true
+                }
+            }
+        }
+        return false
     }
 
-    // --- Scale Gesture Listener Implementation ---
+
     private inner class ScaleListener : ScaleGestureDetector.SimpleOnScaleGestureListener() {
-        private var currentWidth: Int = 0
-        private var currentHeight: Int = 0
-
         override fun onScaleBegin(detector: ScaleGestureDetector): Boolean {
-            // Ignore scale if moving
-            if (isMoving) return false
+            if (isMoving) return false // Don't scale if already moving
 
-            isResizing = true
-            currentWidth = width // Get current view width (which should match layoutParams.width)
-            currentHeight = height // Get current view height
-            scaleFactor = 1.0f // Reset scale factor
-            Log.d("OverlayView", "onScaleBegin - Start Size: ${currentWidth}x$currentHeight")
-            return true // We want to handle scaling
+            isResizingWithScale = true
+            initialViewWidth = width // Current width from the view itself
+            initialViewHeight = height // Current height from the view itself
+            scaleFactor = 1.0f
+            Log.d("TrafficLightOverlay", "onScaleBegin - Start Size: ${initialViewWidth}x$initialViewHeight")
+            return true
         }
 
         override fun onScale(detector: ScaleGestureDetector): Boolean {
-            if (!isResizing) return false
+            if (!isResizingWithScale) return false
+            scaleFactor *= detector.scaleFactor // Accumulate scale factor
 
-            scaleFactor *= detector.scaleFactor // Accumulate scale factor is WRONG, use detector's factor directly
+            var newWidth = (initialViewWidth * scaleFactor).toInt()
+            var newHeight = (initialViewHeight * scaleFactor).toInt()
 
-            // Calculate new size based on the detector's scale factor relative to the *start* of the gesture
-            // A simpler approach is to scale the *current* size by the *incremental* factor
-            var newWidth = (currentWidth * detector.scaleFactor).toInt()
-            var newHeight = (currentHeight * detector.scaleFactor).toInt()
-
-
-            // Apply constraints
-            newWidth = max(minSizePx, newWidth) // Apply min size
+            newWidth = max(minSizePx, newWidth)
             newHeight = max(minSizePx, newHeight)
-            // Apply max size if needed:
-            // newWidth = min(newWidth, maxSizePx)
-            // newHeight = min(newHeight, maxSizePx)
+            // No explicit max size, window manager will handle screen bounds
 
-
-            // Notify the listener (Service) to update layout params
-            interactionListener?.onResize(newWidth, newHeight)
-            // Update current size for next incremental calculation
-            currentWidth = newWidth
-            currentHeight = newHeight
-
-            Log.d("OverlayView", "onScale - Factor: ${detector.scaleFactor}, New Size: ${newWidth}x$newHeight")
-
-            return true // Scale event handled
+            interactionListener?.onResize(instanceId, newWidth, newHeight)
+            // The service will update WindowManager.LayoutParams, which will trigger onMeasure/onLayout
+            return true
         }
 
         override fun onScaleEnd(detector: ScaleGestureDetector) {
-            Log.d("OverlayView", "onScaleEnd - Final Size: ${currentWidth}x$currentHeight")
-            isResizing = false
-            interactionListener?.onResizeFinished(currentWidth, currentHeight)
-            // Reset temporary variables if necessary
+            if (isResizingWithScale) {
+                // Final size based on the accumulated scaleFactor
+                var finalWidth = (initialViewWidth * scaleFactor).toInt()
+                var finalHeight = (initialViewHeight * scaleFactor).toInt()
+                finalWidth = max(minSizePx, finalWidth)
+                finalHeight = max(minSizePx, finalHeight)
+
+                interactionListener?.onResizeFinished(instanceId, finalWidth, finalHeight)
+            }
+            isResizingWithScale = false
             scaleFactor = 1.0f
         }
     }
 
-    // --- Cleanup ---
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
-        // Stop animator when view is detached
         blinkingAnimator?.cancel()
         blinkingAnimator = null
         currentlyBlinkingView = null

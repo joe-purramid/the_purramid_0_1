@@ -11,6 +11,7 @@ import com.example.purramid.thepurramid.R // Import R for error strings if neede
 import com.example.purramid.thepurramid.data.db.DEFAULT_DICE_POOL_JSON
 import com.example.purramid.thepurramid.data.db.DEFAULT_EMPTY_JSON_MAP
 import com.example.purramid.thepurramid.data.db.RandomizerDao
+import com.example.purramid.thepurramid.data.db.RandomizerInstanceEntity
 import com.example.purramid.thepurramid.data.db.SpinSettingsEntity
 import com.example.purramid.thepurramid.util.Event // Assuming you have an Event wrapper
 import com.google.gson.Gson
@@ -185,6 +186,28 @@ class DiceViewModel @Inject constructor(
             Log.e(TAG, "Failed to parse dice pool config JSON: $json", e)
             null // Return null on parsing error
         }
+    }
+
+    fun handleManualClose() {
+        instanceId?.let { idToClose ->
+            Log.d(TAG, "handleManualClose called for instanceId: $idToClose")
+            viewModelScope.launch(Dispatchers.IO) {
+                try {
+                    randomizerDao.deleteSettingsForInstance(idToClose)
+                    randomizerDao.deleteInstance(RandomizerInstanceEntity(instanceId = idToClose))
+                    Log.d(TAG, "Successfully deleted settings and instance record for $idToClose from DB.")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error deleting data for instance $idToClose from DB", e)
+                }
+            }
+        } ?: Log.w(TAG, "handleManualClose called but instanceId is null.")
+    }
+
+    override fun onCleared() {
+        Log.d(TAG, "DiceViewModel onCleared for instanceId: $instanceId")
+        super.onCleared()
+        // If you had manual jobs not in viewModelScope, you'd cancel them here:
+        // myCustomJob?.cancel()
     }
 
     /**

@@ -384,14 +384,15 @@
     <string name="delete_list">Delete List</string>
     <string name="delete_list_title">Delete List?</string>
     <string name="delete_list_confirmation">Are you sure you want to delete \'%1$s\'? This cannot be undone.</string>
-    <string name="sequence_up">Previous sequence item</string>
-    <string name="sequence_down">Next sequence item</string>
+    <string name="add_another_randomizer">Add another Randomizer</string>
 
     '' RANDOMIZER SPIN MODE ''
     <string name="randomizer_mode_spin">Spin Mode</string>
     <string name="spin">Spin</string>
     <string name="setting_celebrate">Celebrate Result</string>
     <string name="setting_sequence">Sequence Results</string>
+    <string name="sequence_up">Previous sequence item</string>
+    <string name="sequence_down">Next sequence item</string>
 
     '' Pre-loaded Randomizer Lists ''
     <string name="default_list_title_colors">Colors</string>
@@ -454,7 +455,12 @@
     <string name="setting_dice_roll_animation">Roll Animation</string>
     <string name="setting_dice_crit_celebration">Critical Celebration (d20=20)</string>
 
+    '' RANDOMIZER COIN FLIP MODE ''
+    <string name="randomizer_mode_coin_flip">Coin Flip Mode</string>
+
     '' RANDOMIZER SNACKBARS ''
+    <string name="max_randomizers_general_reached_snackbar">Maximum of <xliff:g id="count">%1$d</xliff:g> Randomizer windows reached.</string>
+    <string name="max_randomizers_dice_reached_snackbar">Maximum of <xliff:g id="count">%1$d</xliff:g> Dice windows reached.</string>
     <string name="error_settings_instance_id_failed">Some naughty kitties caused an error. Please close this window and open a new one to continue.</string>
     <string name="info_settings_defaulted_kitty">A naughty kitty has made off with your settings. Starting with default settings.</string>
     <string name="error_settings_final_save_failed">A naughty kitty has gotten underfoot. Your settings have applied to your current session, but they have not saved for later use.</string>
@@ -483,7 +489,9 @@
 
 
     '' SPOTLIGHT APP ''
+    <string name="spotlight_settings_title">Spotlight Settings</string>
     <string name="add_another_spotlight">Add another Spotlight</string>
+    <string name="max_spotlights_reached_snackbar">Maximum number of spotlights reached.</string>
     <string name="change_shape_circle">Change shape to Circle</string>
     <string name="change_shape_square">Change shape to Square</string>
 
@@ -517,6 +525,7 @@
     <string name="setting_show_time_remaining">Show Time Remaining (Timed Mode)</string>
     <string name="setting_show_timeline">Show Timeline (Timed Mode)</string>
     <string name="setting_add_another">Add Another Traffic Light</string>
+    <string name="max_traffic_lights_reached_snackbar">Maximum number of traffic lights reached.</string>
     <string name="dialog_close">Close</string>
     <string name="min_db_label">Min:</string> <!-- Minimum -->
     <string name="max_db_label">Max:</string> <!-- Maximum -->

@@ -61,7 +61,6 @@
         app:layout_constraintTop_toBottomOf="@+id/textViewModeLabel"
         app:singleSelection="true"
         app:selectionRequired="true">
-
         <Button
             android:id="@+id/buttonModeSpin"
             style="?attr/materialButtonOutlinedStyle"
@@ -70,7 +69,7 @@
             android:text="Spin"
             app:icon="@drawable/ic_spin"
             app:iconGravity="textStart"
-            android:contentDescription="@string/mode_select_spin"/>
+            android:contentDescription="@string/randomizer_mode_spin"/>
         <Button
             android:id="@+id/buttonModeSlots"
             style="?attr/materialButtonOutlinedStyle"
@@ -79,7 +78,7 @@
             android:text="Slots"
             app:icon="@drawable/ic_slots"
             app:iconGravity="textStart"
-            android:contentDescription="@string/mode_select_slots"/>
+            android:contentDescription="@string/randomizer_mode_slots"/>
         <Button
             android:id="@+id/buttonModeDice"
             style="?attr/materialButtonOutlinedStyle"
@@ -88,7 +87,8 @@
             android:text="Dice"
             app:icon="@drawable/ic_dice"
             app:iconGravity="textStart"
-            android:contentDescription="@string/mode_select_dice"/>
+            android:contentDescription="@string/randomizer_mode_dice"/>
+
         <Button
             android:id="@+id/buttonModeCoinFlip"
             style="?attr/materialButtonOutlinedStyle"
@@ -97,8 +97,7 @@
             android:text="Coin"
             app:icon="@drawable/ic_coin_flip"
             app:iconGravity="textStart"
-            android:contentDescription="@string/mode_select_coin_flip"/>
-
+            android:contentDescription="@string/randomizer_mode_coin_flip"/>
     </com.google.android.material.button.MaterialButtonToggleGroup>
 
     <Button
@@ -113,23 +112,40 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/modeToggleGroup" />
 
-    <com.google.android.material.switchmaterial.SwitchMaterial
-        android:id="@+id/switchSpin"
+    <LinearLayout
+        android:id="@+id/spinSpecificSettingsLayout"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="@string/setting_spin_animation"
-        app:layout_constraintEnd_toEndOf="parent"
+        android:orientation="vertical"
+        android:layout_marginTop="8dp"
+        android:visibility="gone"
+        tools:visibility="visible"
+        app:layout_constraintTop_toBottomOf="@+id/buttonListEditor"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/slotsSettingsLayout" />
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/switchSpin"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/setting_spin_animation" />
+
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/switchIsSequenceEnabled"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/setting_sequence"/>
+    </LinearLayout>
 
     <LinearLayout
         android:id="@+id/slotsSettingsLayout"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:layout_marginTop="16dp"
-        android:visibility="gone" app:layout_constraintTop_toBottomOf="@+id/buttonListEditor"
+        android:layout_marginTop="8dp"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@+id/spinSpecificSettingsLayout"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         tools:visibility="visible">
@@ -148,19 +164,19 @@
             app:singleSelection="true"
             app:selectionRequired="true">
 
-        <Button
-            android:id="@+id/buttonSlotsColumns3"
-            style="?attr/materialButtonOutlinedStyle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/setting_slots_columns_3" />
+            <Button
+                android:id="@+id/buttonSlotsColumns3"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/setting_slots_columns_3" />
 
-        <Button
-            android:id="@+id/buttonSlotsColumns5"
-            style="?attr/materialButtonOutlinedStyle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/setting_slots_columns_5" />
+            <Button
+                android:id="@+id/buttonSlotsColumns5"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/setting_slots_columns_5" />
         </com.google.android.material.button.MaterialButtonToggleGroup>
     </LinearLayout>
 
@@ -175,6 +191,14 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         tools:visibility="visible">
+
+        <Button
+            android:id="@+id/buttonDicePoolConfig"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/dice_pool"
+            app:icon="@drawable/ic_dice_pool"/>
 
         <com.google.android.material.switchmaterial.SwitchMaterial
             android:id="@+id/switchUseDicePips"
@@ -205,16 +229,65 @@
             android:text="@string/setting_dice_crit_celebration" />
     </LinearLayout>
 
+    <LinearLayout
+        android:id="@+id/coinFlipSettingsLayout"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginTop="8dp"
+        android:visibility="gone"
+        tools:visibility="visible"
+        app:layout_constraintTop_toBottomOf="@+id/diceSettingsLayout"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Coin Flip Settings (e.g., Number of Coins)"
+            tools:ignore="HardcodedText" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.Dense"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:hint="Number of Coins">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/editTextNumCoins"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="number"
+                android:maxLength="1"
+                android:text="1"/>
+        </com.google.android.material.textfield.TextInputLayout>
+    </LinearLayout>
+
+
+    <Button
+        android:id="@+id/buttonAddAnotherRandomizer"
+        style="@style/Widget.MaterialComponents.Button.TextButton.Icon"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:text="@string/add_another_randomizer"
+        app:icon="@drawable/ic_add_circle"
+        app:layout_constraintTop_toBottomOf="@+id/coinFlipSettingsLayout"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
     <com.google.android.material.switchmaterial.SwitchMaterial
         android:id="@+id/switchIsAnnounceEnabled"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:text="@string/setting_announce"
-        android:visibility="gone" tools:visibility="visible"
+        android:visibility="gone"
+        tools:visibility="visible"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/diceSettingsLayout" />
+        app:layout_constraintTop_toBottomOf="@+id/buttonAddAnotherRandomizer" />
 
     <com.google.android.material.switchmaterial.SwitchMaterial
         android:id="@+id/switchIsCelebrateEnabled"
@@ -225,15 +298,5 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/switchIsAnnounceEnabled" />
-
-    <com.google.android.material.switchmaterial.SwitchMaterial
-        android:id="@+id/switchIsSequenceEnabled"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="@string/setting_sequence"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/switchIsCelebrateEnabled" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -2,21 +2,12 @@
 package com.example.purramid.thepurramid.data.db
 
 import android.content.Context
-import com.example.purramid.thepurramid.data.db.PurramidDatabase
-import com.example.purramid.thepurramid.data.db.ClockDao
-import com.example.purramid.thepurramid.data.db.CityDao
-import com.example.purramid.thepurramid.data.db.IoDispatcher
-import com.example.purramid.thepurramid.data.db.RandomizerDao
-import com.example.purramid.thepurramid.data.db.SpotlightDao
-import com.example.purramid.thepurramid.data.db.TimeZoneDao
-import com.example.purramid.thepurramid.data.db.TimerDao
-import com.example.purramid.thepurramid.data.db.TrafficLightDao
+import com.example.purramid.thepurramid.di.IoDispatcher
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import javax.inject.Qualifier
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers

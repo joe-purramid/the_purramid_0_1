@@ -1,11 +1,13 @@
 package com.example.purramid.thepurramid.randomizers.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.purramid.thepurramid.data.db.RandomizerDao
+import com.example.purramid.thepurramid.data.db.RandomizerInstanceEntity
 import com.example.purramid.thepurramid.data.db.SpinItemEntity
 import com.example.purramid.thepurramid.data.db.SpinListEntity
 import com.example.purramid.thepurramid.data.db.SpinSettingsEntity
@@ -36,6 +38,7 @@ class SlotsViewModel @Inject constructor(
         // Key to get instanceId from SavedStateHandle (passed via NavArgs/Intent)
         // Ensure this matches the key used in navigation/intent passing
         const val KEY_INSTANCE_ID = "instanceId" // Or use RandomizerSettingsViewModel.KEY_INSTANCE_ID
+        private const val TAG = "SlotsViewModel"
         const val DEFAULT_NUM_COLUMNS = 3
     }
 
@@ -216,6 +219,21 @@ class SlotsViewModel @Inject constructor(
             // Determine results
             determineResults(columnsToSpin)
         }
+    }
+
+    fun handleManualClose() {
+        instanceId?.let { idToClose ->
+            Log.d(TAG, "handleManualClose called for instanceId: $idToClose")
+            viewModelScope.launch(Dispatchers.IO) {
+                try {
+                    randomizerDao.deleteSettingsForInstance(idToClose)
+                    randomizerDao.deleteInstance(RandomizerInstanceEntity(instanceId = idToClose))
+                    Log.d(TAG, "Successfully deleted settings and instance record for $idToClose from DB.")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error deleting data for instance $idToClose from DB", e)
+                }
+            }
+        } ?: Log.w(TAG, "handleManualClose called but instanceId is null.")
     }
 
     // --- Cleanup in onCleared ---

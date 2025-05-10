@@ -1,6 +1,7 @@
 // RandomizerViewModel.kt
 package com.example.purramid.thepurramid.randomizers.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.map
@@ -37,11 +38,12 @@ class RandomizerViewModel @Inject constructor(
 
     companion object {
         const val KEY_INSTANCE_ID = "instanceId"
+        private const val TAG = "RandomizerViewModel"
     }
 
     // --- State ---
     internal val instanceId: UUID = savedStateHandle.get<String>(KEY_INSTANCE_ID)?.let {
-        UUID.fromString(it)
+        try { UUID.fromString(it) } catch (e: IllegalArgumentException) { null }
     } ?: UUID.randomUUID().also { newId ->
         savedStateHandle[KEY_INSTANCE_ID] = newId.toString()
         viewModelScope.launch(Dispatchers.IO) { // Add Dispatcher
@@ -279,24 +281,23 @@ class RandomizerViewModel @Inject constructor(
         _sequenceIndex.value = 0
     }
 
-    // --- Cleanup ---
+    /**
+     * Called when the user manually closes this randomizer instance.
+     * Deletes the instance-specific settings and its registration from the database.
+     */
     fun handleManualClose() {
-        // ... (implementation remains the same, consider Dispatchers.IO) ...
-        val isLast = RandomizerInstanceManager.isLastInstance(instanceId)
-        viewModelScope.launch(Dispatchers.IO) { // Add Dispatcher
-            if (isLast) {
-                val lastSettings = randomizerDao.getSettingsForInstance(instanceId)
-                lastSettings?.let {
-                    val defaultToSave = it.copy(instanceId = DEFAULT_SETTINGS_ID)
-                    randomizerDao.saveDefaultSettings(defaultToSave)
+        instanceId?.let { idToClose ->
+            Log.d(TAG, "handleManualClose called for instanceId: $idToClose")
+            viewModelScope.launch(Dispatchers.IO) {
+                try {
+                    randomizerDao.deleteSettingsForInstance(idToClose)
+                    randomizerDao.deleteInstance(RandomizerInstanceEntity(instanceId = idToClose))
+                    Log.d(TAG, "Successfully deleted settings and instance record for $idToClose from DB.")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error deleting data for instance $idToClose from DB", e)
                 }
-                randomizerDao.deleteSettingsForInstance(instanceId)
-                randomizerDao.deleteInstance(RandomizerInstanceEntity(instanceId = instanceId))
-            } else {
-                randomizerDao.deleteSettingsForInstance(instanceId)
-                randomizerDao.deleteInstance(RandomizerInstanceEntity(instanceId = instanceId))
             }
-        }
+        } ?: Log.w(TAG, "handleManualClose called but instanceId is null.")
     }
 
     override fun onCleared() {
