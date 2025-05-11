@@ -22,6 +22,7 @@ import androidx.core.content.ContextCompat
 import com.bumptech.glide.Glide
 import com.example.purramid.thepurramid.R
 import com.example.purramid.thepurramid.screen_shade.ScreenShadeState
+import com.example.purramid.thepurramid.util.dpToPx
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
@@ -66,7 +67,7 @@ class MaskView @JvmOverloads constructor(
     private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
     private enum class ResizeDirection { NONE, LEFT, TOP, RIGHT, BOTTOM, TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT }
     private var currentResizeDirection = ResizeDirection.NONE
-    private val resizeHandleSize = dpToPx(24) // Increased for easier touch
+    private val resizeHandleSize = context.dpToPx(24) // Increased for easier touch
 
     // Scale Gesture Detector for pinch-to-resize
     private var scaleGestureDetector: ScaleGestureDetector
@@ -96,11 +97,11 @@ class MaskView @JvmOverloads constructor(
         // Close Button
         closeButton = ImageView(context).apply {
             setImageDrawable(ContextCompat.getDrawable(context, R.drawable.ic_close))
-            val buttonSize = dpToPx(32)
-            setPadding(dpToPx(4), dpToPx(4), dpToPx(4), dpToPx(4))
+            val buttonSize = context.dpToPx(32)
+            setPadding(context.dpToPx(4), context.dpToPx(4), context.dpToPx(4), context.dpToPx(4))
             layoutParams = LayoutParams(buttonSize, buttonSize).apply {
                 gravity = Gravity.TOP or Gravity.END
-                setMargins(dpToPx(4), dpToPx(4), dpToPx(4), dpToPx(4))
+                setMargins(context.dpToPx(4), context.dpToPx(4), context.dpToPx(4), context.dpToPx(4))
             }
             setOnClickListener {
                 if (!currentState.isLocked) {
@@ -115,7 +116,7 @@ class MaskView @JvmOverloads constructor(
 
         // Yellow border for locked state
         yellowBorder = GradientDrawable().apply {
-            setStroke(dpToPx(3), Color.YELLOW)
+            setStroke(context.dpToPx(3), Color.YELLOW)
             setColor(Color.TRANSPARENT) // Transparent fill
         }
 

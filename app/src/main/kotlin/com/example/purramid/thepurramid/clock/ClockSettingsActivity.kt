@@ -239,17 +239,19 @@ class ClockSettingsActivity : AppCompatActivity() {
         ContextCompat.startForegroundService(this, serviceIntent)
     }
 
+    // Ensure updateColorSelectionInUI correctly highlights the selected view
+    // It might need to iterate through children of binding.colorPalette to reset others
     private fun updateColorSelectionInUI(newSelection: View) {
         selectedColorView?.background?.apply {
             if (this is GradientDrawable) {
-                val bgColor = colors.find { it == this.color?.defaultColor } // This might not work if color is mutable
-                val outlineIdx = colors.indexOf(selectedColorView?.tag as? Int ?: -1) // Use tag to store original color
-                setStroke(dpToPx(1), if(outlineIdx != -1) outlineColors[outlineIdx] else Color.DKGRAY)
+                val originalColor = selectedColorView?.tag as? Int ?: PurramidPalette.WHITE.colorInt
+                val originalOutline = if (Color.luminance(originalColor) > 0.5) Color.BLACK else Color.WHITE
+                setStroke(dpToPx(1), originalOutline)
             }
         }
+        // Highlight new selection
         newSelection.background?.apply {
             if (this is GradientDrawable) {
-                newSelection.tag = selectedColor // Tag the view with the selected color for reset
                 setStroke(dpToPx(3), Color.CYAN)
             }
         }
@@ -268,7 +270,4 @@ class ClockSettingsActivity : AppCompatActivity() {
         // Potentially reload UI state for currentClockIdForConfig if it can change externally
     }
 
-    private fun dpToPx(dp: Int): Int {
-        return TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp.toFloat(), resources.displayMetrics).toInt()
-    }
 }

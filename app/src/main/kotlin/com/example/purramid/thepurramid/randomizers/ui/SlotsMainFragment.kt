@@ -26,6 +26,7 @@ import com.example.purramid.thepurramid.randomizers.SlotsColumnState
 import com.example.purramid.thepurramid.randomizers.SpinItemType
 import com.example.purramid.thepurramid.randomizers.viewmodel.SlotsResult
 import com.example.purramid.thepurramid.randomizers.viewmodel.SlotsViewModel
+import com.example.purramid.thepurramid.util.dpToPx
 import dagger.hilt.android.AndroidEntryPoint
 import java.util.UUID
 
@@ -227,8 +228,8 @@ class SlotsMainFragment : Fragment() {
     /** Creates a TextView or ImageView for a result item */
     private fun createViewForResultItem(item: SpinItemEntity?): View {
         val context = requireContext()
-        val defaultSize = 100.dpToPx() // Example size, adjust as needed
-        val defaultPadding = 8.dpToPx() // Example padding
+        val defaultSize = requireContext().dpToPx(100) // Example size, adjust as needed
+        val defaultPadding = requireContext().dpToPx(8) // Example padding
 
         if (item == null) {
             // Handle null item (e.g., empty list)
@@ -275,9 +276,6 @@ class SlotsMainFragment : Fragment() {
             }
         }
     }
-
-    // Helper function for dp to pixel conversion (if not already defined elsewhere)
-    fun Int.dpToPx(): Int = (this * resources.displayMetrics.density).toInt()
 
     private fun showListSelectionDialog(columnIndex: Int) {
         if (availableLists.isEmpty()) {

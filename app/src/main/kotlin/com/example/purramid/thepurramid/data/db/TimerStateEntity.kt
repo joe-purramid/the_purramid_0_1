@@ -4,6 +4,7 @@ package com.example.purramid.thepurramid.data.db
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.example.purramid.thepurramid.timers.TimerType
+import com.example.purramid.thepurramid.ui.PurramidPalette
 
 @Entity(tableName = "timer_state")
 data class TimerStateEntity(
@@ -16,6 +17,7 @@ data class TimerStateEntity(
     val lapsJson: String = "[]", // Store list as JSON
     val showCentiseconds: Boolean = true,
     val playSoundOnEnd: Boolean = false,
+    val overlayColor: Int = PurramidPalette.WHITE.colorInt,
     val windowX: Int = 0,
     val windowY: Int = 0,
     val windowWidth: Int = -1,

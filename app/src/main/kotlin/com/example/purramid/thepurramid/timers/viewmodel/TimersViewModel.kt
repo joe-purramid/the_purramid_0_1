@@ -10,6 +10,7 @@ import com.example.purramid.thepurramid.data.db.TimerDao
 import com.example.purramid.thepurramid.data.db.TimerStateEntity
 import com.example.purramid.thepurramid.timers.TimerState
 import com.example.purramid.thepurramid.timers.TimerType
+import com.example.purramid.thepurramid.ui.PurramidPalette
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -199,7 +200,13 @@ class TimersViewModel @Inject constructor(
          saveState(_uiState.value)
      }
 
-     fun updateWindowPosition(x: Int, y: Int) {
+    fun updateOverlayColor(newColor: Int) {
+        if (_uiState.value.overlayColor == newColor) return
+        _uiState.update { it.copy(overlayColor = newColor) }
+        saveState(_uiState.value)
+    }
+
+    fun updateWindowPosition(x: Int, y: Int) {
         if (_uiState.value.windowX == x && _uiState.value.windowY == y) return
         _uiState.update { it.copy(windowX = x, windowY = y) }
         saveState(_uiState.value)
@@ -263,6 +270,7 @@ class TimersViewModel @Inject constructor(
             laps = lapsList,
             showCentiseconds = entity.showCentiseconds,
             playSoundOnEnd = entity.playSoundOnEnd,
+            overlayColor = entity.overlayColor,
             windowX = entity.windowX,
             windowY = entity.windowY,
             windowWidth = entity.windowWidth,
@@ -281,6 +289,7 @@ class TimersViewModel @Inject constructor(
             lapsJson = lapsJson,
             showCentiseconds = state.showCentiseconds,
             playSoundOnEnd = state.playSoundOnEnd,
+            overlayColor = state.overlayColor,
             windowX = state.windowX,
             windowY = state.windowY,
             windowWidth = state.windowWidth,

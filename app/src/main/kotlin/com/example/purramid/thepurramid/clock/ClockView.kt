@@ -15,6 +15,7 @@ import android.view.MotionEvent
 import android.view.View
 import androidx.core.view.isVisible
 import com.caverock.androidsvg.SVGImageView
+import com.example.purramid.thepurramid.util.dpToPx
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -270,7 +271,7 @@ class ClockView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
             val amPmPaint = Paint(textPaint).apply { textSize *= 0.4f } // Smaller size for AM/PM
             val mainTextWidth = textPaint.measureText(formattedTime)
             val amPmTextWidth = amPmPaint.measureText(amPmString)
-            val padding = dpToPx(4)
+            val padding = context.dpToPx(4)
 
             // Position AM/PM to the right of the main time
             val amPmX = x + (mainTextWidth / 2f) + (amPmTextWidth / 2f) + padding
@@ -284,7 +285,7 @@ class ClockView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
     private fun getDigitalTextSize(availableWidth: Int): Float {
         // Start with a base size relative to height or width
         var textSize = min(width, height) * 0.4f // Example: 40% of smaller dimension
-        val minSize = dpToPx(12).toFloat() // Minimum reasonable text size
+        val minSize = context.dpToPx(12).toFloat() // Minimum reasonable text size
 
         // Reduce size until it fits (basic approach)
         textPaint.textSize = textSize
@@ -524,8 +525,3 @@ class ClockView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
         return diff
     }
 
-    // Utility function for DP to PX conversion
-    private fun dpToPx(dp: Int): Int {
-        return TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp.toFloat(), resources.displayMetrics).toInt()
-    }
-}

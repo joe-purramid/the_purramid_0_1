@@ -1,5 +1,5 @@
 // RandomizerInstanceEntity.kt
-package com.example.purramid.thepurramid.data.db // Ensure this package path is correct
+package com.example.purramid.thepurramid.data.db
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey

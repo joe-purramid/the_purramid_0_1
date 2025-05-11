@@ -8,6 +8,8 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Intent
 import android.graphics.PixelFormat
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffColorFilter
 import android.os.Build
 import android.os.Bundle // Needed for SavedStateViewModelFactory args
 import android.os.IBinder
@@ -256,53 +258,90 @@ class TimersService : LifecycleService(), ViewModelStoreOwner {
             TimerType.COUNTDOWN -> R.layout.view_floating_timer_countdown
         }
         if (currentInflatedLayoutId != requiredLayoutId) {
-            Log.w(TAG, "State update received, but layout mismatch. Waiting for re-inflation.")
+            Log.w(TAG, "Timer state update received, but layout mismatch. Waiting for re-inflation.")
             return // Skip update if layout is wrong, wait for addOverlayViewIfNeeded to fix it
         }
 
-        // Update Time Display
+        // Set background color of the root overlay view
+        overlayView?.setBackgroundColor(state.overlayColor)
+
+        // Determine text color based on background luminance for contrast
+        val textColor = if (Color.luminance(state.overlayColor) > 0.5) Color.BLACK else Color.WHITE
+
+        // Update Time Display & Text Color
         val showCenti = state.showCentiseconds // Check setting
         val timeStr = formatTime(state.currentMillis, showCenti)
 
         digitalTimeTextView?.text = timeStr.substringBeforeLast('.')
-        // Only update centi if layout supports it
+        digitalTimeTextView?.setTextColor(textColor)
+
         centisecondsTextView?.let {
             it.text = if (showCenti && timeStr.contains('.')) ".${timeStr.substringAfterLast('.')}" else ""
             it.visibility = if (showCenti && state.type == TimerType.COUNTDOWN) View.VISIBLE else View.GONE
+            it.setTextColor(textColor)
         }
 
         // Update Play/Pause Button state and icon
+        playPauseButton?.setColorFilter(textColor, PorterDuff.Mode.SRC_IN) // Tint the icon
         playPauseButton?.setImageResource(if (state.isRunning) R.drawable.ic_pause else R.drawable.ic_play)
         playPauseButton?.contentDescription = getString(if (state.isRunning) R.string.pause else R.string.play)
 
-        // Update Stopwatch specific UI
+        // Update Close Button (Text color)
+        closeButton?.setTextColor(textColor) // Assuming closeButton is a TextView with '✕'
+
+        // Update Stopwatch Specific UI & Text Colors
         if (state.type == TimerType.STOPWATCH) {
+            lapResetButtonStopwatch?.setTextColor(textColor) // For Button text
+            // Consider tinting button background or using MaterialButton with appropriate styling for contrast
             lapResetButtonStopwatch?.text = getString(if (state.isRunning) R.string.lap else R.string.reset)
-            // Enable Reset button if paused and not at zero, or enable Lap button if running
             lapResetButtonStopwatch?.isEnabled = state.isRunning || state.currentMillis > 0L
 
             val hasLaps = state.laps.isNotEmpty()
             lapTimesLayout?.visibility = if (hasLaps) View.VISIBLE else View.GONE
             noLapsTextView?.visibility = if (!hasLaps) View.VISIBLE else View.GONE
+            noLapsTextView?.setTextColor(textColor)
 
             val reversedLaps = state.laps.reversed()
             lapTimeTextViews.forEachIndexed { index, textView ->
                 if (index < reversedLaps.size) {
-                    // Format: "LapNum. MM:SS.CC"
-                    textView.text = "${state.laps.size - index}. ${formatTime(reversedLaps[index], true)}" // Show centi for laps
+                    textView.text = "${state.laps.size - index}. ${formatTime(reversedLaps[index], true)}"
                     textView.visibility = View.VISIBLE
+                    textView.setTextColor(textColor)
                 } else {
                     textView.visibility = View.GONE
                 }
             }
         }
 
-        // Update Countdown specific UI
+        // Update Stopwatch Specific UI & Text Colors
+        if (state.type == TimerType.STOPWATCH) {
+            lapResetButtonStopwatch?.setTextColor(textColor) // For Button text
+            // Consider tinting button background or using MaterialButton with appropriate styling for contrast
+            lapResetButtonStopwatch?.text = getString(if (state.isRunning) R.string.lap else R.string.reset)
+            lapResetButtonStopwatch?.isEnabled = state.isRunning || state.currentMillis > 0L
+
+            val hasLaps = state.laps.isNotEmpty()
+            lapTimesLayout?.visibility = if (hasLaps) View.VISIBLE else View.GONE
+            noLapsTextView?.visibility = if (!hasLaps) View.VISIBLE else View.GONE
+            noLapsTextView?.setTextColor(textColor)
+
+            val reversedLaps = state.laps.reversed()
+            lapTimeTextViews.forEachIndexed { index, textView ->
+                if (index < reversedLaps.size) {
+                    textView.text = "${state.laps.size - index}. ${formatTime(reversedLaps[index], true)}"
+                    textView.visibility = View.VISIBLE
+                    textView.setTextColor(textColor)
+                } else {
+                    textView.visibility = View.GONE
+                }
+            }
+        }
+
+        // Update Countdown Specific UI & Icon Tints
         if (state.type == TimerType.COUNTDOWN) {
-            // Enable reset only if timer is stopped and not at the initial duration
+            resetButtonCountdown?.setColorFilter(textColor, PorterDuff.Mode.SRC_IN)
             resetButtonCountdown?.isEnabled = !state.isRunning && (state.currentMillis != state.initialDurationMillis || state.currentMillis == 0L)
         }
-    }
 
     // Apply saved state to LayoutParams
     private fun applyStateToLayoutParams(state: TimerState, params: WindowManager.LayoutParams) {

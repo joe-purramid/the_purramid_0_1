@@ -6,13 +6,14 @@ import android.animation.AnimatorListenerAdapter
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
 import android.annotation.SuppressLint // Keep if needed for touch listener
-// import android.content.Context
+import android.content.Context
 import android.content.Intent
 // import android.content.res.Configuration
 import android.graphics.drawable.Drawable
 import android.graphics.Rect
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.util.TypedValue
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.view.LayoutInflater
@@ -32,22 +33,36 @@ import androidx.window.layout.WindowMetricsCalculator
 import com.example.purramid.thepurramid.clock.ClockActivity
 import com.example.purramid.thepurramid.databinding.ActivityMainBinding // Import generated binding class
 import com.example.purramid.thepurramid.data.db.PurramidDatabase // Import Database
+import com.example.purramid.thepurramid.data.db.RandomizerDao // For Randomizer new instance default settings
+import com.example.purramid.thepurramid.data.db.DEFAULT_SETTINGS_ID // For Randomizer
+import com.example.purramid.thepurramid.data.db.RandomizerInstanceEntity // For Randomizer
+import com.example.purramid.thepurramid.data.db.SpinSettingsEntity // For Randomizer
 import com.example.purramid.thepurramid.randomizers.RandomizerInstanceManager // Import Manager
-import com.example.purramid.thepurramid.randomizers.RandomizersActivity
 import com.example.purramid.thepurramid.randomizers.RandomizersHostActivity
+import com.example.purramid.thepurramid.randomizers.viewmodel.RandomizerViewModel
 import com.example.purramid.thepurramid.screen_shade.ScreenShadeActivity
 import com.example.purramid.thepurramid.spotlight.SpotlightActivity
 import com.example.purramid.thepurramid.timers.TimersActivity
 import com.example.purramid.thepurramid.traffic_light.TrafficLightActivity
+import com.example.purramid.thepurramid.util.dpToPx
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.launch // For coroutines
+import java.util.UUID
+import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers // For DB Ops
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext // For switching context
 
 // --- Define simple Enums for Size Classes (for XML Views context) ---
 // Based on Material Design breakpoints: https://m3.material.io/foundations/layout/applying-layout/window-size-classes
 enum class WindowWidthSizeClass { COMPACT, MEDIUM, EXPANDED }
 enum class WindowHeightSizeClass { COMPACT, MEDIUM, EXPANDED }
 
-data class AppIntent(val title: String, val icon: Drawable?, val action: (Context) -> Unit)
+data class AppIntent(
+    val title: String,
+    @get:androidx.annotation.DrawableRes val iconResId: Int, // Store Res ID
+    val action: (Context) -> Unit,
+    val id: String // Unique ID for the intent type
+)
 
 class IntentViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
     val iconImageView: ImageView = itemView.findViewById(R.id.intentIconImageView)
@@ -65,7 +80,7 @@ class IntentAdapter(private val intents: List<AppIntent>, private val onItemClic
 
     override fun onBindViewHolder(holder: IntentViewHolder, position: Int) {
         val currentIntent = intents[position]
-        holder.iconImageView.setImageDrawable(currentIntent.iconDrawable)
+        holder.iconImageView.setImageResource(currentIntent.iconResId)
         holder.titleTextView.text = currentIntent.title
         holder.itemView.setOnClickListener {
             onItemClick(currentIntent)
@@ -85,6 +100,10 @@ class MainActivity : AppCompatActivity() {
     private var screenWidthPx: Int = 0
     private var screenHeightPx: Int = 0
 
+    companion object {
+        private const val TAG = "MainActivity"
+    }
+
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -94,8 +113,8 @@ class MainActivity : AppCompatActivity() {
 
         // Calculate screen dimensions in pixels
         val displayMetrics = resources.displayMetrics
-        screenWidthPx = resources.displayMetrics.widthPixels
-        screenHeightPx = resources.displayMetrics.heightPixels
+        screenWidthPx = displayMetrics.widthPixels
+        screenHeightPx = displayMetrics.heightPixels
 
         // --- Calculate Window Size Classes ---
         val wmc = WindowMetricsCalculator.getOrCreate()
@@ -123,53 +142,13 @@ class MainActivity : AppCompatActivity() {
         // Load app icon
         binding.appIconImageView.setImageDrawable(ContextCompat.getDrawable(this, R.mipmap.ic_launcher_foreground))
 
-        // Define Intents
-        allIntents.clear() // Clear if adding dynamically
-        allIntents.addAll(
-            listOf(
-                AppIntent(
-                    title = getString(R.string.clock_title),
-                    icon = ContextCompat.getDrawable(this, R.drawable.ic_clock),
-                    action = { startActivity(Intent(this, ClockActivity::class.java)) }
-                ),
-                AppIntent(
-                    title = getString(R.string.randomizers_title),
-                    icon = ContextCompat.getDrawable(this, R.drawable.ic_random),
-                    action = { startActivity(Intent(this, RandomizersHostActivity::class.java)) }
-                ),
-                AppIntent(
-                    title = getString(R.string.screen_shade_title),
-                    icon = ContextCompat.getDrawable(this, R.drawable.ic_shade),
-                    action = {
-                        val intent = Intent(this, SpotlightService::class.java).apply {
-                            action = ACTION_START_SPOTLIGHT // Use action defined in Service
-                        }
-                        ContextCompat.startForegroundService(this, intent)
-                    }
-                ),
-                AppIntent(
-                    title = getString(R.string.timers_title),
-                    icon = ContextCompat.getDrawable(this, R.drawable.ic_timer),
-                    action = { startActivity(Intent(this, TimersActivity::class.java)) }
-                ),
-                AppIntent(
-                    title = getString(R.string.traffic_light_title),
-                    icon = ContextCompat.getDrawable(this, R.drawable.ic_traffic_light),
-                    action = { startActivity(Intent(this, TrafficLightActivity::class.java)) }
-                ),
-                AppIntent(
-                    title = getString(R.string.about),
-                    icon = ContextCompat.getDrawable(this, R.drawable.ic_about),
-                    action = { startActivity(Intent(this, AboutActivity::class.java)) }
-                )
-            )
-        )
+        defineAppIntents() // Call method to setup intents
 
         // Set up the RecyclerView
         binding.intentsRecyclerView.layoutManager = LinearLayoutManager(this)
         val intentAdapter = IntentAdapter(allIntents) { appIntent ->
             animateIntentSelection(appIntent) {
-                appIntent.action.invoke()
+                appIntent.action.invoke(this@MainActivity)
                 if (isIntentsVisible) {
                     hideIntentsAnimated()
                 }
@@ -185,12 +164,8 @@ class MainActivity : AppCompatActivity() {
         // Set up touch listener for handling clicks outside the intents
         binding.root.setOnTouchListener { _, event -> // Attach listener to the root view from binding
             if (isIntentsVisible && event.action == MotionEvent.ACTION_DOWN) {
-                val rawX = event.rawX
-                val rawY = event.rawY
-
-                // Use binding to access views for checking bounds
-                if (!isTouchInsideView(rawX, rawY, binding.appIconButtonContainer) &&
-                    !isTouchInsideView(rawX, rawY, binding.intentsRecyclerView)
+                if (!isTouchInsideView(event.rawX, event.rawY, binding.appIconButtonContainer) &&
+                    !isTouchInsideView(event.rawX, event.rawY, binding.intentsRecyclerView)
                 ) {
                     hideIntentsAnimated()
                     return@setOnTouchListener true
@@ -201,35 +176,113 @@ class MainActivity : AppCompatActivity() {
 
         // Apply Layout Adaptations based on Size Classes
         adaptLayoutToSizeClasses(widthSizeClass, heightSizeClass)
-
         // Set initial freeform window size
         setInitialFreeformWindowSize()
+        // *** Add Restoration Logic ***
+        restoreRandomizerInstances()
     }
 
-    // *** Add Restoration Logic ***
-    restoreRandomizerInstances()
-}
+    // Define Intents
+    private fun defineAppIntents() {
+        allIntents.clear() // Clear if adding dynamically
+        allIntents.addAll(
+            listOf(
+                AppIntent(
+                    title = getString(R.string.clock_title),
+                    iconResId = R.drawable.ic_clock,
+                    id = "clock",
+                    action = { context ->
+                        // ClockActivity handles logic for new vs settings
+                        val intent = Intent(context, ClockActivity::class.java)
+                        context.startActivity(intent)
+                    }
+                ),
+                AppIntent(
+                    title = getString(R.string.randomizers_title),
+                    iconResId = R.drawable.ic_random,
+                    id = "randomizers",
+                    action = { context ->
+                        // Simpler launch logic from MainActivity for Randomizers
+                        val activeRandomizerCount = RandomizerInstanceManager.getActiveInstanceCount()
+                        val intent = Intent(context, RandomizersHostActivity::class.java)
 
-// --- Restoration Logic ---
-private fun restoreRandomizerInstances() {
-    lifecycleScope.launch { // Use lifecycleScope for coroutine
-        val database = PurramidDatabase.getDatabase(applicationContext)
-        // Get instances saved in DB (excluding the default settings record ID)
-        val instancesToRestore = database.randomizerDao().getAllNonDefaultInstances()
+                        if (activeRandomizerCount > 0) {
+                            Log.d(TAG, "Randomizers active ($activeRandomizerCount), reordering to front.")
+                            intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+                        } else {
+                            Log.d(TAG, "No active Randomizers, launching new instance (HostActivity will init defaults).")
+                            // No instanceId extra is put here. RandomizersHostActivity will detect this.
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) // Good for a new primary window
+                        }
+                        context.startActivity(intent)
+                    }
+                ),
 
-        if (instancesToRestore.isNotEmpty()) {
-            // Re-register these instances with the manager
-            instancesToRestore.forEach { instanceEntity ->
-                RandomizerInstanceManager.registerInstance(instanceEntity.instanceId)
-                // Launch activity for each instance
-                launchExistingRandomizer(instanceEntity.instanceId)
-            }
+                AppIntent(
+                    title = getString(R.string.screen_shade_title),
+                    iconResId = R.drawable.ic_shade,
+                    id = "screen_shade",
+                    action = { context ->
+                        // ScreenShadeActivity handles logic for new vs settings
+                        val intent = Intent(context, ScreenShadeActivity::class.java)
+                        context.startActivity(intent)
+                    }
+                ),
+                AppIntent(
+                    title = getString(R.string.spotlight_title),
+                    iconResId = R.drawable.ic_spotlight, // Ensure you have ic_spotlight
+                    id = "spotlight",
+                    action = { context ->
+                        // SpotlightActivity handles logic for new vs settings
+                        val intent = Intent(context, SpotlightActivity::class.java)
+                        context.startActivity(intent)
+                    }
+                ),
+                AppIntent(
+                    title = getString(R.string.timers_title),
+                    iconResId = R.drawable.ic_timer,
+                    id = "timers",
+                    action = { context ->
+                        // TimersActivity handles logic for new vs settings
+                        val intent = Intent(context, TimersActivity::class.java)
+                        context.startActivity(intent)
+                    }
+                ),
+                AppIntent(
+                    title = getString(R.string.traffic_light_title),
+                    iconResId = R.drawable.ic_traffic_light,
+                    id = "traffic_light",
+                    action = { context ->
+                        // TrafficLightActivity handles logic for new vs settings
+                        val intent = Intent(context, TrafficLightActivity::class.java)
+                        context.startActivity(intent)
+                    }
+                ),
+                AppIntent(
+                    title = getString(R.string.about),
+                    iconResId = R.drawable.ic_about, // Ensure you have ic_about
+                    id = "about",
+                    action = { context ->
+                        val intent = Intent(context, AboutActivity::class.java)
+                        intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT) // Standard behavior for About
+                        context.startActivity(intent)
+                    }
+                )
+            )
+        )
+    }
+
+    private fun launchExistingRandomizer(instanceId: UUID) {
+        Log.d(TAG, "Intending to launch existing Randomizer: $instanceId (restore logic)")
+        val intent = Intent(this, RandomizersHostActivity::class.java).apply {
+            putExtra(RandomizersHostActivity.EXTRA_INSTANCE_ID, instanceId.toString())
+            // Important flags to try and bring an existing task to the foreground or create new if needed
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
         }
-        // Else: No instances to restore, normal startup
+        startActivity(intent)
     }
-}
 
-// Helper Function for Touch Handling
+    // Helper Function for Touch Handling
     private fun isTouchInsideView(rawX: Float, rawY: Float, view: View): Boolean {
         if (!view.isShown) {
             return false
@@ -275,9 +328,9 @@ private fun restoreRandomizerInstances() {
         binding.intentsRecyclerView.alpha = 0f
 
         // Access views via binding
-        val scaleDownX = ObjectAnimator.ofFloat(binding.appIconImageView, "scaleX", 1f, 0.8f)
-        val scaleDownY = ObjectAnimator.ofFloat(binding.appIconImageView, "scaleY", 1f, 0.8f)
-        val fadeIn = ObjectAnimator.ofFloat(binding.intentsRecyclerView, "alpha", 0f, 1f)
+        val scaleDownX = ObjectAnimator.ofFloat(binding.appIconImageView, View.SCALE_X, 1f, 0.8f)
+        val scaleDownY = ObjectAnimator.ofFloat(binding.appIconImageView, View.SCALE_Y, 1f, 0.8f)
+        val fadeIn = ObjectAnimator.ofFloat(binding.intentsRecyclerView, View.ALPHA, 0f, 1f)
 
         AnimatorSet().apply {
             duration = 300
@@ -297,15 +350,13 @@ private fun restoreRandomizerInstances() {
         if (!isIntentsVisible) return
 
         // Define slide distance in DP and convert to pixels using the helper function
-        val slideUpDistancePx = dpToPx(-30) // Slide up by 30dp (adjust as needed)
+        val slideUpDistancePx = this.dpToPx(-30) // Slide up by 30dp (adjust as needed)
 
         // Access views via binding
-        val scaleUpX = ObjectAnimator.ofFloat(binding.appIconImageView, "scaleX", binding.appIconImageView.scaleX, 1f)
-        val scaleUpY = ObjectAnimator.ofFloat(binding.appIconImageView, "scaleY", binding.appIconImageView.scaleY, 1f)
-        val fadeOut = ObjectAnimator.ofFloat(binding.intentsRecyclerView, "alpha", 1f, 0f)
-
-        // Use the calculated fixed pixel distance for the slide
-        val slideUp = ObjectAnimator.ofFloat(binding.intentsRecyclerView, "translationY", 0f, slideUpDistancePx.toFloat())
+        val scaleUpX = ObjectAnimator.ofFloat(binding.appIconImageView, View.SCALE_X, binding.appIconImageView.scaleX, 1f)
+        val scaleUpY = ObjectAnimator.ofFloat(binding.appIconImageView, View.SCALE_Y, binding.appIconImageView.scaleY, 1f)
+        val fadeOut = ObjectAnimator.ofFloat(binding.intentsRecyclerView, View.ALPHA, 1f, 0f)
+        val slideUp = ObjectAnimator.ofFloat(binding.intentsRecyclerView, View.TRANSLATION_Y, 0f, slideUpDistancePx.toFloat())
 
         AnimatorSet().apply {
             duration = 300
@@ -314,21 +365,23 @@ private fun restoreRandomizerInstances() {
             playTogether(scaleUpX, scaleUpY, fadeOut, slideUp)
             addListener(object : AnimatorListenerAdapter() {
                 override fun onAnimationEnd(animation: Animator) {
-                    binding.intentsRecyclerView.visibility = View.GONE
-                    binding.intentsRecyclerView.translationY = 0f
+                    if (_binding != null) { // Check binding
+                        binding.intentsRecyclerView.visibility = View.GONE
+                        binding.intentsRecyclerView.translationY = 0f
+                    }
                     isIntentsVisible = false
                 }
                 override fun onAnimationStart(animation: Animator) {
-                    // Optional: Set isIntentsVisible = false here if needed sooner
+                    if (_binding != null) {
+                        binding.intentsRecyclerView.visibility = View.GONE
+                        binding.intentsRecyclerView.translationY = 0f
+                        binding.listTitleCaret.rotation = 0f
+                    }
+                    isIntentsVisible = false
                 }
             })
             start()
         }
-    }
-
-    // Ensure dpToPx function definition exists and remains
-    private fun dpToPx(dp: Int): Int {
-        return TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp.toFloat(), resources.displayMetrics).toInt()
     }
 
     // Utility and Other Functions
@@ -367,9 +420,5 @@ private fun restoreRandomizerInstances() {
                 e.printStackTrace()
             }
         }
-    }
-
-    private fun dpToPx(dp: Int): Int {
-        return TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp.toFloat(), resources.displayMetrics).toInt()
     }
 }

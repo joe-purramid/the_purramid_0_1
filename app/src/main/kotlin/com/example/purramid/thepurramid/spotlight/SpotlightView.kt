@@ -13,6 +13,7 @@ import android.view.ViewConfiguration
 import android.view.WindowManager // Keep if needed, though params handled by Service
 import androidx.core.content.ContextCompat
 import com.example.purramid.thepurramid.R
+import com.example.purramid.thepurramid.util.dpToPx
 import kotlin.math.absoluteValue
 import kotlin.math.atan2
 import kotlin.math.hypot
@@ -85,8 +86,8 @@ class SpotlightView(context: Context, attrs: AttributeSet?) : View(context, attr
     private val ovalRect = RectF()
 
     // --- UI Control Elements ---
-    private val controlButtonSize = dpToPx(48)
-    private val controlMargin = dpToPx(16)
+    private val controlButtonSize = context.dpToPx(48)
+    private val controlMargin = context.dpToPx(16)
     private var addRect = Rect()
     private var closeRect = Rect()
     private var shapeRect = Rect()
@@ -96,7 +97,7 @@ class SpotlightView(context: Context, attrs: AttributeSet?) : View(context, attr
     private var shapeDrawableSquare: Drawable? = null
 
     // Minimum size for spotlights
-    private val minDimensionPx = dpToPx(50).toFloat()
+    private val minDimensionPx = context.dpToPx(50).toFloat()
 
     // Data class to represent a spotlight (moved from outside)
     data class Spotlight(
@@ -550,10 +551,5 @@ class SpotlightView(context: Context, attrs: AttributeSet?) : View(context, attr
         var result = 1.0f
         repeat(exp) { result *= this }
         return result
-    }
-
-
-    private fun dpToPx(dp: Int): Int {
-        return TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp.toFloat(), resources.displayMetrics).toInt()
     }
 }

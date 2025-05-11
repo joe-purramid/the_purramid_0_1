@@ -1,14 +1,19 @@
 // TimersSettingsFragment.kt
 package com.example.purramid.thepurramid.timers.ui
 
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
 import android.util.Log
+import android.util.TypedValue // Add
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
+import android.widget.LinearLayout
 import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.DialogFragment
@@ -20,6 +25,8 @@ import com.example.purramid.thepurramid.R
 import com.example.purramid.thepurramid.databinding.FragmentTimersSettingsBinding
 import com.example.purramid.thepurramid.timers.TimerType
 import com.example.purramid.thepurramid.timers.viewmodel.TimersViewModel
+import com.example.purramid.thepurramid.ui.PurramidPalette
+import com.example.purramid.thepurramid.util.dpToPx
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
@@ -43,6 +50,11 @@ class TimersSettingsFragment : DialogFragment() {
 
     private var blockListeners = false // To prevent listener loops
 
+    private var selectedTimerColor: Int = PurramidPalette.WHITE.colorInt
+    private var selectedTimerColorView: View? = null
+
+    val marginInPx = requireContext().dpToPx(16)
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -54,9 +66,47 @@ class TimersSettingsFragment : DialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         dialog?.setTitle(R.string.timer_settings_title)
+        setupTimerColorPalette()
 
         setupListeners()
-        observeViewModel()
+        observeViewModel(updateTimerColorSelectionInUI)
+    }
+
+    private fun setupTimerColorPalette() {
+        binding.timerColorPalette.removeAllViews()
+        PurramidPalette.appStandardPalette.forEach { namedColor ->
+            val colorValue = namedColor.colorInt
+            val colorView = View(requireContext()).apply {
+                // ... (similar setup as in ClockSettingsActivity for size, margins, background, click listener) ...
+                // On click:
+                // this.selectedTimerColor = colorValue
+                // updateTimerColorSelectionInUI(this)
+                // viewModel.updateTimerColor(colorValue) // ViewModel needs this method
+            }
+            binding.timerColorPalette.addView(colorView)
+            // Initial selection based on viewModel.uiState.value.color
+            // if (colorValue == viewModel.uiState.value.color) { // Assuming color is in TimerState
+            //    updateTimerColorSelectionInUI(colorView)
+            //    this.selectedTimerColor = colorValue
+            // }
+        }
+    }
+
+    private fun updateTimerColorSelectionInUI(activeColor: Int) {
+        for (i in 0 until binding.timerColorPalette.childCount) {
+            val childView = binding.timerColorPalette.getChildAt(i)
+            val viewColor = childView.tag as? Int ?: continue
+            val drawable = childView.background as? GradientDrawable
+
+            if (viewColor == activeColor) {
+                drawable?.setStroke(requireContext().dpToPx(3), Color.CYAN) // Highlight selected
+                selectedOverlayColorView = childView // Track currently highlighted
+            } else {
+                // Reset others to normal stroke
+                val outline = if (Color.luminance(viewColor) > 0.5) Color.BLACK else Color.WHITE
+                drawable?.setStroke(requireContext().dpToPx(1), outline)
+            }
+        }
     }
 
     private fun setupListeners() {
@@ -67,6 +117,8 @@ class TimersSettingsFragment : DialogFragment() {
             }
             dismiss()
         }
+
+        binding.buttonAddAnotherTimer.setOnClickListener { handleAddAnotherTimer() }
 
         binding.radioGroupTimerType.setOnCheckedChangeListener { _, checkedId ->
             if (blockListeners) return@setOnCheckedChangeListener
@@ -147,6 +199,10 @@ class TimersSettingsFragment : DialogFragment() {
                     // Update Common Settings
                     binding.switchShowCentiseconds.isChecked = state.showCentiseconds
 
+                    // Update color palette selection
+                    selectedOverlayColor = state.overlayColor
+                    updateTimerColorSelectionInUI(selectedOverlayColor)
+
                     blockListeners = false
                 }
             }
@@ -190,7 +246,6 @@ class TimersSettingsFragment : DialogFragment() {
         viewModel.setInitialDuration(totalMillis)
         Log.d("TimerSettingsFrag", "Saved duration: $totalMillis ms")
     }
-
 
     override fun onDestroyView() {
         super.onDestroyView()
