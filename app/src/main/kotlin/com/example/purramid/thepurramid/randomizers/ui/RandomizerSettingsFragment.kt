@@ -1,4 +1,4 @@
-// src/main/kotlin/com/example/purramid/thepurramid/randomizers/ui/RandomizerSettingsFragment.kt
+// RandomizerSettingsFragment.kt
 package com.example.purramid.thepurramid.randomizers.ui
 
 import android.content.Intent
@@ -7,30 +7,30 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ArrayAdapter
 import android.widget.CompoundButton
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels // Changed for potentially shared VM
 import androidx.fragment.app.viewModels
-import androidx.lifecycle.lifecycleScope // Added for coroutines
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import com.example.purramid.thepurramid.R
-import com.example.purramid.thepurramid.data.db.RandomizerDao // To fetch current settings for cloning
+import com.example.purramid.thepurramid.data.db.RandomizerDao
 import com.example.purramid.thepurramid.data.db.RandomizerInstanceEntity
 import com.example.purramid.thepurramid.data.db.SpinSettingsEntity
+import com.example.purramid.thepurramid.randomizers.DiceSumResultType
 import com.example.purramid.thepurramid.databinding.FragmentRandomizerSettingsBinding
+import com.example.purramid.thepurramid.randomizers.RandomizerInstanceManager
 import com.example.purramid.thepurramid.randomizers.RandomizerMode
-import com.example.purramid.thepurramid.randomizers.RandomizersHostActivity // To launch new instance
-import com.example.purramid.thepurramid.randomizers.RandomizerInstanceManager // To check active count
+import com.example.purramid.thepurramid.randomizers.RandomizersHostActivity
 import com.example.purramid.thepurramid.randomizers.viewmodel.RandomizerSettingsViewModel
-import com.example.purramid.thepurramid.randomizers.viewmodel.RandomizerViewModel // For KEY_INSTANCE_ID
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.util.UUID
-import javax.inject.Inject // Added for DAO injection
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class RandomizerSettingsFragment : Fragment() {
@@ -39,23 +39,29 @@ class RandomizerSettingsFragment : Fragment() {
     private val binding get() = _binding!!
 
     private val args: RandomizerSettingsFragmentArgs by navArgs()
-    private val viewModel: RandomizerSettingsViewModel by viewModels()
 
-    @Inject // Inject DAO for cloning settings
-    lateinit var randomizerDao: RandomizerDao
+    // Use activityViewModels if you intend this VM to be shared with DiceColorPickerDialogFragment
+    // or other dialogs launched from settings. If not, viewModels() is fine.
+    private val viewModel: RandomizerSettingsViewModel by activityViewModels()
+
+
+    // For "Add Another Randomizer"
+    @Inject
+    lateinit var randomizerDao: RandomizerDao // Inject DAO for cloning settings
+    private var currentInstanceIdForCloning: UUID? = null // Store the ID for cloning
 
     private var isUpdatingSwitches = false
     private var isUpdatingMode = false
     private var isUpdatingSlotsColumns = false
     private var isUpdatingDiceSettings = false
 
-    private var currentInstanceId: UUID? = null // To store the ID of the current settings window
-
     companion object {
-        private const val TAG = "RandomizerSettingsFrag"
-        private const val MAX_INSTANCES_GENERAL = 4
-        private const val MAX_INSTANCES_DICE = 7
+        private const val MAX_INSTANCES_GENERAL = 7 // Example limit
+        private const val MAX_INSTANCES_DICE = 7    // Example limit for Dice (can be same or different)
+        private const val TAG = "SettingsFragment"
     }
+
+    private lateinit var sumResultsAdapter: ArrayAdapter<String>
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -67,37 +73,31 @@ class RandomizerSettingsFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        currentInstanceIdForCloning = try { UUID.fromString(args.instanceId) } catch (e: Exception) { null }
 
-        args.instanceId?.let { uuidString ->
-            try {
-                currentInstanceId = UUID.fromString(uuidString)
-                // ViewModel handles loading based on this ID via SavedStateHandle
-            } catch (e: IllegalArgumentException) {
-                Log.e(TAG, "Invalid UUID format in arguments: $uuidString", e)
-                Snackbar.make(requireView(), R.string.error_settings_instance_id_failed, Snackbar.LENGTH_LONG).show()
-                findNavController().popBackStack() // Go back if ID is invalid
-                return
-            }
-        } ?: run {
-            Log.e(TAG, "Instance ID argument is null in RandomizerSettingsFragment")
-            Snackbar.make(requireView(), R.string.error_settings_instance_id_failed, Snackbar.LENGTH_LONG).show()
-            findNavController().popBackStack()
-            return
-        }
-
+        setupSumResultsDropdown()
         setupListeners()
         observeViewModel()
         updateAddAnotherButtonState() // Initial state
     }
 
-    private fun updateAddAnotherButtonState() {
-        val activeCount = RandomizerInstanceManager.getActiveInstanceCount()
-        // Determine current mode to apply correct limit
-        val currentMode = viewModel.settings.value?.mode ?: RandomizerMode.SPIN // Default to SPIN if not loaded
-        val limit = if (currentMode == RandomizerMode.DICE) MAX_INSTANCES_DICE else MAX_INSTANCES_GENERAL
+    private fun setupSumResultsDropdown() {
+        // Get user-friendly names for the enum values
+        val sumResultTypeNames = DiceSumResultType.values().map {
+            when (it) {
+                DiceSumResultType.INDIVIDUAL -> getString(R.string.dice_sum_type_individual) // TODO: Add string
+                DiceSumResultType.SUM_TYPE -> getString(R.string.dice_sum_type_sum_type)   // TODO: Add string
+                DiceSumResultType.SUM_TOTAL -> getString(R.string.dice_sum_type_sum_total)  // TODO: Add string
+            }
+        }.toTypedArray()
 
-        binding.buttonAddAnotherRandomizer.isEnabled = activeCount < limit
-        binding.buttonAddAnotherRandomizer.alpha = if (activeCount < limit) 1.0f else 0.5f
+        sumResultsAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, sumResultTypeNames)
+        binding.autoCompleteTextViewSumResults.setAdapter(sumResultsAdapter)
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 
     private fun setupListeners() {
@@ -107,24 +107,39 @@ class RandomizerSettingsFragment : Fragment() {
 
         binding.buttonListEditor.setOnClickListener {
             try {
-                // Assuming listId is not strictly needed by ListCreatorFragment if it creates new or loads last edited.
-                // If ListCreatorFragment *always* needs a listId (even for a new list),
-                // then we might need to pass the current listId from settings.
-                // Or ListCreatorFragment creates a new list if no ID is passed.
-                val currentListIdToEdit = viewModel.settings.value?.currentListId?.toString()
-                val action = RandomizerSettingsFragmentDirections.actionSettingsToListEditor(currentListIdToEdit)
+                // Pass null for listId to create a new list
+                val action = RandomizerSettingsFragmentDirections.actionSettingsToListCreator(null)
                 findNavController().navigate(action)
             } catch (e: Exception) {
-                Log.e(TAG, "Navigation to List Editor failed.", e)
+                Log.e(TAG, "Navigation to List Creator failed.", e)
                 Snackbar.make(requireView(), "Cannot open List Editor", Snackbar.LENGTH_SHORT).show()
             }
         }
 
-        binding.buttonAddAnotherRandomizer.setOnClickListener { // Changed ID
-            handleAddAnotherInstance()
+        binding.modeToggleGroup.addOnButtonCheckedListener { group, checkedId, isChecked ->
+            if (isUpdatingMode || !isChecked) return@addOnButtonCheckedListener
+            val selectedMode = when (checkedId) {
+                R.id.buttonModeSpin -> RandomizerMode.SPIN
+                R.id.buttonModeSlots -> RandomizerMode.SLOTS
+                R.id.buttonModeDice -> RandomizerMode.DICE
+                R.id.buttonModeCoinFlip -> RandomizerMode.COIN_FLIP
+                else -> viewModel.settings.value?.mode // Keep current if somehow no button is valid
+            }
+            selectedMode?.let { viewModel.updateMode(it) }
+            updateAddAnotherButtonState() // Update button state when mode changes
         }
 
-        // Switch Listeners (common and mode-specific)
+        binding.slotsNumColumnsToggleGroup.addOnButtonCheckedListener { group, checkedId, isChecked ->
+            if (isUpdatingSlotsColumns || !isChecked) return@addOnButtonCheckedListener
+            val numColumns = when (checkedId) {
+                R.id.buttonSlotsColumns3 -> 3
+                R.id.buttonSlotsColumns5 -> 5
+                else -> viewModel.settings.value?.numSlotsColumns ?: 3
+            }
+            viewModel.updateNumSlotsColumns(numColumns)
+        }
+
+        // Common Switches
         val commonSwitchListener = CompoundButton.OnCheckedChangeListener { buttonView, isChecked ->
             if (isUpdatingSwitches) return@OnCheckedChangeListener
             when (buttonView.id) {
@@ -135,6 +150,7 @@ class RandomizerSettingsFragment : Fragment() {
         binding.switchIsAnnounceEnabled.setOnCheckedChangeListener(commonSwitchListener)
         binding.switchIsCelebrateEnabled.setOnCheckedChangeListener(commonSwitchListener)
 
+        // Spin Specific Switches
         val spinSwitchListener = CompoundButton.OnCheckedChangeListener { buttonView, isChecked ->
             if (isUpdatingSwitches) return@OnCheckedChangeListener
             when (buttonView.id) {
@@ -145,7 +161,7 @@ class RandomizerSettingsFragment : Fragment() {
         binding.switchSpin.setOnCheckedChangeListener(spinSwitchListener)
         binding.switchIsSequenceEnabled.setOnCheckedChangeListener(spinSwitchListener)
 
-
+        // Dice Specific Switches
         val diceSwitchListener = CompoundButton.OnCheckedChangeListener { buttonView, isChecked ->
             if (isUpdatingDiceSettings) return@OnCheckedChangeListener
             when (buttonView.id) {
@@ -160,103 +176,44 @@ class RandomizerSettingsFragment : Fragment() {
         binding.switchIsDiceAnimationEnabled.setOnCheckedChangeListener(diceSwitchListener)
         binding.switchIsDiceCritCelebrationEnabled.setOnCheckedChangeListener(diceSwitchListener)
 
-
-        // Mode Toggle Group Listener
-        binding.modeToggleGroup.addOnButtonCheckedListener { _, checkedId, isChecked ->
-            if (isUpdatingMode || !isChecked) return@addOnButtonCheckedListener
-            val selectedMode = when (checkedId) {
-                R.id.buttonModeSpin -> RandomizerMode.SPIN
-                R.id.buttonModeSlots -> RandomizerMode.SLOTS
-                R.id.buttonModeDice -> RandomizerMode.DICE
-                R.id.buttonModeCoinFlip -> RandomizerMode.COIN_FLIP
-                else -> viewModel.settings.value?.mode // Should not happen with selectionRequired
-            }
-            selectedMode?.let {
-                viewModel.updateMode(it)
-                updateAddAnotherButtonState() // Update button based on new mode's limit
-            }
-        }
-
-        // Slots Columns Listener
-        binding.slotsNumColumnsToggleGroup.addOnButtonCheckedListener { _, checkedId, isChecked ->
-            if (isUpdatingSlotsColumns || !isChecked) return@addOnButtonCheckedListener
-            val numColumns = when (checkedId) {
-                R.id.buttonSlotsColumns3 -> 3
-                R.id.buttonSlotsColumns5 -> 5
-                else -> viewModel.settings.value?.numSlotsColumns ?: 3
-            }
-            viewModel.updateNumSlotsColumns(numColumns)
-        }
-
-        // Dice Pool Button Listener
+        // Button to open Dice Pool Configuration
         binding.buttonDicePoolConfig.setOnClickListener {
-            currentInstanceId?.let { id ->
-                DicePoolDialogFragment.newInstance(id)
-                    .show(parentFragmentManager, DicePoolDialogFragment.TAG)
-            } ?: Snackbar.make(binding.root, "Cannot open dice pool: Invalid instance.", Snackbar.LENGTH_SHORT).show()
+            currentInstanceIdForCloning?.let { instanceId ->
+                DicePoolDialogFragment.newInstance(instanceId).show(parentFragmentManager, DicePoolDialogFragment.TAG)
+            } ?: Log.e(TAG, "Cannot open Dice Pool Config: Instance ID is null")
+        }
+
+        // *** Listener for Configure Dice Colors Button ***
+        binding.buttonConfigureDiceColors.setOnClickListener {
+            currentInstanceIdForCloning?.let { instanceId ->
+                DiceColorPickerDialogFragment.newInstance(instanceId)
+                    .show(parentFragmentManager, DiceColorPickerDialogFragment.TAG)
+            } ?: Log.e(TAG, "Cannot open Dice Color Picker: Instance ID is null")
+        }
+
+        binding.buttonConfigureDiceModifiers.setOnClickListener {
+            currentInstanceIdForCloning?.let { instanceId -> // Use the stored instanceId
+                DiceModifiersDialogFragment.newInstance(instanceId)
+                    .show(parentFragmentManager, DiceModifiersDialogFragment.TAG)
+            } ?: Log.e(TAG, "Cannot open Dice Modifiers: Instance ID is null")
+        }
+
+        // Listener for the Sum Results Dropdown
+        binding.autoCompleteTextViewSumResults.setOnItemClickListener { parent, _, position, _ ->
+            if (isUpdatingSwitches) return@setOnItemClickListener // Use a general flag or a specific one
+
+            val selectedEnum = DiceSumResultType.values()[position]
+            viewModel.updateDiceSumResultType(selectedEnum)
+        }
+
+        // Add Another Randomizer Button
+        binding.buttonAddAnotherRandomizer.setOnClickListener {
+            handleAddAnotherInstance()
         }
     }
-
-    private fun handleAddAnotherInstance() {
-        val activeCount = RandomizerInstanceManager.getActiveInstanceCount()
-        val currentMode = viewModel.settings.value?.mode ?: RandomizerMode.SPIN
-        val limit = if (currentMode == RandomizerMode.DICE) MAX_INSTANCES_DICE else MAX_INSTANCES_GENERAL
-
-        if (activeCount >= limit) {
-            val message = if (currentMode == RandomizerMode.DICE) {
-                getString(R.string.max_randomizers_dice_reached_snackbar, MAX_INSTANCES_DICE)
-            } else {
-                getString(R.string.max_randomizers_general_reached_snackbar, MAX_INSTANCES_GENERAL)
-            }
-            Snackbar.make(binding.root, message, Snackbar.LENGTH_LONG).show()
-            return
-        }
-
-        currentInstanceId?.let { instanceIdToCloneFrom ->
-            binding.buttonAddAnotherRandomizer.isEnabled = false // Disable button temporarily
-            lifecycleScope.launch(Dispatchers.IO) {
-                val settingsToClone = randomizerDao.getSettingsForInstance(instanceIdToCloneFrom)
-                if (settingsToClone != null) {
-                    val newInstanceId = UUID.randomUUID()
-                    val clonedSettings = settingsToClone.copy(instanceId = newInstanceId)
-
-                    randomizerDao.saveSettings(clonedSettings)
-                    randomizerDao.saveInstance(RandomizerInstanceEntity(instanceId = newInstanceId))
-
-                    withContext(Dispatchers.Main) {
-                        val intent = Intent(requireContext(), RandomizersHostActivity::class.java).apply {
-                            putExtra(RandomizersHostActivity.EXTRA_INSTANCE_ID, newInstanceId.toString())
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) // Ensures it can be started from non-Activity context
-                        }
-                        try {
-                            startActivity(intent)
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Failed to start new RandomizersHostActivity", e)
-                            // Rollback DB changes if activity launch fails? Or leave them for next app launch?
-                            // For now, log and show error.
-                            Snackbar.make(binding.root, "Failed to open new Randomizer window.", Snackbar.LENGTH_LONG).show()
-                            // Re-enable button if launch failed
-                            updateAddAnotherButtonState()
-                        }
-                        // No need to update button state here if activity will be replaced or closed
-                        // It will update on next onViewCreated if user navigates back.
-                    }
-                } else {
-                    withContext(Dispatchers.Main) {
-                        Snackbar.make(binding.root, "Could not clone current settings to create new instance.", Snackbar.LENGTH_LONG).show()
-                        updateAddAnotherButtonState() // Re-enable button
-                    }
-                }
-            }
-        } ?: run {
-            Snackbar.make(binding.root, "Cannot add another: Current instance ID is missing.", Snackbar.LENGTH_LONG).show()
-        }
-    }
-
 
     private fun observeViewModel() {
         val lifecycleOwner = viewLifecycleOwner
-
         viewModel.settings.observe(lifecycleOwner) { settingsEntity ->
             isUpdatingSwitches = true
             isUpdatingMode = true
@@ -266,6 +223,15 @@ class RandomizerSettingsFragment : Fragment() {
             if (settingsEntity != null) {
                 updateModeSelectionUI(settingsEntity.mode)
 
+                // Common
+                binding.switchIsAnnounceEnabled.isChecked = settingsEntity.isAnnounceEnabled
+                binding.switchIsCelebrateEnabled.isChecked = settingsEntity.isCelebrateEnabled
+
+                // Spin
+                binding.switchSpin.isChecked = settingsEntity.isSpinEnabled
+                binding.switchIsSequenceEnabled.isChecked = settingsEntity.isSequenceEnabled
+
+                // Slots
                 val slotsButtonToCheck = when (settingsEntity.numSlotsColumns) {
                     5 -> R.id.buttonSlotsColumns5
                     else -> R.id.buttonSlotsColumns3
@@ -274,31 +240,41 @@ class RandomizerSettingsFragment : Fragment() {
                     binding.slotsNumColumnsToggleGroup.check(slotsButtonToCheck)
                 }
 
+                // Dice
                 binding.switchUseDicePips.isChecked = settingsEntity.useDicePips
                 binding.switchIsPercentileDiceEnabled.isChecked = settingsEntity.isPercentileDiceEnabled
                 binding.switchIsDiceAnimationEnabled.isChecked = settingsEntity.isDiceAnimationEnabled
                 binding.switchIsDiceCritCelebrationEnabled.isChecked = settingsEntity.isDiceCritCelebrationEnabled
 
-                binding.switchIsAnnounceEnabled.isChecked = settingsEntity.isAnnounceEnabled
-                binding.switchIsCelebrateEnabled.isChecked = settingsEntity.isCelebrateEnabled
+                // *** Set Sum Results Dropdown Value ***
+                val sumResultTypeNames = DiceSumResultType.values().map {
+                    when (it) {
+                        DiceSumResultType.INDIVIDUAL -> getString(R.string.dice_sum_type_individual)
+                        DiceSumResultType.SUM_TYPE -> getString(R.string.dice_sum_type_sum_type)
+                        DiceSumResultType.SUM_TOTAL -> getString(R.string.dice_sum_type_sum_total)
+                    }
+                }
+                val currentSumTypeName = when (settingsEntity.diceSumResultType) {
+                    DiceSumResultType.INDIVIDUAL -> getString(R.string.dice_sum_type_individual)
+                    DiceSumResultType.SUM_TYPE -> getString(R.string.dice_sum_type_sum_type)
+                    DiceSumResultType.SUM_TOTAL -> getString(R.string.dice_sum_type_sum_total)
+                }
 
-                binding.switchSpin.isChecked = settingsEntity.isSpinEnabled
-                binding.switchIsSequenceEnabled.isChecked = settingsEntity.isSequenceEnabled
+                // SetText on AutoCompleteTextView requires providing the filterable text, not the position
+                binding.autoCompleteTextViewSumResults.setText(currentSumTypeName, false) // false to not filter
 
-                // Visibility & Enablement logic based on mode and dependencies
                 updateControlEnablement(settingsEntity)
-
                 binding.textViewSettingsPlaceholder.visibility = View.GONE
-                enableAllPrimaryControls(true)
+                enableAllControls(true)
+
             } else {
                 binding.textViewSettingsPlaceholder.text = getString(R.string.error_settings_load_failed)
                 binding.textViewSettingsPlaceholder.visibility = View.VISIBLE
-                enableAllPrimaryControls(false)
+                enableAllControls(false)
                 binding.modeToggleGroup.clearChecked()
                 binding.slotsNumColumnsToggleGroup.clearChecked()
+                binding.autoCompleteTextViewSumResults.setText("", false) // Clear dropdown
             }
-            updateAddAnotherButtonState() // Update based on potentially new mode and active count
-
             isUpdatingSwitches = false
             isUpdatingMode = false
             isUpdatingSlotsColumns = false
@@ -306,19 +282,43 @@ class RandomizerSettingsFragment : Fragment() {
         }
 
         viewModel.errorEvent.observe(lifecycleOwner) { event ->
-            event?.getContentIfNotHandled()?.let { errorMsg -> // Assuming Event<String>
-                Snackbar.make(requireView(), errorMsg, Snackbar.LENGTH_LONG)
-                    .setAction(getString(R.string.snackbar_action_ok)) {}
-                    .show()
+            event.getContentIfNotHandled()?.let { resId ->
+                val message = getString(resId)
+                if (resId == R.string.error_settings_instance_id_failed) {
+                    Log.e(TAG, "Critical Error: $message - Navigating back.")
+                    findNavController().popBackStack()
+                } else {
+                    Snackbar.make(requireView(), message, Snackbar.LENGTH_LONG)
+                        .setAction(getString(R.string.snackbar_action_ok)) {}
+                        .show()
+                }
             }
         }
     }
 
-    private fun enableAllPrimaryControls(enabled: Boolean) {
+    private fun enableAllControls(enabled: Boolean) {
         binding.modeToggleGroup.isEnabled = enabled
         binding.buttonListEditor.isEnabled = enabled
-        // Further enablement is handled by updateControlEnablement
+        binding.slotsNumColumnsToggleGroup.isEnabled = enabled
+
+        binding.buttonDicePoolConfig.isEnabled = enabled
+        binding.buttonConfigureDiceColors.isEnabled = enabled
+        binding.switchUseDicePips.isEnabled = enabled
+        binding.switchIsPercentileDiceEnabled.isEnabled = enabled
+        binding.switchIsDiceAnimationEnabled.isEnabled = enabled
+        binding.switchIsDiceCritCelebrationEnabled.isEnabled = enabled
+        // Graph controls later
+
+        binding.switchIsAnnounceEnabled.isEnabled = enabled
+        binding.switchIsCelebrateEnabled.isEnabled = enabled
+
+        binding.switchSpin.isEnabled = enabled
+        binding.switchIsSequenceEnabled.isEnabled = enabled
+
+        binding.buttonAddAnotherRandomizer.isEnabled = enabled // General enablement
+        updateAddAnotherButtonState() // Then apply logic-based enablement
     }
+
 
     private fun updateModeSelectionUI(currentMode: RandomizerMode) {
         val buttonIdToCheck = when (currentMode) {
@@ -331,59 +331,116 @@ class RandomizerSettingsFragment : Fragment() {
             binding.modeToggleGroup.check(buttonIdToCheck)
         }
 
-        // Section Visibility
-        val listModes = listOf(RandomizerMode.SPIN, RandomizerMode.SLOTS) // Dice/Coin don't use SpinListEntity for main items
+        // Visibility Control
+        val listModes = listOf(RandomizerMode.SPIN, RandomizerMode.SLOTS)
         val announceModes = listOf(RandomizerMode.SPIN, RandomizerMode.SLOTS, RandomizerMode.DICE)
 
+        // Mode Specific Sections
         binding.buttonListEditor.isVisible = currentMode in listModes
         binding.slotsSettingsLayout.isVisible = currentMode == RandomizerMode.SLOTS
         binding.diceSettingsLayout.isVisible = currentMode == RandomizerMode.DICE
-        binding.coinFlipSettingsLayout.isVisible = currentMode == RandomizerMode.COIN_FLIP // Assuming you add this layout
+        binding.coinFlipSettingsLayout.isVisible = currentMode == RandomizerMode.COIN_FLIP
+        binding.spinSpecificSettingsLayout.isVisible = currentMode == RandomizerMode.SPIN
 
-        // Common Settings Visibility
+        // Common Settings Visibility (adjust based on mode)
         binding.switchIsAnnounceEnabled.isVisible = currentMode in announceModes
         binding.switchIsCelebrateEnabled.isVisible = currentMode == RandomizerMode.SPIN // General celebrate for Spin
+        // Dice has its own isDiceCritCelebrationEnabled
 
-        // Spin Specific Settings Visibility
-        binding.spinSpecificSettingsLayout.isVisible = currentMode == RandomizerMode.SPIN
+        updateAddAnotherButtonState() // Ensure button state reflects current mode
+        viewModel.settings.value?.let { updateControlEnablement(it) }
     }
-
 
     private fun updateControlEnablement(settings: SpinSettingsEntity) {
-        val announceEnabled = settings.isAnnounceEnabled
-        val sequenceEnabled = settings.isSequenceEnabled
-        val graphEnabled = settings.graphDistributionType != com.example.purramid.thepurramid.randomizers.GraphDistributionType.OFF
-        val currentMode = settings.mode
+        // This function adjusts enabled state based on OTHER settings values
+        val isGraphOn = settings.graphDistributionType != GraphDistributionType.OFF
+        // Announce enabled/disabled by sequence (for Spin) or graph (for Dice)
+        val isAnnounceOnForDice = settings.isAnnounceEnabled && settings.mode == RandomizerMode.DICE
 
-        // Common
-        binding.switchIsAnnounceEnabled.isEnabled = binding.switchIsAnnounceEnabled.isVisible && !sequenceEnabled && !graphEnabled
-        binding.switchIsCelebrateEnabled.isEnabled = binding.switchIsCelebrateEnabled.isVisible && announceEnabled && !sequenceEnabled
+        // Dice specific announcement-dependent controls
+        binding.menuSumResultsLayout.visibility = if (isAnnounceOnForDice) View.VISIBLE else View.GONE
+        binding.buttonConfigureDiceModifiers.isEnabled = isAnnounceOnForDice // Assuming modifiers depend on announce
+        binding.switchIsDiceCritCelebrationEnabled.visibility = if (isAnnounceOnForDice) View.VISIBLE else View.GONE
+        binding.switchIsDiceCritCelebrationEnabled.isEnabled = isAnnounceOnForDice // Already checks announce internally in VM
 
-        // Spin specific
-        binding.switchSpin.isEnabled = binding.spinSpecificSettingsLayout.isVisible
-        binding.switchIsSequenceEnabled.isEnabled = binding.spinSpecificSettingsLayout.isVisible
-
-        // Dice specific
-        binding.switchUseDicePips.isEnabled = binding.diceSettingsLayout.isVisible
-        binding.switchIsPercentileDiceEnabled.isEnabled = binding.diceSettingsLayout.isVisible
-        binding.switchIsDiceAnimationEnabled.isEnabled = binding.diceSettingsLayout.isVisible
-        binding.switchIsDiceCritCelebrationEnabled.isEnabled = binding.diceSettingsLayout.isVisible && announceEnabled && !graphEnabled
-
-        // Dice Pool Button
-        binding.buttonDicePoolConfig.isEnabled = binding.diceSettingsLayout.isVisible && !settings.isPercentileDiceEnabled
-
-        // Update Add Another button state based on limits too
-        updateAddAnotherButtonState()
+        when (settings.mode) {
+            RandomizerMode.SPIN -> {
+                binding.switchIsAnnounceEnabled.isEnabled = !settings.isSequenceEnabled && binding.switchIsAnnounceEnabled.isVisible
+                binding.switchIsCelebrateEnabled.isEnabled = !settings.isSequenceEnabled && settings.isAnnounceEnabled && binding.switchIsCelebrateEnabled.isVisible
+            }
+            RandomizerMode.DICE -> {
+                binding.switchIsAnnounceEnabled.isEnabled = !isGraphOn && binding.switchIsAnnounceEnabled.isVisible
+                binding.buttonDicePoolConfig.isEnabled = true // Always enabled for Dice mode
+                binding.buttonConfigureDiceColors.isEnabled = true // Always enabled for Dice mode
+                binding.switchUseDicePips.isEnabled = true
+                binding.switchIsPercentileDiceEnabled.isEnabled = true
+                binding.switchIsDiceAnimationEnabled.isEnabled = true
+                binding.switchIsDiceCritCelebrationEnabled.isEnabled = settings.isAnnounceEnabled && binding.switchIsDiceCritCelebrationEnabled.isVisible
+            }
+            RandomizerMode.SLOTS -> {
+                // Slots might have its own interdependencies for announce/celebrate if they get added
+                binding.switchIsAnnounceEnabled.isEnabled = binding.switchIsAnnounceEnabled.isVisible // Default to visible state
+            }
+            else -> { // COIN_FLIP or others
+                binding.switchIsAnnounceEnabled.isEnabled = binding.switchIsAnnounceEnabled.isVisible
+            }
+        }
     }
 
-
-    override fun onResume() {
-        super.onResume()
-        updateAddAnotherButtonState() // Refresh button state in case active instance count changed
+    private fun updateAddAnotherButtonState() {
+        val currentMode = viewModel.settings.value?.mode
+        val currentInstanceCount = RandomizerInstanceManager.getActiveInstanceCount()
+        val limit = if (currentMode == RandomizerMode.DICE) MAX_INSTANCES_DICE else MAX_INSTANCES_GENERAL
+        binding.buttonAddAnotherRandomizer.isEnabled = currentInstanceCount < limit
     }
 
-    override fun onDestroyView() {
-        super.onDestroyView()
-        _binding = null
+    private fun handleAddAnotherInstance() {
+        val currentMode = viewModel.settings.value?.mode
+        val currentInstanceCount = RandomizerInstanceManager.getActiveInstanceCount()
+        val limit = if (currentMode == RandomizerMode.DICE) MAX_INSTANCES_DICE else MAX_INSTANCES_GENERAL
+
+        if (currentInstanceCount >= limit) {
+            val messageResId = if (currentMode == RandomizerMode.DICE) {
+                R.string.max_randomizers_dice_reached_snackbar
+            } else {
+                R.string.max_randomizers_general_reached_snackbar
+            }
+            Snackbar.make(binding.root, messageResId, Snackbar.LENGTH_LONG).show()
+            return
+        }
+
+        lifecycleScope.launch { // Coroutine for DB operations
+            val currentSettings = currentInstanceIdForCloning?.let { randomizerDao.getSettingsForInstance(it) }
+            if (currentSettings == null) {
+                Log.e(TAG, "Cannot clone settings, current settings not found for ID: $currentInstanceIdForCloning")
+                Snackbar.make(binding.root, "Error: Could not clone current settings.", Snackbar.LENGTH_SHORT).show()
+                return@launch
+            }
+
+            val newInstanceId = UUID.randomUUID()
+            val newSettings = currentSettings.copy(
+                instanceId = newInstanceId,
+                // Optionally reset some specific fields for a new instance if desired
+                // e.g., currentListId = null if cloning from Spin to a new mode
+            )
+            val newInstanceEntity = RandomizerInstanceEntity(instanceId = newInstanceId)
+
+            try {
+                randomizerDao.saveSettings(newSettings)
+                randomizerDao.saveInstance(newInstanceEntity)
+                Log.d(TAG, "Cloned settings and created new instance: $newInstanceId")
+
+                // Launch new Activity instance
+                val intent = Intent(requireActivity(), RandomizersHostActivity::class.java).apply {
+                    putExtra(RandomizersHostActivity.EXTRA_INSTANCE_ID, newInstanceId.toString())
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) // Important for launching new activity from non-activity context if needed
+                }
+                requireActivity().startActivity(intent)
+
+            } catch (e: Exception) {
+                Log.e(TAG, "Error saving new cloned instance or launching activity", e)
+                Snackbar.make(binding.root, "Error creating new randomizer window.", Snackbar.LENGTH_LONG).show()
+            }
+        }
     }
 }

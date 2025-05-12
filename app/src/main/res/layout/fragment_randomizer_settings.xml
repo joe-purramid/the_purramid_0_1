@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
@@ -11,7 +12,8 @@
         android:id="@+id/closeSettingsButton"
         android:layout_width="48dp"
         android:layout_height="48dp"
-        android:layout_margin="8dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="8dp"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:contentDescription="@string/close"
         android:src="@drawable/ic_close"
@@ -22,7 +24,7 @@
         android:id="@+id/textViewSettingsTitle"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
+        android:layout_marginStart="16dp"
         android:layout_marginEnd="8dp"
         android:text="@string/settings"
         android:textAppearance="@style/TextAppearance.AppCompat.Large"
@@ -61,27 +63,27 @@
         app:layout_constraintTop_toBottomOf="@+id/textViewModeLabel"
         app:singleSelection="true"
         app:selectionRequired="true">
+
         <Button
-            android:id="@+id/buttonModeSpin"
-            style="?attr/materialButtonOutlinedStyle"
+            android:id="@+id/buttonModeSpin" style="?attr/materialButtonOutlinedStyle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Spin"
             app:icon="@drawable/ic_spin"
             app:iconGravity="textStart"
             android:contentDescription="@string/randomizer_mode_spin"/>
+
         <Button
-            android:id="@+id/buttonModeSlots"
-            style="?attr/materialButtonOutlinedStyle"
+            android:id="@+id/buttonModeSlots" style="?attr/materialButtonOutlinedStyle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Slots"
             app:icon="@drawable/ic_slots"
             app:iconGravity="textStart"
             android:contentDescription="@string/randomizer_mode_slots"/>
+
         <Button
-            android:id="@+id/buttonModeDice"
-            style="?attr/materialButtonOutlinedStyle"
+            android:id="@+id/buttonModeDice" style="?attr/materialButtonOutlinedStyle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Dice"
@@ -90,8 +92,7 @@
             android:contentDescription="@string/randomizer_mode_dice"/>
 
         <Button
-            android:id="@+id/buttonModeCoinFlip"
-            style="?attr/materialButtonOutlinedStyle"
+            android:id="@+id/buttonModeCoinFlip" style="?attr/materialButtonOutlinedStyle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Coin"
@@ -108,35 +109,11 @@
         android:layout_marginTop="16dp"
         android:text="@string/list_editor"
         app:icon="@drawable/ic_edit_list"
+        android:visibility="gone"
+        tools:visibility="visible"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/modeToggleGroup" />
-
-    <LinearLayout
-        android:id="@+id/spinSpecificSettingsLayout"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:layout_marginTop="8dp"
-        android:visibility="gone"
-        tools:visibility="visible"
-        app:layout_constraintTop_toBottomOf="@+id/buttonListEditor"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
-
-        <com.google.android.material.switchmaterial.SwitchMaterial
-            android:id="@+id/switchSpin"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/setting_spin_animation" />
-
-        <com.google.android.material.switchmaterial.SwitchMaterial
-            android:id="@+id/switchIsSequenceEnabled"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="@string/setting_sequence"/>
-    </LinearLayout>
 
     <LinearLayout
         android:id="@+id/slotsSettingsLayout"
@@ -145,10 +122,10 @@
         android:orientation="vertical"
         android:layout_marginTop="8dp"
         android:visibility="gone"
-        app:layout_constraintTop_toBottomOf="@+id/spinSpecificSettingsLayout"
+        app:layout_constraintTop_toBottomOf="@+id/buttonListEditor"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        tools:visibility="visible">
+        tools:visibility="gone">
 
         <TextView
             android:id="@+id/textViewSlotsColumnsLabel"
@@ -165,15 +142,13 @@
             app:selectionRequired="true">
 
             <Button
-                android:id="@+id/buttonSlotsColumns3"
-                style="?attr/materialButtonOutlinedStyle"
+                android:id="@+id/buttonSlotsColumns3" style="?attr/materialButtonOutlinedStyle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/setting_slots_columns_3" />
 
             <Button
-                android:id="@+id/buttonSlotsColumns5"
-                style="?attr/materialButtonOutlinedStyle"
+                android:id="@+id/buttonSlotsColumns5" style="?attr/materialButtonOutlinedStyle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/setting_slots_columns_5" />
@@ -194,11 +169,11 @@
 
         <Button
             android:id="@+id/buttonDicePoolConfig"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            style="@style/Widget.MaterialComponents.Button.TextButton.Icon"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/dice_pool"
-            app:icon="@drawable/ic_dice_pool"/>
+            app:icon="@drawable/ic_dice_pool" />
 
         <Button
             android:id="@+id/buttonConfigureDiceColors"
@@ -208,6 +183,15 @@
             android:layout_marginTop="8dp"
             android:text="@string/setting_dice_configure_colors"
             app:icon="@drawable/ic_color_palette" />
+
+        <Button
+            android:id="@+id/buttonConfigureDiceModifiers"
+            style="@style/Widget.MaterialComponents.Button.TextButton.Icon"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/setting_dice_configure_modifiers"
+            app:icon="@drawable/ic_plus_minus_circle" />
 
         <com.google.android.material.switchmaterial.SwitchMaterial
             android:id="@+id/switchUseDicePips"
@@ -231,11 +215,39 @@
             android:text="@string/setting_dice_roll_animation" />
 
         <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/switchIsAnnounceEnabled"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="@string/setting_announce" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/menuSumResultsLayout"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:hint="@string/setting_dice_sum_results_label"
+            android:visibility="gone"
+            tools:visibility="visible">
+
+            <AutoCompleteTextView
+                android:id="@+id/autoCompleteTextViewSumResults"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="none"
+                tools:text="Individual" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.switchmaterial.SwitchMaterial
             android:id="@+id/switchIsDiceCritCelebrationEnabled"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="@string/setting_dice_crit_celebration" />
+            android:text="@string/setting_dice_crit_celebration"
+            android:visibility="gone"
+            tools:visibility="visible"/>
+
     </LinearLayout>
 
     <LinearLayout
@@ -245,67 +257,63 @@
         android:orientation="vertical"
         android:layout_marginTop="8dp"
         android:visibility="gone"
-        tools:visibility="visible"
         app:layout_constraintTop_toBottomOf="@+id/diceSettingsLayout"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Coin Flip Settings (e.g., Number of Coins)"
-            tools:ignore="HardcodedText" />
-
-        <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.Dense"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:hint="Number of Coins">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/editTextNumCoins"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="number"
-                android:maxLength="1"
-                android:text="1"/>
-        </com.google.android.material.textfield.TextInputLayout>
-    </LinearLayout>
-
-
-    <Button
-        android:id="@+id/buttonAddAnotherRandomizer"
-        style="@style/Widget.MaterialComponents.Button.TextButton.Icon"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:text="@string/add_another_randomizer"
-        app:icon="@drawable/ic_add_circle"
-        app:layout_constraintTop_toBottomOf="@+id/coinFlipSettingsLayout"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
-
-    <com.google.android.material.switchmaterial.SwitchMaterial
-        android:id="@+id/switchIsAnnounceEnabled"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="@string/setting_announce"
-        android:visibility="gone"
-        tools:visibility="visible"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/buttonAddAnotherRandomizer" />
+        tools:visibility="gone">
+
+        <TextView android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Coin Flip Settings (TODO)"/>
+    </LinearLayout>
 
     <com.google.android.material.switchmaterial.SwitchMaterial
         android:id="@+id/switchIsCelebrateEnabled"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="16dp"
         android:text="@string/setting_celebrate"
+        android:visibility="gone"
+        tools:visibility="gone"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/switchIsAnnounceEnabled" />
+        app:layout_constraintTop_toBottomOf="@+id/coinFlipSettingsLayout" />
+
+    <LinearLayout
+        android:id="@+id/spinSpecificSettingsLayout"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="gone"
+        tools:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@+id/switchIsCelebrateEnabled"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/switchSpin"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/setting_spin_animation"/>
+
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/switchIsSequenceEnabled"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/setting_sequence"/>
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/buttonAddAnotherRandomizer"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="@string/add_another_randomizer"
+        app:icon="@drawable/ic_add_circle_outline"
+        app:layout_constraintTop_toBottomOf="@+id/spinSpecificSettingsLayout"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

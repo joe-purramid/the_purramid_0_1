@@ -1,4 +1,4 @@
-//DiceColorPickerDialogFragment.kt
+// DiceColorPickerDialogFragment.kt
 package com.example.purramid.thepurramid.randomizers.ui
 
 import android.app.Dialog
@@ -18,7 +18,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.example.purramid.thepurramid.R
-import com.example.purramid.thepurramid.ui.PurramidPalette // Import the shared palette
+import com.example.purramid.thepurramid.common.PurramidPalette // Import the shared palette
 import com.example.purramid.thepurramid.data.db.DEFAULT_EMPTY_JSON_MAP
 import com.example.purramid.thepurramid.databinding.DialogDiceColorPickerBinding
 import com.example.purramid.thepurramid.databinding.IncludeDiceColorRowBinding
@@ -124,7 +124,7 @@ class DiceColorPickerDialogFragment : DialogFragment() {
             if (background is GradientDrawable) { // Assuming color_square_background_selector uses a shape that results in GradientDrawable
                 background.setColorFilter(color, PorterDuff.Mode.SRC_ATOP) // Or just setColor if it's a solid
             } else { // Fallback for other drawable types
-                 rowBinding.colorSquareView.background = ColorDrawable(color)
+                rowBinding.colorSquareView.background = ColorDrawable(color)
             }
         }
     }
@@ -173,7 +173,7 @@ class DiceColorPickerDialogFragment : DialogFragment() {
                     // Apply to the specific die type clicked
                     if (selectedNamedColor.isDefault) {
                         currentDiceColorConfig.remove(dieSidesToUpdate)
-                         // If percentile is enabled and a d10 was clicked, also clear the d10_units
+                        // If percentile is enabled and a d10 was clicked, also clear the d10_units
                         if (settingsViewModel.settings.value?.isPercentileDiceEnabled == true && dieSidesToUpdate == 10) {
                             currentDiceColorConfig.remove(DicePoolDialogFragment.D10_UNITS_KEY)
                         }

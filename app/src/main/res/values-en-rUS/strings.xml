@@ -454,6 +454,16 @@
     <string name="setting_dice_percentile_mode">Percentile Dice (d%)</string>
     <string name="setting_dice_roll_animation">Roll Animation</string>
     <string name="setting_dice_crit_celebration">Critical Celebration (d20=20)</string>
+    <string name="setting_dice_configure_colors">Dice Colors</string>
+    <string name="setting_dice_configure_colors_title">Configure Dice Colors</string>
+    <string name="setting_dice_apply_color_all">Apply to all dice</string>
+    <string name="pick_color_for_die">Pick Color for %s</string>
+    <string name="dice_label_d10_tens" translatable="false">d% (00-90)</string>
+    <string name="dice_label_d10_units" translatable="false">d% (0-9)</string>
+    <string name="error_settings_not_loaded_cant_save">Settings not loaded, cannot save changes.</string>
+    <string name="die_face_image">Die face image</string>
+    <string name="setting_dice_configure_modifiers">Dice Modifiers</string>
+    <string name="setting_dice_configure_modifiers_title">Configure Dice Modifiers</string>
 
     '' RANDOMIZER COIN FLIP MODE ''
     <string name="randomizer_mode_coin_flip">Coin Flip Mode</string>

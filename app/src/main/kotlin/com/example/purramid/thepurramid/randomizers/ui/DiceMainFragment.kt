@@ -4,28 +4,42 @@ package com.example.purramid.thepurramid.randomizers.ui
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.ObjectAnimator
+import android.graphics.Color
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffColorFilter
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import android.view.animation.AccelerateDecelerateInterpolator
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.annotation.DrawableRes
+import androidx.core.view.isVisible // Import for isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import com.example.purramid.thepurramid.R
+import com.example.purramid.thepurramid.ui.PurramidPalette
+import com.example.purramid.thepurramid.data.db.DEFAULT_EMPTY_JSON_MAP
+import com.example.purramid.thepurramid.data.db.SpinSettingsEntity // For settings access
 import com.example.purramid.thepurramid.databinding.FragmentDiceMainBinding
 import com.example.purramid.thepurramid.databinding.ItemDieResultBinding
 import com.example.purramid.thepurramid.randomizers.viewmodel.DiceRollResults
 import com.example.purramid.thepurramid.randomizers.viewmodel.DiceViewModel
+import com.example.purramid.thepurramid.randomizers.viewmodel.ProcessedDiceResult
 import com.google.android.material.snackbar.Snackbar
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 import java.util.UUID
 import kotlin.random.Random
 
@@ -36,13 +50,16 @@ class DiceMainFragment : Fragment() {
     private val binding get() = _binding!!
 
     private val viewModel: DiceViewModel by viewModels()
+    private val gson = Gson() // For parsing color config
 
     private enum class LastResultType { NONE, POOL, PERCENTILE }
     private var lastResultType = LastResultType.NONE
+    private val animationDuration = 1000L
+    private val announcementDisplayDuration = 3000L
 
-    private val animationDuration = 1000L // 1 second
+    private val announcementHandler = Handler(Looper.getMainLooper())
+    private var announcementRunnable: Runnable? = null
 
-    // --- Lifecycle Methods ---
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -59,66 +76,94 @@ class DiceMainFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        announcementRunnable?.let { announcementHandler.removeCallbacks(it) } // Clear pending hide
         _binding = null
     }
 
-    // --- Setup and Observation ---
     private fun setupListeners() {
         binding.diceRollButton.setOnClickListener {
+            clearAnnouncement() // Clear any previous announcement
             handleRoll()
         }
-        // ... other listeners (close, settings, dice pool, reset) ...
-        binding.diceCloseButton.setOnClickListener { activity?.finish() }
-
+        binding.diceCloseButton.setOnClickListener {
+            viewModel.handleManualClose() // Use the ViewModel's close logic
+            activity?.finish()
+        }
         binding.diceSettingsButton.setOnClickListener {
             viewModel.settings.value?.instanceId?.let { navigateToSettings(it) }
                 ?: Log.e("DiceMainFragment", "Cannot navigate to settings: Instance ID not available")
         }
-
         binding.dicePoolButton.setOnClickListener {
             viewModel.settings.value?.instanceId?.let { instanceId ->
                 DicePoolDialogFragment.newInstance(instanceId)
                     .show(parentFragmentManager, DicePoolDialogFragment.TAG)
             } ?: Log.e("DiceMainFragment", "Cannot open Dice Pool: Instance ID not available")
         }
-
         binding.diceResetButton.setOnClickListener {
             Toast.makeText(context, "Reset Graph (TODO)", Toast.LENGTH_SHORT).show()
+        }
+        // Allow tapping announcement to dismiss it
+        binding.diceAnnouncementTextView.setOnClickListener {
+            clearAnnouncement()
         }
     }
 
     private fun observeViewModel() {
         val lifecycleOwner = viewLifecycleOwner
 
-        viewModel.dicePoolResults.observe(lifecycleOwner) { results ->
-            if (viewModel.settings.value?.isDiceAnimationEnabled == false || binding.diceDisplayArea.childCount == 0) {
-                // If animation is off, or if this is an update without a roll (e.g. config change), display immediately
-                displayDicePoolResults(results)
-                if (results != null) lastResultType = LastResultType.POOL
-            }
-            // If animation is on, results will be displayed by the animation's onEnd listener
-        }
-
-        viewModel.percentileResult.observe(lifecycleOwner) { result ->
-            if (viewModel.settings.value?.isDiceAnimationEnabled == false || binding.diceDisplayArea.childCount == 0) {
-                displayPercentileResult(result)
-                if (result != null) lastResultType = LastResultType.PERCENTILE
-            }
-            // If animation is on, results will be displayed by the animation's onEnd listener
-        }
-        // ... observe settings and errorEvent ...
-        viewModel.settings.observe(lifecycleOwner) { settings ->
-            if (settings != null) {
-                // Update UI elements based on loaded settings if needed
-                // For example, enable/disable roll button based on pool emptiness
-                binding.diceRollButton.isEnabled = !(settings.isPercentileDiceEnabled == false &&
-                        (viewModel.parseDicePoolConfig(settings.dicePoolConfigJson)?.values?.sum() ?: 0) == 0)
-            }
-        }
-
-        viewModel.errorEvent.observe(lifecycleOwner) { event ->
-            event?.getContentIfNotHandled()?.let { errorMessage ->
-                showErrorSnackbar(errorMessage)
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                launch {
+                    viewModel.rawDicePoolResults.observe(lifecycleOwner) { rawResults ->
+                        if (viewModel.settings.value?.isDiceAnimationEnabled == false ||
+                            (lastResultType == LastResultType.POOL || lastResultType == LastResultType.NONE || rawResults != null)) {
+                            if (viewModel.processedDiceResult.value?.isPercentile == false) {
+                                displayDicePoolResults(rawResults)
+                                if (rawResults != null) lastResultType = LastResultType.POOL
+                            }
+                        }
+                    }
+                }
+                launch {
+                    viewModel.rawPercentileResultComponents.observe(lifecycleOwner) { rawPercentileComponents ->
+                        if (viewModel.settings.value?.isDiceAnimationEnabled == false ||
+                            (lastResultType == LastResultType.PERCENTILE || lastResultType == LastResultType.NONE || rawPercentileComponents != null)) {
+                            if (viewModel.processedDiceResult.value?.isPercentile == true) {
+                                displayPercentileResult(viewModel.processedDiceResult.value)
+                                if (rawPercentileComponents != null) lastResultType = LastResultType.PERCENTILE
+                            }
+                        }
+                    }
+                }
+                launch {
+                    viewModel.settings.observe(lifecycleOwner) { settings ->
+                        if (settings != null) {
+                            binding.diceRollButton.isEnabled = !(settings.isPercentileDiceEnabled == false &&
+                                    (viewModel.parseDicePoolConfig(settings.dicePoolConfigJson)?.values?.sum()
+                                        ?: 0) == 0)
+                            // If settings change and announcement is now off, clear it
+                            if (!settings.isAnnounceEnabled) {
+                                clearAnnouncement()
+                            }
+                        }
+                    }
+                }
+                launch {
+                    viewModel.processedDiceResult.observe(lifecycleOwner) { processedResult ->
+                        if (processedResult != null && viewModel.settings.value?.isAnnounceEnabled == true) {
+                            showAnnouncement(processedResult.announcementString)
+                        } else {
+                            clearAnnouncement() // Clear if announce is off or result is null
+                        }
+                    }
+                }
+                launch {
+                    viewModel.errorEvent.observe(lifecycleOwner) { event ->
+                        event?.getContentIfNotHandled()?.let { errorMessage ->
+                            showErrorSnackbar(errorMessage)
+                        }
+                    }
+                }
             }
         }
     }
@@ -126,36 +171,68 @@ class DiceMainFragment : Fragment() {
     private fun handleRoll() {
         val currentSettings = viewModel.settings.value
         val isAnimationEnabled = currentSettings?.isDiceAnimationEnabled ?: false
-
-        binding.diceDisplayArea.removeAllViews() // Clear previous dice before animation/roll
+        clearAnnouncement() // Clear announcement before roll
+        binding.diceDisplayArea.removeAllViews()
 
         if (isAnimationEnabled) {
-            // Create placeholder views for animation
             val tempDiceViews = createTemporaryDiceViewsForAnimation(currentSettings)
             tempDiceViews.forEach { binding.diceDisplayArea.addView(it) }
-
-            // Animate these temporary views
             animateDiceViews(tempDiceViews) {
-                // Animation ended, now fetch and display actual results
-                viewModel.rollDice() // This will trigger LiveData observers
+                viewModel.rollDice()
             }
         } else {
-            // No animation, roll and display immediately
             viewModel.rollDice()
         }
     }
 
-    /** Creates temporary ImageViews with placeholder/random dice for animation */
+    // --- Announcement Logic ---
+    private fun showAnnouncement(message: String) {
+        announcementRunnable?.let { announcementHandler.removeCallbacks(it) } // Remove previous hide callback
+
+        binding.diceAnnouncementTextView.text = message
+        if (!binding.diceAnnouncementTextView.isVisible) {
+            binding.diceAnnouncementTextView.alpha = 0f
+            binding.diceAnnouncementTextView.visibility = View.VISIBLE
+            binding.diceAnnouncementTextView.animate()
+                .alpha(1f)
+                .setDuration(300) // Short fade-in
+                .setListener(null)
+        }
+
+        // Auto-hide after a delay
+        announcementRunnable = Runnable { clearAnnouncement() }
+        announcementHandler.postDelayed(announcementRunnable!!, announcementDisplayDuration)
+    }
+
+    private fun clearAnnouncement() {
+        announcementRunnable?.let { announcementHandler.removeCallbacks(it) }
+        announcementRunnable = null
+        if (binding.diceAnnouncementTextView.isVisible) {
+            binding.diceAnnouncementTextView.animate()
+                .alpha(0f)
+                .setDuration(300) // Short fade-out
+                .setListener(object : AnimatorListenerAdapter() {
+                    override fun onAnimationEnd(animation: Animator) {
+                        if (_binding != null) { // Check binding still valid
+                            binding.diceAnnouncementTextView.visibility = View.GONE
+                            binding.diceAnnouncementTextView.text = "" // Clear text
+                        }
+                    }
+                })
+        }
+    }
+
     private fun createTemporaryDiceViewsForAnimation(settings: SpinSettingsEntity?): List<View> {
         val tempViews = mutableListOf<View>()
         val inflater = LayoutInflater.from(context)
+        val colorConfig = parseDiceColorConfig(settings?.diceColorConfigJson)
 
         if (settings?.isPercentileDiceEnabled == true) {
-            // Create two d10 placeholders for percentile
-            repeat(2) {
+            repeat(2) { index ->
                 val itemBinding = ItemDieResultBinding.inflate(inflater, binding.diceDisplayArea, false)
-                // Set a random d10 face or a generic "rolling" SVG
-                itemBinding.dieResultImageView.setImageResource(getDieResultDrawable(10, Random.nextInt(1, 11)))
+                val dieTypeKey = if (index == 0) DicePoolDialogFragment.D10_TENS_KEY else DicePoolDialogFragment.D10_UNITS_KEY
+                itemBinding.dieResultImageView.setImageResource(getDieResultDrawable(dieTypeKey, Random.nextInt(0, 10))) // Show a random 0-9 face
+                applyTint(itemBinding.dieResultImageView, colorConfig[dieTypeKey])
                 tempViews.add(itemBinding.root)
             }
         } else {
@@ -163,8 +240,8 @@ class DiceMainFragment : Fragment() {
             poolConfig?.forEach { (sides, count) ->
                 repeat(count) {
                     val itemBinding = ItemDieResultBinding.inflate(inflater, binding.diceDisplayArea, false)
-                    // Set a random face of the correct type or a generic "rolling" SVG
                     itemBinding.dieResultImageView.setImageResource(getDieResultDrawable(sides, Random.nextInt(1, sides + 1)))
+                    applyTint(itemBinding.dieResultImageView, colorConfig[sides])
                     tempViews.add(itemBinding.root)
                 }
             }
@@ -172,60 +249,32 @@ class DiceMainFragment : Fragment() {
         return tempViews
     }
 
-
     private fun animateDiceViews(diceViews: List<View>, onAnimationEndAction: () -> Unit) {
         if (diceViews.isEmpty()) {
             onAnimationEndAction()
             return
         }
-
         var animationsPending = diceViews.size
-
         diceViews.forEach { dieView ->
-            // Simple rotation and fade out/in example
-            dieView.alpha = 0f // Start faded out
-            val rotation = ObjectAnimator.ofFloat(dieView, "rotation", 0f, 360f * 2) // Two full spins
+            dieView.alpha = 0f
+            val rotation = ObjectAnimator.ofFloat(dieView, "rotation", 0f, 360f * (Random.nextInt(2, 5))) // Random rotations
             rotation.duration = animationDuration
             rotation.interpolator = AccelerateDecelerateInterpolator()
-
             val fadeIn = ObjectAnimator.ofFloat(dieView, "alpha", 0f, 1f)
-            fadeIn.duration = animationDuration / 4 // Fade in quickly
-
-            val fadeOut = ObjectAnimator.ofFloat(dieView, "alpha", 1f, 0f)
-            fadeOut.startDelay = animationDuration * 3 / 4 // Start fading out towards the end
-            fadeOut.duration = animationDuration / 4
-
-            // For "cycling" effect (more complex, requires rapidly changing SVG sources)
-            // This is a conceptual placeholder for the cycling effect.
-            // A ValueAnimator could be used to change dieView.setImageResource() at intervals.
-            val cycleAnimator = ValueAnimator.ofInt(0, 10).apply { // Cycle 10 times
-                duration = animationDuration
-                addUpdateListener {
-                    // In a real implementation, change the SVG source of dieView (ImageView)
-                    // to a different random face. This is tricky with current SVG setup.
-                    // For now, this just makes the rotation happen.
-                }
-            }
-
+            fadeIn.duration = animationDuration / 4
             rotation.addListener(object : AnimatorListenerAdapter() {
                 override fun onAnimationEnd(animation: Animator) {
                     animationsPending--
                     if (animationsPending == 0) {
-                        // All animations finished
                         onAnimationEndAction()
                     }
                 }
             })
-            // Start rotation and initial fade in. Cycling would be part of this.
             rotation.start()
             fadeIn.start()
-            // Fade out is handled by its own startDelay.
-            // fadeOut.start() // Not starting fadeOut here, let rotation finish mostly visible
         }
     }
 
-
-    // --- Helper Functions ---
     @DrawableRes
     private fun getDieResultDrawable(sides: Int, rollValue: Int): Int {
         val usePipsForD6 = viewModel.settings.value?.useDicePips ?: false
@@ -249,16 +298,11 @@ class DiceMainFragment : Fragment() {
         return if (resourceId != 0) resourceId else R.drawable.ic_die_placeholder
     }
 
-    // --- Display Logic ---
     private fun displayDicePoolResults(results: DiceRollResults?) {
-        // This function is now primarily called AFTER animation, or if animation is off
-        // The animation function will handle clearing and adding initial views
         if (viewModel.settings.value?.isDiceAnimationEnabled == true && binding.diceDisplayArea.childCount > 0) {
-            // If animation was enabled and views are present, update them instead of removing/re-adding
             updateAnimatedViewsWithResults(results)
             return
         }
-
         binding.diceDisplayArea.removeAllViews()
         if (results == null) return
         if (results.isEmpty() && lastResultType == LastResultType.POOL) {
@@ -266,43 +310,49 @@ class DiceMainFragment : Fragment() {
             binding.diceDisplayArea.addView(textView)
             return
         }
-
         val inflater = LayoutInflater.from(context)
+        val colorConfig = parseDiceColorConfig(viewModel.settings.value?.diceColorConfigJson)
         results.entries.sortedBy { it.key }.forEach { (sides, rolls) ->
             rolls.forEach { rollValue ->
                 val itemBinding = ItemDieResultBinding.inflate(inflater, binding.diceDisplayArea, false)
-                val drawableResId = getDieResultDrawable(sides, rollValue)
-                itemBinding.dieResultImageView.setImageResource(drawableResId)
-                // TODO: Apply die color tint
+                itemBinding.dieResultImageView.setImageResource(getDieResultDrawable(sides, rollValue))
+                applyTint(itemBinding.dieResultImageView, colorConfig[sides])
                 binding.diceDisplayArea.addView(itemBinding.root)
             }
         }
     }
 
-    private fun displayPercentileResult(result: Int?) {
-        // Similar logic as displayDicePoolResults for when to update vs removeAllViews
-        if (viewModel.settings.value?.isDiceAnimationEnabled == true && binding.diceDisplayArea.childCount > 0) {
-            updateAnimatedViewsWithPercentileResult(result)
+    private fun displayPercentileResult(processedResult: ProcessedDiceResult?) {
+        if (viewModel.settings.value?.isDiceAnimationEnabled == true && binding.diceDisplayArea.childCount > 0 && lastResultType == LastResultType.PERCENTILE) {
+            updateAnimatedViewsWithPercentileResult(processedResult?.percentileValue) // Pass the final sum
             return
         }
-
         binding.diceDisplayArea.removeAllViews()
-        if (result == null) return
+        if (processedResult?.isPercentile != true || processedResult.percentileValue == null) return
+
+        val finalSum = processedResult.percentileValue
+        val componentRolls = processedResult.rawRolls // Should contain D10_TENS_KEY and D10_UNITS_KEY
+
+        val tensValueForDisplay = processedResult.rawRolls?.get(DicePoolDialogFragment.D10_TENS_KEY)?.firstOrNull() ?: 0
+        val unitsValueForDisplay = processedResult.rawRolls?.get(DicePoolDialogFragment.D10_UNITS_KEY)?.firstOrNull() ?: 0
 
         val inflater = LayoutInflater.from(context)
-        val tensValue = if (result == 100) 0 else (result / 10) * 10
-        val unitsValue = if (result == 100) 0 else result % 10
+        val colorConfig = parseDiceColorConfig(viewModel.settings.value?.diceColorConfigJson)
 
+        // Tens Die (d10p)
         val tensBinding = ItemDieResultBinding.inflate(inflater, binding.diceDisplayArea, false)
-        tensBinding.dieResultImageView.setImageResource(getDieResultDrawable(DicePoolDialogFragment.D10_TENS_KEY, tensValue))
+        tensBinding.dieResultImageView.setImageResource(getDieResultDrawable(DicePoolDialogFragment.D10_TENS_KEY, tensValueForDisplay))
+        applyTint(tensBinding.dieResultImageView, colorConfig[DicePoolDialogFragment.D10_TENS_KEY])
         binding.diceDisplayArea.addView(tensBinding.root)
 
+        // Units Die (d10)
         val unitsBinding = ItemDieResultBinding.inflate(inflater, binding.diceDisplayArea, false)
-        unitsBinding.dieResultImageView.setImageResource(getDieResultDrawable(DicePoolDialogFragment.D10_UNITS_KEY, unitsValue))
+        unitsBinding.dieResultImageView.setImageResource(getDieResultDrawable(DicePoolDialogFragment.D10_UNITS_KEY, unitsValueForDisplay))
+        applyTint(unitsBinding.dieResultImageView, colorConfig[DicePoolDialogFragment.D10_UNITS_KEY])
         binding.diceDisplayArea.addView(unitsBinding.root)
 
         val resultTextView = TextView(requireContext()).apply {
-            text = "= $result%"
+            text = "= $finalSum%" // Display the final (potentially modified) sum
             textSize = 24f
             val params = ViewGroup.MarginLayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
             params.marginStart = 16
@@ -311,68 +361,98 @@ class DiceMainFragment : Fragment() {
         binding.diceDisplayArea.addView(resultTextView)
     }
 
-    /** Updates the already animated views with their final results (Pool) */
     private fun updateAnimatedViewsWithResults(results: DiceRollResults?) {
         if (results == null) {
-            binding.diceDisplayArea.removeAllViews() // Or show error/empty
+            binding.diceDisplayArea.removeAllViews()
             return
         }
         var viewIndex = 0
+        val colorConfig = parseDiceColorConfig(viewModel.settings.value?.diceColorConfigJson)
         results.entries.sortedBy { it.key }.forEach { (sides, rolls) ->
             rolls.forEach { rollValue ->
                 if (viewIndex < binding.diceDisplayArea.childCount) {
                     val itemView = binding.diceDisplayArea.getChildAt(viewIndex)
-                    // Assuming itemView is the root of item_die_result.xml (FrameLayout or ImageView directly)
-                    val imageView = itemView.findViewById<ImageView>(R.id.dieResultImageView) // Find by ID
+                    val imageView = itemView.findViewById<ImageView>(R.id.dieResultImageView)
                     imageView?.setImageResource(getDieResultDrawable(sides, rollValue))
-                    imageView?.alpha = 1f // Ensure it's visible
-                    imageView?.rotation = 0f // Reset rotation
+                    applyTint(imageView, colorConfig[sides])
+                    imageView?.alpha = 1f
+                    imageView?.rotation = 0f
                 }
                 viewIndex++
             }
         }
-        // Remove any extra temporary views if the number of dice changed
         while (binding.diceDisplayArea.childCount > viewIndex) {
             binding.diceDisplayArea.removeViewAt(viewIndex)
         }
     }
 
-    /** Updates the already animated views with their final results (Percentile) */
     private fun updateAnimatedViewsWithPercentileResult(result: Int?) {
         if (result == null) {
             binding.diceDisplayArea.removeAllViews()
             return
         }
-        // Assuming 2 views for percentile + 1 TextView for result
-        if (binding.diceDisplayArea.childCount >= 2) {
-            val tensValue = if (result == 100) 0 else (result / 10) * 10
-            val unitsValue = if (result == 100) 0 else result % 10
+        // Component rolls to update the individual dice SVGs
+        val componentRolls = viewModel.processedDiceResult.value?.rawRolls
+        val tensValueForDisplay = componentRolls?.get(DicePoolDialogFragment.D10_TENS_KEY)?.firstOrNull() ?: 0
+        val unitsValueForDisplay = componentRolls?.get(DicePoolDialogFragment.D10_UNITS_KEY)?.firstOrNull() ?: 0
 
+        val colorConfig = parseDiceColorConfig(viewModel.settings.value?.diceColorConfigJson)
+
+        if (binding.diceDisplayArea.childCount >= 2) {
             (binding.diceDisplayArea.getChildAt(0)?.findViewById<ImageView>(R.id.dieResultImageView))?.apply {
-                setImageResource(getDieResultDrawable(DicePoolDialogFragment.D10_TENS_KEY, tensValue))
+                setImageResource(getDieResultDrawable(DicePoolDialogFragment.D10_TENS_KEY, tensValueForDisplay))
+                applyTint(this, colorConfig[DicePoolDialogFragment.D10_TENS_KEY])
                 alpha = 1f; rotation = 0f
             }
             (binding.diceDisplayArea.getChildAt(1)?.findViewById<ImageView>(R.id.dieResultImageView))?.apply {
-                setImageResource(getDieResultDrawable(DicePoolDialogFragment.D10_UNITS_KEY, unitsValue))
+                setImageResource(getDieResultDrawable(DicePoolDialogFragment.D10_UNITS_KEY, unitsValueForDisplay))
+                applyTint(this, colorConfig[DicePoolDialogFragment.D10_UNITS_KEY])
                 alpha = 1f; rotation = 0f
             }
-            if (binding.diceDisplayArea.childCount == 3 && binding.diceDisplayArea.getChildAt(2) is TextView) {
-                (binding.diceDisplayArea.getChildAt(2) as TextView).text = "= $result%"
-            } else if (binding.diceDisplayArea.childCount == 2) { // Add text view if missing
-                val resultTextView = TextView(requireContext()).apply {
-                    text = "= $result%"
+            // Update or add the sum TextView
+            var sumTextView = if (binding.diceDisplayArea.childCount == 3 && binding.diceDisplayArea.getChildAt(2) is TextView) {
+                binding.diceDisplayArea.getChildAt(2) as TextView
+            } else {
+                // Remove extra views if any, then add
+                while (binding.diceDisplayArea.childCount > 2) {
+                    binding.diceDisplayArea.removeViewAt(2)
+                }
+                TextView(requireContext()).apply {
                     textSize = 24f
                     val params = ViewGroup.MarginLayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
                     params.marginStart = 16
                     layoutParams = params
+                    binding.diceDisplayArea.addView(this)
                 }
-                binding.diceDisplayArea.addView(resultTextView)
+            }
+            sumTextView.text = "= $finalSum%"
+        }
+    }
+
+    private fun applyTint(imageView: ImageView?, colorInt: Int?) {
+        imageView?.let {
+            val tintToApply = colorInt ?: PurramidPalette.DEFAULT_DIE_COLOR.colorInt
+            if (tintToApply != Color.TRANSPARENT) {
+                it.colorFilter = PorterDuffColorFilter(tintToApply, PorterDuff.Mode.SRC_IN)
+            } else {
+                it.clearColorFilter()
             }
         }
     }
 
+    private fun parseDiceColorConfig(json: String?): Map<Int, Int> {
+        if (json.isNullOrEmpty() || json == DEFAULT_EMPTY_JSON_MAP) {
+            return emptyMap()
+        }
+        return try {
+            val mapType = object : TypeToken<Map<Int, Int>>() {}.type
+            gson.fromJson(json, mapType)
+        } catch (e: Exception) {
+            Log.e("DiceMainFragment", "Failed to parse dice color config JSON: $json", e)
+            emptyMap()
+        }
+    }
 
-    // --- Navigation & Error Handling ---
     private fun navigateToSettings(instanceId: UUID) {
         try {
             val action = DiceMainFragmentDirections.actionDiceMainFragmentToRandomizerSettingsFragment(instanceId.toString())
