@@ -4,6 +4,7 @@ package com.example.purramid.thepurramid.randomizers.ui
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.ObjectAnimator
+import android.content.Context // For accessibility service
 import android.graphics.Color
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
@@ -11,6 +12,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.view.accessibility.AccessibilityManager // For reduced motion check
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -40,8 +42,12 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
-import java.util.UUID
 import kotlin.random.Random
+import java.util.concurrent.TimeUnit
+import java.util.UUID
+import nl.dionsegijn.konfetti.core.Party
+import nl.dionsegijn.konfetti.core.Position
+import nl.dionsegijn.konfetti.core.emitter.Emitter
 
 @AndroidEntryPoint
 class DiceMainFragment : Fragment() {
@@ -51,6 +57,20 @@ class DiceMainFragment : Fragment() {
 
     private val viewModel: DiceViewModel by viewModels()
     private val gson = Gson() // For parsing color config
+
+    private enum class LastResultType { NONE, POOL, PERCENTILE }
+    private var lastResultType = LastResultType.NONE
+    private val animationDuration = 1000L
+    private val announcementDisplayDuration = 3000L
+
+    private val announcementHandler = Handler(Looper.getMainLooper())
+    private var announcementRunnable: Runnable? = null
+
+    private var _binding: FragmentDiceMainBinding? = null
+    private val binding get() = _binding!!
+
+    private val viewModel: DiceViewModel by viewModels()
+    private val gson = Gson()
 
     private enum class LastResultType { NONE, POOL, PERCENTILE }
     private var lastResultType = LastResultType.NONE
@@ -145,15 +165,28 @@ class DiceMainFragment : Fragment() {
                             if (!settings.isAnnounceEnabled) {
                                 clearAnnouncement()
                             }
+                            // If crit celebration is turned off, ensure no confetti is running (more robust)
+                            if (!settings.isDiceCritCelebrationEnabled) {
+                                binding.konfettiViewDice.stopGracefully()
+                            }
                         }
                     }
                 }
                 launch {
                     viewModel.processedDiceResult.observe(lifecycleOwner) { processedResult ->
-                        if (processedResult != null && viewModel.settings.value?.isAnnounceEnabled == true) {
-                            showAnnouncement(processedResult.announcementString)
+                        val currentSettings = viewModel.settings.value
+                        if (processedResult != null && currentSettings != null) {
+                            if (currentSettings.isAnnounceEnabled) {
+                                showAnnouncement(processedResult.announcementString)
+                                // *** TRIGGER CRIT CELEBRATION ***
+                                if (currentSettings.isDiceCritCelebrationEnabled && processedResult.d20CritsRolled > 0) {
+                                    startCritCelebration()
+                                }
+                            } else {
+                                clearAnnouncement()
+                            }
                         } else {
-                            clearAnnouncement() // Clear if announce is off or result is null
+                            clearAnnouncement()
                         }
                     }
                 }
@@ -395,7 +428,6 @@ class DiceMainFragment : Fragment() {
         val componentRolls = viewModel.processedDiceResult.value?.rawRolls
         val tensValueForDisplay = componentRolls?.get(DicePoolDialogFragment.D10_TENS_KEY)?.firstOrNull() ?: 0
         val unitsValueForDisplay = componentRolls?.get(DicePoolDialogFragment.D10_UNITS_KEY)?.firstOrNull() ?: 0
-
         val colorConfig = parseDiceColorConfig(viewModel.settings.value?.diceColorConfigJson)
 
         if (binding.diceDisplayArea.childCount >= 2) {
@@ -467,5 +499,33 @@ class DiceMainFragment : Fragment() {
         view?.let {
             Snackbar.make(it, message, Snackbar.LENGTH_LONG).show()
         }
+    }
+    private fun startCritCelebration() {
+        if (_binding == null) return // View already destroyed
+
+        // Accessibility Check for reduced motion
+        val accessibilityManager = context?.getSystemService(Context.ACCESSIBILITY_SERVICE) as? AccessibilityManager
+        if (accessibilityManager?.isTouchExplorationEnabled == true) { // A proxy for reduced motion preference
+            Log.d("DiceMainFragment", "Reduced motion enabled, skipping confetti.")
+            return
+        }
+
+        // Using the same colors as Spin mode example for now
+        val partyColors = listOf(0xFF0000, 0xFFFF00, 0x00FF00, 0x4363D8, 0x7F00FF)
+        // Or use your confetti_piece_*.xml colors if preferred, though Konfetti takes Ints.
+
+        binding.konfettiViewDice.start(
+            Party(
+                speed = 0f,
+                maxSpeed = 35f,
+                damping = 0.9f,
+                spread = 360,
+                colors = partyColors,
+                emitter = Emitter(duration = 150, TimeUnit.MILLISECONDS).max(150), // Quick burst
+                position = Position.Relative(0.5, 0.3) // Emit from near top-center
+            )
+        )
+        // Konfetti usually stops itself based on emitter duration / timeToLive.
+        // No explicit stop needed for short bursts unless you want to clear immediately after.
     }
 }

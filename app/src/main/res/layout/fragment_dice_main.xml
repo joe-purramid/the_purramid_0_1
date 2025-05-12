@@ -67,6 +67,16 @@
         tools:text="d20: 15 (15+0)\nTotal Sum: 15"
         tools:visibility="visible" />
 
+    <nl.dionsegijn.konfetti.xml.KonfettiView
+        android:id="@+id/konfettiViewDice"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:elevation="10dp"/>
+
     <Button
         android:id="@+id/diceRollButton"
         android:layout_width="wrap_content"
