@@ -58,11 +58,11 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/stopwatch" /> <RadioButton
-                android:id="@+id/radioCountdown"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
-                android:text="@string/countdown" /> </RadioGroup>
+            android:id="@+id/radioCountdown"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:text="@string/countdown" /> </RadioGroup>
 
         <LinearLayout
             android:id="@+id/layoutCountdownSettings"
@@ -167,7 +167,7 @@
             app:layout_constraintTop_toBottomOf="@id/switchShowCentiseconds"
             app:layout_constraintStart_toStartOf="parent"/>
 
-<TextView
+        <TextView
             android:id="@+id/labelTimerOverlayColor"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -188,16 +188,5 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent" />
 
-        <LinearLayout
-            android:id="@+id/timerColorPalette"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_horizontal"
-            android:layout_marginTop="8dp"
-            android:paddingBottom="8dp"
-            app:layout_constraintTop_toBottomOf="@id/labelTimerColor"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 </ScrollView>

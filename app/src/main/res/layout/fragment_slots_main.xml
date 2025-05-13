@@ -109,46 +109,6 @@
         android:id="@+id/slotsAnnouncementOverlay"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:background="#AAFFFFFF"
-        android:elevation="10dp"
-        android:visibility="gone"
-        app:layout_constraintTop_toTopOf="@id/slotsColumnsContainer"
-        app:layout_constraintBottom_toBottomOf="@id/slotsColumnsContainer"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        tools:visibility="visible">
-
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:orientation="horizontal">
-             <TextView
-                 android:layout_width="wrap_content"
-                 android:layout_height="wrap_content"
-                 android:padding="8dp"
-                 android:textAppearance="?attr/textAppearanceHeadline5"
-                 tools:text="Result 1"/>
-              <TextView
-                 android:layout_width="wrap_content"
-                 android:layout_height="wrap_content"
-                  android:padding="8dp"
-                 android:textAppearance="?attr/textAppearanceHeadline5"
-                 tools:text="Result 2"/>
-             <TextView
-                 android:layout_width="wrap_content"
-                 android:layout_height="wrap_content"
-                 android:padding="8dp"
-                 android:textAppearance="?attr/textAppearanceHeadline5"
-                 tools:text="Result 3"/>
-        </LinearLayout>
-
-    </FrameLayout>
-
-    <FrameLayout
-        android:id="@+id/slotsAnnouncementOverlay"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
         android:background="#AAFFFFFF" android:clickable="true" android:focusable="true"
         android:elevation="10dp"
         android:visibility="gone"
