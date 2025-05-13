@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    '' MAIN APP VIEW ''
+    <!-- `` MAIN APP VIEW `` -->
     <string name="app_name">The <xliff:g id="tp" translatable="false">Purramid</xliff:g></string>
     <string name="app_widget_description">Launch a Purramid class management tool</string>
     <string name="enable_overlay">Enable Overlay</string>
@@ -14,7 +14,7 @@
     <string name="traffic_light_title">Traffic Light</string>
     <string name="about">About this App</string>
 
-    '' UNIVERSAL TERMS ''
+    <!-- `` UNIVERSAL TERMS `` -->
     <string name="snackbar_action_ok">OK</string>
     <string name="pause">Pause Button</string>
     <string name="pause_accessible">A Pause button to temporarily stop time.</string>
@@ -44,7 +44,7 @@
     <string name="cancel">Cancel</string>
     <string name="delete">Delete</string>
 
-    '' CLOCK APP ''
+    <!-- `` CLOCK APP `` -->
     <string name="clock_settings_title">Clock Settings</string>
     <string name="enable_floating_clock">Enable Floating Clock</string>
     <string name="clock_mode">Clock Type</string>
@@ -62,7 +62,7 @@
     <string name="nest_clock">Nest Clock</string>
     <string name="add_another_clock">Add another Clock</string>
 
-    '' TIME ZONE CITIES ''
+    <!-- `` TIME ZONE CITIES `` -->
     <string name="city_mindelo">Mindelo</string>
     <string name="city_ponta_delgada">Ponta Delgada</string>
     <string name="city_praia">Praia</string>
@@ -77,26 +77,26 @@
     <string name="city_nuuk">Nuuk</string>
     <string name="city_qaanaaq">Qaanaaq</string>
     <string name="city_grytviken">Grytviken</string>
-    <string name="city_sao_paulo">S&#227;o Paulo</string>
+    <string name="city_sao_paulo">São Paulo</string>
     <string name="city_bueno_aires">Buenos Aires</string>
     <string name="city_rio_de_janeiro">Rio de Janeiro</string>
     <string name="city_montevideo">Montevideo</string>
     <string name="city_stanley">Stanley</string>
-    <string name="city_st_johns">St. John&apos;s</string>
+    <string name="city_st_johns">St. John\'s</string>
     <string name="city_santiago">Santiago</string>
     <string name="city_caracas">Caracas</string>
     <string name="city_san_juan">San Juan</string>
-    <string name="city_asuncion">Asunción</string>
+    <string name="city_asuncion">Asuncion</string>
     <string name="city_halifax">Halifax</string>
     <string name="city_la_paz">La Paz</string>
     <string name="city_lima">Lima</string>
-    <string name="city_bogota">Bogot&#225;</string>
+    <string name="city_bogota">Bogotá</string>
     <string name="city_miami">Miami</string>
     <string name="city_toronto">Toronto</string>
-    <string name="city_montreal">Montr&#233;al</string>
+    <string name="city_montreal">Montréal</string>
     <string name="city_havana">Havana</string>
     <string name="city_quito">Quito</string>
-    <string name="city_cancun">Canc&#250;n</string>
+    <string name="city_cancun">Cancun</string>
     <string name="city_rio_branco">Rio Branco</string>
     <string name="city_nassau">Nassau</string>
     <string name="city_boston">Boston</string>
@@ -115,9 +115,9 @@
     <string name="city_regina">Regina</string>
     <string name="city_phoenix">Phoenix</string>
     <string name="city_denver">Denver</string>
-    <string name="city_ciudad_juarez">Ciudad Ju&#225;rez</string>
+    <string name="city_ciudad_juarez">Ciudad Juarez</string>
     <string name="city_calgary">Calgary</string>
-    <string name="city_mazatlan">Mazatl&#225;n</string>
+    <string name="city_mazatlan">Mazatlan</string>
     <string name="city_boise">Boise</string>
     <string name="city_yellowknife">Yellowknife</string>
     <string name="city_los_angeles">Los Angeles</string>
@@ -181,7 +181,7 @@
     <string name="city_tarawa">Tarawa</string>
     <string name="city_waitangi">Waitangi</string>
     <string name="city_apia">Apia</string>
-    <string name="city_nukualofa">Nuku&apos;alofa</string>
+    <string name="city_nukualofa">Nuku\'alofa</string>
     <string name="city_neiafu">Neiafu</string>
     <string name="city_afega">Afega</string>
     <string name="city_cairo">Cairo</string>
@@ -252,7 +252,7 @@
     <string name="city_darwin">Darwin</string>
     <string name="city_broken_hill">Broken Hill</string>
 
-    '' TIME ZONE COUNTRIES ''
+    <!-- `` TIME ZONE COUNTRIES `` -->
     <string name="country_cabo_verde">Cabo Verde</string>
     <string name="country_portugal">Portugal</string>
     <string name="country_hawaii">Hawaii (USA)</string>
@@ -372,7 +372,7 @@
     <string name="country_south_korea">South Korea</string>
     <string name="country_north_korea">North Korea</string>
 
-    '' RANDOMIZERS APP ''
+    <!-- `` RANDOMIZERS APP `` -->
     <string name="randomizer_settings_title">Randomizer Settings</string>
     <string name="select_list">Choose a List</string>
     <string name="show_lists">Open a drop-down menu to select a list</string>
@@ -386,7 +386,7 @@
     <string name="delete_list_confirmation">Are you sure you want to delete \'%1$s\'? This cannot be undone.</string>
     <string name="add_another_randomizer">Add another Randomizer</string>
 
-    '' RANDOMIZER SPIN MODE ''
+    <!-- `` RANDOMIZER SPIN MODE `` -->
     <string name="randomizer_mode_spin">Spin Mode</string>
     <string name="spin">Spin</string>
     <string name="setting_celebrate">Celebrate Result</string>
@@ -394,7 +394,7 @@
     <string name="sequence_up">Previous sequence item</string>
     <string name="sequence_down">Next sequence item</string>
 
-    '' Pre-loaded Randomizer Lists ''
+    <!-- `` Pre-loaded Randomizer Lists `` -->
     <string name="default_list_title_colors">Colors</string>
     <string name="default_list_title_consonants">Consonants (English)</string>
     <string name="default_list_title_continents">Continents</string>
@@ -429,7 +429,7 @@
         <item>Southern</item>
     </string-array>
 
-    '' RANDOMIZER SLOTS MODE ''
+    <!-- `` RANDOMIZER SLOTS MODE `` -->
     <string name="randomizer_mode_slots">Slots Mode</string>
     <string name="lock_column">Lock Column</string>
     <string name="unlock_column">Unlock Column</string>
@@ -444,7 +444,7 @@
     <string name="setting_slots_columns_3">3</string>
     <string name="setting_slots_columns_5">5</string>
 
-    '' RANDOMIZER DICE MODE ''
+    <!-- `` RANDOMIZER DICE MODE `` -->
     <string name="randomizer_mode_dice">Dice Mode</string>
     <string name="roll">Roll</string>
     <string name="dice_pool">Dice Pool</string>
@@ -465,10 +465,10 @@
     <string name="setting_dice_configure_modifiers">Dice Modifiers</string>
     <string name="setting_dice_configure_modifiers_title">Configure Dice Modifiers</string>
 
-    '' RANDOMIZER COIN FLIP MODE ''
+    <!-- `` RANDOMIZER COIN FLIP MODE `` -->
     <string name="randomizer_mode_coin_flip">Coin Flip Mode</string>
 
-    '' RANDOMIZER SNACKBARS ''
+    <!-- `` RANDOMIZER SNACKBARS `` -->
     <string name="max_randomizers_general_reached_snackbar">Maximum of <xliff:g id="count">%1$d</xliff:g> Randomizer windows reached.</string>
     <string name="max_randomizers_dice_reached_snackbar">Maximum of <xliff:g id="count">%1$d</xliff:g> Dice windows reached.</string>
     <string name="error_settings_instance_id_failed">Some naughty kitties caused an error. Please close this window and open a new one to continue.</string>
@@ -488,7 +488,7 @@
     <string name="delete_item_confirmation">Are you sure you want to delete this item starting with \'%1$s\'?</string>
 
 
-    '' SCREEN SHADE APP ''
+    <!-- `` SCREEN SHADE APP `` -->
     <string name="screen_shade_settings_title">Screen Shade Settings</string>
     <string name="add_another_screen">Add another Screen</string>
     <string name="max_masks_reached_snackbar">Maximum number of screen shades reached.</string>
@@ -498,7 +498,7 @@
     <string name="cannot_open_image_picker">Cannot open image picker</string>
 
 
-    '' SPOTLIGHT APP ''
+    <!-- `` SPOTLIGHT APP `` -->
     <string name="spotlight_settings_title">Spotlight Settings</string>
     <string name="add_another_spotlight">Add another Spotlight</string>
     <string name="max_spotlights_reached_snackbar">Maximum number of spotlights reached.</string>
@@ -506,7 +506,7 @@
     <string name="change_shape_square">Change shape to Square</string>
 
 
-    '' TIMERS APP ''
+    <!-- `` TIMERS APP `` -->
     <string name="timer_settings_title">Timer Settings</string>
     <string name="timer_mode">Timer Type</string>
     <string name="stopwatch">Stopwatch</string>
@@ -523,7 +523,7 @@
     <string name="no_laps_recorded">No laps recorded</string>
     <string name="sounds">Stopwatch sounds</string>
 
-    '' TRAFFIC LIGHT APP ''
+    <!-- `` TRAFFIC LIGHT APP `` -->
     <string name="setting_mode">Mode</string>
     <string name="setting_mode_manual">Manual Change</string>
     <string name="setting_mode_responsive">Responsive Change (Requires Microphone)</string>
@@ -549,8 +549,8 @@
     <string name="yellow_color_label">Yellow</string> <!-- Amber in UK -->
     <string name="red_color_label">Red</string>
 
-    '' ABOUT THIS APP ''
-    <string name="version_number">Version 0.1</string> '' in dev ''
+    <!-- `` ABOUT THIS APP `` -->
+    <string name="version_number">Version 0.1</string> <!-- `` in dev `` -->
 
     <string name="purramid_copyright_title">The <xliff:g id="tp" translatable="false">Purramid</xliff:g></string>
     <string name="purramid_copyright_text">Copyright © 2025 <xliff:g id="tpl" translatable="false">Purramid Learning®, Inc.</xliff:g> All rights reserved.</string>

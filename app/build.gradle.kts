@@ -107,6 +107,7 @@ dependencies {
     implementation("org.locationtech.jts:jts-core:1.20.0")
     implementation("org.locationtech.jts.io:jts-io-common:1.20.0")
     implementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(platform(libs.androidx.compose.bom))
     ksp(libs.glide.compiler)
     ksp(libs.hilt.compiler)
     ksp(libs.room.compiler)
