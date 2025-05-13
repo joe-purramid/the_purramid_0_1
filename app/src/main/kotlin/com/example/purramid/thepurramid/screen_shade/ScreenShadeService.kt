@@ -30,16 +30,22 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.lifecycleScope
+import androidx.savedstate.SavedStateRegistry
+import androidx.savedstate.SavedStateRegistryController
+import androidx.savedstate.SavedStateRegistryOwner
 import com.example.purramid.thepurramid.MainActivity
 import com.example.purramid.thepurramid.R
 import com.example.purramid.thepurramid.data.db.ScreenShadeDao // For restoring state
 import com.example.purramid.thepurramid.di.HiltViewModelFactory // Assuming Hilt Factory for custom creation
 import com.example.purramid.thepurramid.screen_shade.ui.MaskView
 import com.example.purramid.thepurramid.screen_shade.viewmodel.ScreenShadeViewModel
+import com.example.purramid.thepurramid.screen_shade.ScreenShadeActivity
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlin.math.max
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
@@ -54,18 +60,22 @@ const val EXTRA_MASK_INSTANCE_ID = ScreenShadeViewModel.KEY_INSTANCE_ID // From 
 const val EXTRA_IMAGE_URI = "com.example.purramid.screen_shade.EXTRA_IMAGE_URI"
 
 @AndroidEntryPoint
-class ScreenShadeService : LifecycleService(), ViewModelStoreOwner {
+class ScreenShadeService : LifecycleService(), ViewModelStoreOwner, SavedStateRegistryOwner {
 
     @Inject lateinit var windowManager: WindowManager
     @Inject lateinit var viewModelFactory: ViewModelProvider.Factory // Hilt provides default factory
     @Inject lateinit var screenShadeDao: ScreenShadeDao // Inject DAO for state restoration
-
-    // Injected SharedPreferences (provide this via a Hilt module)
     @Inject @ScreenShadePrefs lateinit var servicePrefs: SharedPreferences
-
 
     private val _viewModelStore = ViewModelStore()
     override fun getViewModelStore(): ViewModelStore = _viewModelStore
+
+    // For SavedStateRegistryOwner
+    private lateinit var savedStateRegistryController: SavedStateRegistryController
+
+    override fun getSavedStateRegistry(): SavedStateRegistry { // Implement method
+        return savedStateRegistryController.savedStateRegistry
+    }
 
     private val activeMaskViewModels = ConcurrentHashMap<Int, ScreenShadeViewModel>()
     private val activeMaskViews = ConcurrentHashMap<Int, MaskView>()
@@ -81,12 +91,18 @@ class ScreenShadeService : LifecycleService(), ViewModelStoreOwner {
         private const val NOTIFICATION_ID = 6
         private const val CHANNEL_ID = "ScreenShadeServiceChannel"
         const val MAX_MASKS = 4 // Shared constant for max masks
-        const val PREFS_NAME_FOR_ACTIVITY = ScreenShadeActivity.PREFS_NAME // For Activity to read count
-        const val KEY_ACTIVE_COUNT_FOR_ACTIVITY = ScreenShadeActivity.KEY_ACTIVE_COUNT
+
+        // Define the actual string literals here
+        const val PREFS_NAME = "com.example.purramid.thepurramid.screen_shade.APP_PREFERENCES"
+        const val KEY_ACTIVE_COUNT = "SCREEN_SHADE_ACTIVE_INSTANCE_COUNT"
         const val KEY_LAST_INSTANCE_ID = "last_instance_id_screenshade"
     }
 
     override fun onCreate() {
+        savedStateRegistryController = SavedStateRegistryController.create(this)
+        savedStateRegistryController.performAttach()
+        savedStateRegistryController.performRestore(null)
+
         super.onCreate()
         Log.d(TAG, "onCreate")
         createNotificationChannel()
@@ -106,7 +122,7 @@ class ScreenShadeService : LifecycleService(), ViewModelStoreOwner {
     }
 
     private fun updateActiveInstanceCountInPrefs() {
-        servicePrefs.edit().putInt(KEY_ACTIVE_COUNT_FOR_ACTIVITY, activeMaskViewModels.size).apply()
+        servicePrefs.edit().putInt(KEY_ACTIVE_COUNT, activeMaskViewModels.size).apply()
         Log.d(TAG, "Updated active ScreenShade mask count: ${activeMaskViewModels.size}")
     }
 
@@ -144,7 +160,7 @@ class ScreenShadeService : LifecycleService(), ViewModelStoreOwner {
         when (action) {
             ACTION_START_SCREEN_SHADE -> {
                 startForegroundServiceIfNeeded()
-                if (activeMaskViewModels.isEmpty() && servicePrefs.getInt(KEY_ACTIVE_COUNT_FOR_ACTIVITY, 0) == 0) {
+                if (activeMaskViewModels.isEmpty() && servicePrefs.getInt(KEY_ACTIVE_COUNT, 0) == 0) {
                     Log.d(TAG, "No active masks (from map and prefs), adding a new default one.")
                     handleAddNewMaskInstance()
                 } else {
@@ -196,15 +212,7 @@ class ScreenShadeService : LifecycleService(), ViewModelStoreOwner {
     private fun initializeViewModel(id: Int, initialArgs: Bundle?): ScreenShadeViewModel {
         return activeMaskViewModels.computeIfAbsent(id) {
             Log.d(TAG, "Creating ScreenShadeViewModel for ID: $id")
-            // Use Hilt's default factory which handles SavedStateHandle injection via AbstractSavedStateViewModelFactory
-            val factory = object : AbstractSavedStateViewModelFactory(this, initialArgs ?: Bundle().apply { putInt(ScreenShadeViewModel.KEY_INSTANCE_ID, id) }) {
-                override fun <T : ViewModel> create(key: String, modelClass: Class<T>, handle: SavedStateHandle): T {
-                    @Suppress("UNCHECKED_CAST")
-                    return ScreenShadeViewModel(screenShadeDao, handle) as T // Manually pass deps if not using Hilt factory directly here
-                    // For Hilt, if ViewModel is @HiltViewModel, this can be simpler with default ViewModelProvider
-                }
-            }
-            // Corrected ViewModelProvider instantiation
+            // Directly use the ViewModelProvider with the intended HiltViewModelFactory.
             ViewModelProvider(this, HiltViewModelFactory(this, initialArgs ?: Bundle().apply { putInt(ScreenShadeViewModel.KEY_INSTANCE_ID, id) }, viewModelFactory))
                 .get(ScreenShadeViewModel::class.java)
                 .also { vm ->
@@ -247,7 +255,9 @@ class ScreenShadeService : LifecycleService(), ViewModelStoreOwner {
                     activeMaskViews.remove(instanceId)
                     maskLayoutParams.remove(instanceId)
                     stateObserverJobs[instanceId]?.cancel()
-                    activeMaskViewModels.remove(instanceId)?.onCleared() // Clean up VM
+
+                    val viewModel = activeMaskViewModels.remove(instanceId)
+                    viewModel?.deleteState()
                     updateActiveInstanceCountInPrefs()
                     return@post
                 }

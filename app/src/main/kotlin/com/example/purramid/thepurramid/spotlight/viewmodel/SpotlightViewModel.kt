@@ -28,6 +28,7 @@ class SpotlightViewModel @Inject constructor(
     companion object {
         private const val TAG = "SpotlightViewModel"
         private const val MAX_SPOTLIGHTS = 4
+        const val KEY_INSTANCE_ID = "spotlight_instance_id"
     }
 
     private val _uiState = MutableStateFlow(SpotlightUiState(isLoading = true))
@@ -257,5 +258,28 @@ class SpotlightViewModel @Inject constructor(
             height = data.height,
             size = data.size
         )
+    }
+
+    /**
+     * Called by SpotlightService when a ViewModel instance is being removed.
+     * This is the place for any specific cleanup related to this ViewModel's data,
+     * for example, deleting its associated spotlights from the database if that's the desired behavior.
+     * Note: `onCleared()` is called automatically by the ViewModelStore when the store itself is cleared (e.g., service onDestroy).
+     */
+    fun deleteState() {
+        Log.d(TAG, "deleteState() called for ViewModel instance. Implement DB cleanup logic if needed for this instance.")
+        // Example: If each ViewModel instance is tied to a specific set of spotlights
+        // that should be deleted when this instance is removed:
+        // val currentInstanceId = savedStateHandle.get<Int>(KEY_INSTANCE_ID) // Assuming you have access to instanceId
+        // if (currentInstanceId != null) {
+        //     viewModelScope.launch(Dispatchers.IO) {
+        //         try {
+        //             // spotlightDao.deleteAllSpotlightsForInstance(currentInstanceId) // Hypothetical DAO method
+        //             Log.d(TAG, "Deleted all DB entries for instance $currentInstanceId")
+        //         } catch (e: Exception) {
+        //             Log.e(TAG, "Error deleting DB entries for instance $currentInstanceId", e)
+        //         }
+        //     }
+        // }
     }
 }

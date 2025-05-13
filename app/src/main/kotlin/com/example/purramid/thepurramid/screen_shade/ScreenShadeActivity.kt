@@ -26,8 +26,8 @@ class ScreenShadeActivity : AppCompatActivity() {
         private const val TAG = "ScreenShadeActivity"
         const val ACTION_LAUNCH_IMAGE_CHOOSER_FROM_SERVICE = "com.example.purramid.screen_shade.ACTION_LAUNCH_IMAGE_CHOOSER_FROM_SERVICE"
         // Using the constants defined in ScreenShadeService for SharedPreferences
-        const val PREFS_NAME = ScreenShadeService.PREFS_NAME_FOR_ACTIVITY
-        const val KEY_ACTIVE_COUNT = ScreenShadeService.KEY_ACTIVE_COUNT_FOR_ACTIVITY
+        const val PREFS_NAME = ScreenShadeService.PREFS_NAME
+        const val KEY_ACTIVE_COUNT = ScreenShadeService.KEY_ACTIVE_COUNT
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -54,7 +54,7 @@ class ScreenShadeActivity : AppCompatActivity() {
             // Activity will finish after imagePickerLauncher returns
         } else {
             // Default launch path (e.g., from MainActivity or if no specific action)
-            val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
             val activeCount = prefs.getInt(KEY_ACTIVE_COUNT, 0)
 
             if (activeCount > 0) {
@@ -101,27 +101,35 @@ class ScreenShadeActivity : AppCompatActivity() {
         }
     }
 
-    override fun onNewIntent(intent: Intent?) {
+    override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent) // Update the activity's intent with the new one
-        Log.d(TAG, "onNewIntent - Action: ${intent?.action}")
-        if (intent?.action == ACTION_LAUNCH_IMAGE_CHOOSER_FROM_SERVICE) {
+        handleIntent(intent)
+    }
+
+    // Centralized intent handling logic
+    private fun handleIntent(intent: Intent) {
+        Log.d(TAG, "handleIntent - Action: ${intent.action}")
+        if (intent.action == ACTION_LAUNCH_IMAGE_CHOOSER_FROM_SERVICE) {
+            Log.d(TAG, "Launched by service to pick image.")
             openImageChooser()
-        } else if (intent?.action != null) {
-            // If activity is reordered to front and it's not for image picking,
-            // assume it's a generic launch and show settings if masks are active.
-            val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            // Activity will finish after imagePickerLauncher returns if openImageChooser calls finish()
+        } else {
+            // Default launch path or if reordered to front without specific known action
+            val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
             val activeCount = prefs.getInt(KEY_ACTIVE_COUNT, 0)
+
             if (activeCount > 0) {
+                Log.d(TAG, "Screen Shades active ($activeCount), launching settings fragment.")
                 showSettingsFragment()
+                // Activity remains open to host the fragment
             } else {
-                // If somehow reordered to front and no masks are active (unlikely scenario if first launch adds one)
-                // Default to adding a new mask and finishing.
+                Log.d(TAG, "No active Screen Shades, requesting service to add a new one.")
                 val serviceIntent = Intent(this, ScreenShadeService::class.java).apply {
                     action = ACTION_ADD_NEW_MASK_INSTANCE
                 }
                 ContextCompat.startForegroundService(this, serviceIntent)
-                finish()
+                finish() // Finish after telling service to add the first instance
             }
         }
     }

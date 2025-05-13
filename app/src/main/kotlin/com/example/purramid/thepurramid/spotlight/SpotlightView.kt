@@ -5,20 +5,16 @@ import android.content.Context
 import android.graphics.*
 import android.graphics.drawable.Drawable
 import android.util.AttributeSet
-import android.util.Log
-import android.util.TypedValue
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
-import android.view.WindowManager // Keep if needed, though params handled by Service
 import androidx.core.content.ContextCompat
 import com.example.purramid.thepurramid.R
 import com.example.purramid.thepurramid.util.dpToPx
 import kotlin.math.absoluteValue
 import kotlin.math.atan2
 import kotlin.math.hypot
-import kotlin.math.max // Ensure this is kotlin.math.max
-import kotlin.math.min // Ensure this is kotlin.math.min
+import kotlin.math.min
 import kotlin.math.maxOf // Use maxOf for comparing multiple values
 
 class SpotlightView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
@@ -37,7 +33,7 @@ class SpotlightView(context: Context, attrs: AttributeSet?) : View(context, attr
 
     // --- Paints ---
     private val shadeColor = Color.argb(128, 0, 0, 0)
-    private val shadePaint = Paint().apply { color = shadeColor }
+    // private val shadePaint = Paint().apply { color = shadeColor }
     private val spotlightPaint = Paint().apply {
         xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR)
         isAntiAlias = true
@@ -62,6 +58,8 @@ class SpotlightView(context: Context, attrs: AttributeSet?) : View(context, attr
 
     // State for dragging spotlight
     private var currentDraggingSpotlight: Spotlight? = null
+    private var initialTouchX = 0f //
+    private var initialTouchY = 0f //
     private var dragInitialSpotlightX = 0f // Store initial position for drag delta calc
     private var dragInitialSpotlightY = 0f
 

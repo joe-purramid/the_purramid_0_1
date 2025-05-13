@@ -133,7 +133,6 @@ class ScreenShadeViewModel @Inject constructor(
             width = entity.width,
             height = entity.height,
             isLocked = entity.isLocked,
-            color = entity.color,
             billboardImageUri = entity.billboardImageUri,
             isBillboardVisible = entity.isBillboardVisible,
             isControlsVisible = entity.isControlsVisible
@@ -148,7 +147,7 @@ class ScreenShadeViewModel @Inject constructor(
             width = state.width,
             height = state.height,
             isLocked = state.isLocked,
-            color = state.color,
+            color = Color.WHITE,
             billboardImageUri = state.billboardImageUri,
             isBillboardVisible = state.isBillboardVisible,
             isControlsVisible = state.isControlsVisible

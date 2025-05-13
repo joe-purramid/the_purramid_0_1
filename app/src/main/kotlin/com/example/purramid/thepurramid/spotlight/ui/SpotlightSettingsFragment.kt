@@ -13,7 +13,6 @@ import androidx.fragment.app.Fragment
 import com.example.purramid.thepurramid.R
 import com.example.purramid.thepurramid.databinding.FragmentSpotlightSettingsBinding
 import com.example.purramid.thepurramid.spotlight.ACTION_ADD_NEW_SPOTLIGHT_INSTANCE
-import com.example.purramid.thepurramid.spotlight.SpotlightActivity
 import com.example.purramid.thepurramid.spotlight.SpotlightService
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
@@ -53,8 +52,8 @@ class SpotlightSettingsFragment : Fragment() {
         }
 
         binding.buttonAddNewSpotlight.setOnClickListener {
-            val prefs = requireActivity().getSharedPreferences(SpotlightActivity.PREFS_NAME, Context.MODE_PRIVATE)
-            val activeCount = prefs.getInt(SpotlightActivity.KEY_ACTIVE_COUNT, 0)
+            val prefs = requireActivity().getSharedPreferences(SpotlightService.PREFS_NAME_FOR_ACTIVITY, Context.MODE_PRIVATE)
+            val activeCount = prefs.getInt(SpotlightService.KEY_ACTIVE_COUNT_FOR_ACTIVITY, 0)
 
             if (activeCount < SpotlightService.MAX_SPOTLIGHTS) {
                 Log.d(TAG, "Add new spotlight requested from settings.")

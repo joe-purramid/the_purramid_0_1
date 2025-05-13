@@ -1,6 +1,5 @@
 // SpotlightService.kt
 package com.example.purramid.thepurramid.spotlight
-package com.example.purramid.thepurramid.spotlight
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -21,9 +20,7 @@ import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
 import androidx.core.app.NotificationCompat
-import androidx.lifecycle.AbstractSavedStateViewModelFactory
 import androidx.lifecycle.LifecycleService
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStore
@@ -33,12 +30,14 @@ import com.example.purramid.thepurramid.MainActivity
 import com.example.purramid.thepurramid.R
 import com.example.purramid.thepurramid.data.db.SpotlightDao
 import com.example.purramid.thepurramid.di.HiltViewModelFactory
-import com.example.purramid.thepurramid.spotlight.ui.SpotlightSettingsFragment // Assuming this will be created
+import com.example.purramid.thepurramid.di.SpotlightPrefs
+import com.example.purramid.thepurramid.spotlight.SpotlightUiState
 import com.example.purramid.thepurramid.spotlight.viewmodel.SpotlightViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
@@ -47,9 +46,6 @@ import javax.inject.Inject
 const val ACTION_START_SPOTLIGHT_SERVICE = "com.example.purramid.spotlight.ACTION_START_SERVICE"
 const val ACTION_STOP_SPOTLIGHT_SERVICE = "com.example.purramid.spotlight.ACTION_STOP_SERVICE"
 const val ACTION_ADD_NEW_SPOTLIGHT_INSTANCE = "com.example.purramid.spotlight.ACTION_ADD_NEW_INSTANCE"
-// EXTRA_SPOTLIGHT_ID is already ScreenShadeViewModel.KEY_INSTANCE_ID, let's use SpotlightViewModel's
-const val EXTRA_SPOTLIGHT_INSTANCE_ID = SpotlightViewModel.KEY_INSTANCE_ID
-
 
 @AndroidEntryPoint
 class SpotlightService : LifecycleService(), ViewModelStoreOwner {
@@ -58,7 +54,6 @@ class SpotlightService : LifecycleService(), ViewModelStoreOwner {
     @Inject lateinit var viewModelFactory: ViewModelProvider.Factory // Hilt provides default
     @Inject lateinit var spotlightDao: SpotlightDao // For restoring state if needed
     @Inject @SpotlightPrefs lateinit var servicePrefs: SharedPreferences
-
 
     private val _viewModelStore = ViewModelStore()
     override fun getViewModelStore(): ViewModelStore = _viewModelStore
@@ -76,9 +71,10 @@ class SpotlightService : LifecycleService(), ViewModelStoreOwner {
         private const val NOTIFICATION_ID = 3 // Was 3, ensure uniqueness
         private const val CHANNEL_ID = "SpotlightServiceChannel"
         const val MAX_SPOTLIGHTS = 4
-        const val PREFS_NAME_FOR_ACTIVITY = SpotlightActivity.PREFS_NAME // From SpotlightActivity
-        const val KEY_ACTIVE_COUNT_FOR_ACTIVITY = SpotlightActivity.KEY_ACTIVE_COUNT
-        const val KEY_LAST_INSTANCE_ID = "last_instance_id_spotlight"
+        const val KEY_INSTANCE_ID = "spotlight_instance_id"
+        const val PREFS_NAME_FOR_ACTIVITY = "spotlight_service_prefs"
+        const val KEY_ACTIVE_COUNT_FOR_ACTIVITY = "active_spotlight_count"
+        const val KEY_LAST_INSTANCE_ID = "last_spotlight_instance_id"
         private const val PASS_THROUGH_DELAY_MS = 50L
     }
 
@@ -185,7 +181,7 @@ class SpotlightService : LifecycleService(), ViewModelStoreOwner {
     private fun observeViewModelState(instanceId: Int, viewModel: SpotlightViewModel) {
         stateObserverJobs[instanceId]?.cancel()
         stateObserverJobs[instanceId] = lifecycleScope.launch {
-            viewModel.uiState.collectLatest { state ->
+            viewModel.uiState.collectLatest { state: SpotlightUiState ->
                 Log.d(TAG, "State update for Spotlight ID $instanceId: ${state.spotlights.size} items, Shape: ${state.globalShape}")
                 // A Spotlight overlay manages ALL spotlights data from its corresponding ViewModel.
                 // So, we pass the whole list from the state.
@@ -212,15 +208,19 @@ class SpotlightService : LifecycleService(), ViewModelStoreOwner {
                 spotlightLayoutParams[instanceId] = params
 
                 try {
-                    windowManager.addView(spotlightViewInstance, params)
-                    Log.d(TAG, "Added SpotlightView ID $instanceId to WindowManager.")
+                    if (!spotlightViewInstance.isAttachedToWindow) {
+                        windowManager.addView(spotlightViewInstance, params)
+                        Log.d(TAG, "Added SpotlightView ID $instanceId to WindowManager.")
+                    } else {
+                        Log.w(TAG, "Attempted to add SpotlightView ID $instanceId but it was already attached.")
+                    }
                 } catch (e: Exception) {
                     Log.e(TAG, "Error adding SpotlightView ID $instanceId to WindowManager", e)
                     // Cleanup if addView fails
                     activeSpotlightViews.remove(instanceId)
                     spotlightLayoutParams.remove(instanceId)
                     stateObserverJobs[instanceId]?.cancel()
-                    activeSpotlightViewModels.remove(instanceId)?.onCleared()
+                    activeSpotlightViewModels.remove(instanceId)
                     updateActiveInstanceCountInPrefs()
                     return@post
                 }
