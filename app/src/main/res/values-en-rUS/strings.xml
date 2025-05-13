@@ -462,6 +462,7 @@
     <string name="dice_label_d10_units" translatable="false">d% (0-9)</string>
     <string name="error_settings_not_loaded_cant_save">Settings not loaded, cannot save changes.</string>
     <string name="die_face_image">Die face image</string>
+    <string name="setting_dice_sum_results_label">Rolled sum</string>
     <string name="setting_dice_configure_modifiers">Dice Modifiers</string>
     <string name="setting_dice_configure_modifiers_title">Configure Dice Modifiers</string>
 
@@ -524,6 +525,8 @@
     <string name="sounds">Stopwatch sounds</string>
 
     <!-- `` TRAFFIC LIGHT APP `` -->
+    <string name="traffic_light_vertical_desc">A vertically oriented traffic light.</string>
+    <string name="traffic_light_horizontal_desc">A horizontally oriented traffic light.</string>
     <string name="traffic_light_settings_title">Traffic Light Settings</string>
     <string name="setting_mode">Mode</string>
     <string name="setting_mode_manual">Manual Change</string>
@@ -597,6 +600,6 @@
 
     <string name="contact_information_title">Contact Information</string>
     <string name="company_name"><xliff:g id="tpl" translatable="false">Purramid Learning, Inc.</xliff:g></string>
-    <string name="contact_information">Your mailed feedback and requests are welcome at 379&#8211;121 Amherst St., Nashua, NH 03063, USA.</string>
+    <string name="contact_information_text">Your mailed feedback and requests are welcome at <xliff:g id="tpl" translatable="false">379&#8211;121 Amherst St., Nashua, NH 03063, USA.</xliff:g></string>
 
 </resources>

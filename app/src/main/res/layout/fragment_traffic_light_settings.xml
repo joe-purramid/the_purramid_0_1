@@ -58,7 +58,9 @@
             app:layout_constraintTop_toBottomOf="@id/radio_group_mode"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            tools:text="Orientation (Vertical/Horizontal)" /> <com.google.android.material.materialswitch.MaterialSwitch
+            tools:text="Orientation (Vertical/Horizontal)" />
+
+        <com.google.android.material.materialswitch.MaterialSwitch
             android:id="@+id/switch_blinking"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -80,7 +82,9 @@
             app:layout_constraintTop_toBottomOf="@id/switch_blinking"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            tools:visibility="visible"/> <Button
+            tools:visibility="visible"/>
+
+        <Button
             android:id="@+id/button_add_messages"
             style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="0dp"
@@ -91,7 +95,9 @@
             app:layout_constraintTop_toBottomOf="@id/button_adjust_values"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            tools:visibility="visible"/> <Button
+            tools:visibility="visible"/>
+
+        <Button
             android:id="@+id/button_edit_sequence"
             style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="0dp"
@@ -102,7 +108,9 @@
             app:layout_constraintTop_toBottomOf="@id/button_add_messages"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            tools:visibility="visible"/> <com.google.android.material.materialswitch.MaterialSwitch
+            tools:visibility="visible"/>
+
+        <com.google.android.material.materialswitch.MaterialSwitch
             android:id="@+id/switch_show_time_remaining"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -113,7 +121,9 @@
             app:layout_constraintTop_toBottomOf="@id/button_edit_sequence"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            tools:visibility="visible"/> <com.google.android.material.materialswitch.MaterialSwitch
+            tools:visibility="visible"/>
+
+        <com.google.android.material.materialswitch.MaterialSwitch
             android:id="@+id/switch_show_timeline"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -124,7 +134,9 @@
             app:layout_constraintTop_toBottomOf="@id/switch_show_time_remaining"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            tools:visibility="visible"/> <Button
+            tools:visibility="visible"/>
+
+        <Button
             android:id="@+id/button_add_another"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -133,5 +145,6 @@
             app:layout_constraintTop_toBottomOf="@id/switch_show_timeline"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent" /> </androidx.constraintlayout.widget.ConstraintLayout>
+            app:layout_constraintBottom_toBottomOf="parent" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
 </ScrollView>

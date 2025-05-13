@@ -94,7 +94,7 @@
         </activity>
 
         <activity android:name=".screen_shade.ScreenShadeActivity"
-            android:exported="false"
+            android:exported="true"
             android:label="@string/screen_shade_title"
             android:parentActivityName=".MainActivity"
             android:theme="@style/Theme.ThePurramid"

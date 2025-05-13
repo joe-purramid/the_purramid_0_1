@@ -52,7 +52,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:background="@drawable/announcement_background"
+        android:background="@drawable/ic_announcement_background"
         android:elevation="4dp"
         android:padding="12dp"
         android:textAppearance="@style/TextAppearance.MaterialComponents.Headline6"
