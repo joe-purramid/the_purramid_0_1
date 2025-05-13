@@ -85,7 +85,7 @@
             android:name=".randomizers.ui.ListEditorActivity"
             android:exported="false"
             android:label="@string/list_editor"
-            android:parentActivityName=".randomizers.ui.RandomizerSettingsActivity"
+            android:parentActivityName=".randomizers.ui.RandomizerSettingsFragment"
             android:resizeableActivity="true"
             android:windowLayoutInDisplayCutoutMode="shortEdges" >
             <layout android:defaultWidth="700dp"
@@ -139,7 +139,7 @@
                 android:gravity="center" />
         </activity>
 
-        <service android:name=".timers.service.TimersService"
+        <service android:name=".timers.TimersService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
