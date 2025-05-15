@@ -8,12 +8,15 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.purramid.thepurramid.R
+import com.example.purramid.thepurramid.data.db.DEFAULT_EMPTY_JSON_MAP
 import com.example.purramid.thepurramid.data.db.RandomizerDao
 import com.example.purramid.thepurramid.data.db.SpinSettingsEntity
+import com.example.purramid.thepurramid.data.db.DEFAULT_COIN_COLOR_INT // Import default coin color
 import com.example.purramid.thepurramid.randomizers.DiceSumResultType
 import com.example.purramid.thepurramid.randomizers.GraphDistributionType
 import com.example.purramid.thepurramid.randomizers.GraphLineStyle
 import com.example.purramid.thepurramid.randomizers.RandomizerMode
+import com.example.purramid.thepurramid.randomizers.CoinProbabilityMode // Import new Enum
 import com.example.purramid.thepurramid.util.Event
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -61,8 +64,20 @@ class RandomizerSettingsViewModel @Inject constructor(
                     withContext(Dispatchers.Main) { _settings.value = loadedSettings }
                 } else {
                     Log.w(TAG, "No settings found for instance $id. Creating new default settings.")
-                    val defaultSettings = SpinSettingsEntity(instanceId = id) // Create default
-                    randomizerDao.saveSettings(defaultSettings) // Save it
+                    // Ensure all defaults, including new coin flip ones, are set
+                    val defaultSettings = SpinSettingsEntity(
+                        instanceId = id,
+                        mode = RandomizerMode.SPIN, // Default mode for a new instance
+                        coinColor = DEFAULT_COIN_COLOR_INT,
+                        isFlipAnimationEnabled = true,
+                        isCoinFreeFormEnabled = false,
+                        isCoinAnnouncementEnabled = true,
+                        coinProbabilityMode = CoinProbabilityMode.NONE.name,
+                        coinGraphDistributionType = GraphDistributionType.OFF.name,
+                        coinGraphLineStyle = GraphLineStyle.SOLID.name,
+                        coinGraphFlipCount = 1000
+                    )
+                    randomizerDao.saveSettings(defaultSettings)
                     withContext(Dispatchers.Main) {
                         _settings.value = defaultSettings
                         _errorEvent.value = Event(R.string.info_settings_defaulted_kitty)
@@ -82,9 +97,10 @@ class RandomizerSettingsViewModel @Inject constructor(
         val currentSettings = _settings.value
         if (currentSettings == null) {
             Log.e(TAG, "Attempted to update settings but current settings are null.")
-            _errorEvent.postValue(Event(R.string.error_settings_not_loaded_cant_save)) // TODO: Add string
+            _errorEvent.postValue(Event(R.string.error_settings_not_loaded_cant_save))
             return
         }
+        // Apply the update action and then save
         saveSettings(updateAction(currentSettings))
     }
 
@@ -115,38 +131,51 @@ class RandomizerSettingsViewModel @Inject constructor(
     }
 
     fun updateIsDiceCritCelebrationEnabled(enabled: Boolean) {
-        updateSettingsField {
-            val announceIsOn = it.isAnnounceEnabled
-            it.copy(isDiceCritCelebrationEnabled = enabled && announceIsOn)
+        updateSettingsField { settings ->
+            val announceIsOn = settings.isAnnounceEnabled && settings.mode == RandomizerMode.DICE
+            settings.copy(isDiceCritCelebrationEnabled = enabled && announceIsOn)
         }
     }
 
     fun updateIsAnnounceEnabled(enabled: Boolean) {
         updateSettingsField { settings ->
-            if (!enabled) {
-                settings.copy(
-                    isAnnounceEnabled = false,
+            var updatedSettings = settings.copy(isAnnounceEnabled = enabled)
+            if (enabled) { // Turning Announce ON
+                // Mutually exclusive: Turn off Probability and Free Form for Coin Flip
+                if (settings.mode == RandomizerMode.COIN_FLIP) {
+                    updatedSettings = updatedSettings.copy(
+                        coinProbabilityMode = CoinProbabilityMode.NONE.name,
+                        isCoinFreeFormEnabled = false
+                    )
+                }
+                // Mutually exclusive with Graph for Dice
+                if (settings.mode == RandomizerMode.DICE) {
+                    updatedSettings = updatedSettings.copy(graphDistributionType = GraphDistributionType.OFF)
+                }
+                // Mutually exclusive with Sequence for Spin
+                if (settings.mode == RandomizerMode.SPIN) {
+                    updatedSettings = updatedSettings.copy(isSequenceEnabled = false)
+                }
+
+            } else { // Turning Announce OFF
+                // If announce is off, celebration should also be off
+                updatedSettings = updatedSettings.copy(
                     isCelebrateEnabled = false, // General celebration
-                    isDiceCritCelebrationEnabled = false, // Dice crit celebration
-                    // If Sum Results and Modifiers should be RESET when Announce is OFF:
-                    // diceSumResultType = DiceSumResultType.INDIVIDUAL, // Reset to default
-                    // diceModifierConfigJson = DEFAULT_EMPTY_JSON_MAP // Reset modifiers
-                    // For now, we'll just let them retain their values but be disabled by UI
+                    isDiceCritCelebrationEnabled = false // Dice crit celebration
                 )
-            } else { // Turning Announce ON
-                settings.copy(
-                    isAnnounceEnabled = true,
-                    // Force Graph OFF if Announce is turned ON
-                    graphDistributionType = GraphDistributionType.OFF
-                )
+                // For coin flip, if announce is off, coin announcement should also be off
+                if (settings.mode == RandomizerMode.COIN_FLIP) {
+                    updatedSettings = updatedSettings.copy(isCoinAnnouncementEnabled = false)
+                }
             }
+            updatedSettings
         }
     }
 
-    fun updateIsCelebrateEnabled(enabled: Boolean) {
-        updateSettingsField {
-            val announceIsOn = it.isAnnounceEnabled
-            it.copy(isCelebrateEnabled = enabled && announceIsOn)
+    fun updateIsCelebrateEnabled(enabled: Boolean) { // General celebration (for Spin)
+        updateSettingsField { settings ->
+            val announceIsOn = settings.isAnnounceEnabled && settings.mode == RandomizerMode.SPIN
+            settings.copy(isCelebrateEnabled = enabled && announceIsOn)
         }
     }
 
@@ -155,11 +184,11 @@ class RandomizerSettingsViewModel @Inject constructor(
     }
 
     fun updateIsSequenceEnabled(enabled: Boolean) {
-        updateSettingsField {
-            if (enabled) {
-                it.copy(isSequenceEnabled = true, isAnnounceEnabled = false, isCelebrateEnabled = false)
+        updateSettingsField { settings ->
+            if (enabled) { // Turning Sequence ON (for Spin)
+                settings.copy(isSequenceEnabled = true, isAnnounceEnabled = false, isCelebrateEnabled = false)
             } else {
-                it.copy(isSequenceEnabled = false)
+                settings.copy(isSequenceEnabled = false)
             }
         }
     }
@@ -168,7 +197,6 @@ class RandomizerSettingsViewModel @Inject constructor(
         updateSettingsField { it.copy(dicePoolConfigJson = newConfigJson) }
     }
 
-    // *** Function to update dice color config ***
     fun updateDiceColorConfig(newConfigJson: String) {
         updateSettingsField { it.copy(diceColorConfigJson = newConfigJson) }
     }
@@ -179,15 +207,11 @@ class RandomizerSettingsViewModel @Inject constructor(
 
     fun updateGraphDistributionType(newType: GraphDistributionType) {
         updateSettingsField { currentState ->
-            if (newType != GraphDistributionType.OFF) {
+            if (newType != GraphDistributionType.OFF) { // Turning Graph ON (for Dice)
                 currentState.copy(
                     graphDistributionType = newType,
                     isAnnounceEnabled = false,
-                    isCelebrateEnabled = false,
                     isDiceCritCelebrationEnabled = false
-                    // TODO: Decide if diceSumResultType and diceModifierConfigJson should be reset
-                    // diceSumResultType = DiceSumResultType.INDIVIDUAL,
-                    // diceModifierConfigJson = DEFAULT_EMPTY_JSON_MAP
                 )
             } else {
                 currentState.copy(graphDistributionType = GraphDistributionType.OFF)
@@ -195,22 +219,92 @@ class RandomizerSettingsViewModel @Inject constructor(
         }
     }
 
+    // --- Coin Flip Specific Settings Update Functions ---
+    fun updateCoinColor(newColor: Int) {
+        updateSettingsField { it.copy(coinColor = newColor) }
+    }
+
+    fun updateIsFlipAnimationEnabled(enabled: Boolean) {
+        updateSettingsField { it.copy(isFlipAnimationEnabled = enabled) }
+    }
+
+    fun updateIsCoinFreeFormEnabled(enabled: Boolean) {
+        updateSettingsField { settings ->
+            var updatedSettings = settings.copy(isCoinFreeFormEnabled = enabled)
+            if (enabled) { // Turning FreeForm ON
+                // Mutually exclusive: Turn off Announcement and Probability
+                updatedSettings = updatedSettings.copy(
+                    isCoinAnnouncementEnabled = false,
+                    coinProbabilityMode = CoinProbabilityMode.NONE.name
+                )
+            }
+            updatedSettings
+        }
+    }
+
+    fun updateIsCoinAnnouncementEnabled(enabled: Boolean) {
+        updateSettingsField { settings ->
+            var updatedSettings = settings.copy(isCoinAnnouncementEnabled = enabled)
+            if (enabled) { // Turning Coin Announcement ON
+                // Mutually exclusive: Turn off Probability and Free Form
+                updatedSettings = updatedSettings.copy(
+                    coinProbabilityMode = CoinProbabilityMode.NONE.name,
+                    isCoinFreeFormEnabled = false
+                )
+            }
+            updatedSettings
+        }
+    }
+
+    fun updateCoinProbabilityMode(newMode: CoinProbabilityMode) {
+        updateSettingsField { settings ->
+            var updatedSettings = settings.copy(coinProbabilityMode = newMode.name)
+            if (newMode != CoinProbabilityMode.NONE) { // Turning Probability ON (any mode other than None)
+                // Mutually exclusive: Turn off Announcement and Free Form
+                updatedSettings = updatedSettings.copy(
+                    isCoinAnnouncementEnabled = false,
+                    isCoinFreeFormEnabled = false
+                )
+                // If Graph Distribution is NOT selected, reset graph-specific sub-settings
+                if (newMode != CoinProbabilityMode.GRAPH_DISTRIBUTION) {
+                    updatedSettings = updatedSettings.copy(
+                        coinGraphDistributionType = GraphDistributionType.OFF.name,
+                        coinGraphLineStyle = GraphLineStyle.SOLID.name, // Reset to default
+                        coinGraphFlipCount = 1000 // Reset to default
+                    )
+                }
+            }
+            updatedSettings
+        }
+    }
+
+    fun updateCoinGraphDistributionType(newType: GraphDistributionType) {
+        updateSettingsField { it.copy(coinGraphDistributionType = newType.name) }
+    }
+
+    fun updateCoinGraphLineStyle(newStyle: GraphLineStyle) {
+        updateSettingsField { it.copy(coinGraphLineStyle = newStyle.name) }
+    }
+
+    fun updateCoinGraphFlipCount(count: Int) {
+        // Add validation if needed (e.g., count > 0)
+        updateSettingsField { it.copy(coinGraphFlipCount = count) }
+    }
+
     private fun saveSettings(settingsToSave: SpinSettingsEntity) {
-        if (instanceId == null) { // Should have been caught by updateSettingsField
+        if (instanceId == null) {
             Log.e(TAG, "Instance ID is null during saveSettings. This should not happen.")
             _errorEvent.postValue(Event(R.string.error_settings_instance_id_failed))
             return
         }
 
-        // Ensure the instanceId is correctly set on the object being saved.
         val finalSettingsToSave = settingsToSave.copy(instanceId = this.instanceId)
-
         _settings.value = finalSettingsToSave // Update LiveData immediately
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 randomizerDao.saveSettings(finalSettingsToSave)
-                Log.d(TAG, "Settings saved for instance ${finalSettingsToSave.instanceId}")
+                Log.d(TAG, "Settings saved for instance ${finalSettingsToSave.instanceId}: Mode=${finalSettingsToSave.mode}, CoinProb=${finalSettingsToSave.coinProbabilityMode}")
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to save settings for instance ${finalSettingsToSave.instanceId}", e)
                 withContext(Dispatchers.Main) {
@@ -221,6 +315,6 @@ class RandomizerSettingsViewModel @Inject constructor(
     }
 
     fun clearErrorEvent() {
-        _errorEvent.value = Event(0) // Or null if your Event wrapper handles null content
+        _errorEvent.value = Event(0) // Using 0 or a specific "no_error" resource ID
     }
 }

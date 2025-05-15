@@ -9,9 +9,17 @@ import androidx.room.TypeConverters
 import com.example.purramid.thepurramid.data.db.ClockStateEntity
 import com.example.purramid.thepurramid.data.db.CityEntity
 import com.example.purramid.thepurramid.data.db.CityDao
-import com.example.purramid.thepurramid.data.db.SpotlightStateEntity
 import com.example.purramid.thepurramid.data.db.TimeZoneBoundaryEntity
 import com.example.purramid.thepurramid.data.db.TimeZoneDao
+import com.example.purramid.thepurramid.data.db.RandomizerInstanceEntity
+import com.example.purramid.thepurramid.data.db.RandomizerDao
+import com.example.purramid.thepurramid.data.db.SpinItemEntity
+import com.example.purramid.thepurramid.data.db.SpinListEntity
+import com.example.purramid.thepurramid.data.db.SpinSettingsEntity
+import com.example.purramid.thepurramid.data.db.ScreenShadeStateEntity
+import com.example.purramid.thepurramid.data.db.ScreenShadeDao
+import com.example.purramid.thepurramid.data.db.SpotlightStateEntity
+import com.example.purramid.thepurramid.data.db.SpotlightDao
 import com.example.purramid.thepurramid.data.db.TimerStateEntity
 import com.example.purramid.thepurramid.data.db.TimerDao
 import com.example.purramid.thepurramid.data.db.TrafficLightStateEntity
@@ -33,9 +41,10 @@ import com.example.purramid.thepurramid.data.db.TrafficLightStateEntity
         SpinListEntity::class,
         SpinSettingsEntity::class,
         SpotlightStateEntity::class,
+        TimerStateEntity::class,
         TrafficLightStateEntity::class
     ],
-    version = 10, // Updated with Slots randomizer mode
+    version = 11, // Updated with Slots randomizer mode
     exportSchema = false // Set to true if you want to export the schema to a file for version control (recommended for production apps)
 )
 @TypeConverters(Converters::class) // Register the TypeConverters class

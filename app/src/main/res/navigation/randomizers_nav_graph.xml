@@ -20,9 +20,17 @@
         android:name="com.example.purramid.thepurramid.randomizers.ui.RandomizerSettingsFragment"
         android:label="@string/randomizer_settings_title"
         tools:layout="@layout/fragment_randomizer_settings">
+        <argument
+            android:name="instanceId"
+            app:argType="string" />
         <action
             android:id="@+id/action_settings_to_list_editor"
             app:destination="@id/listCreatorFragment"/>
+        <action
+            android:id="@+id/action_randomizerSettingsFragment_to_coinFlipFragment"
+            app:destination="@id/coinFlipFragment"
+            app:popUpTo="@id/coinFlipFragment"
+            app:popUpToInclusive="true"/>
     </fragment>
 
     <fragment
@@ -44,11 +52,9 @@
         tools:layout="@layout/fragment_slots_main">
         <argument
             android:name="instanceId"
-            app:argType="string"
-            app:nullable="true" />
-        <action
-            android:id="@+id/action_slotsMainFragment_to_settingsFragment"
-            app:destination="@id/randomizerSettingsFragment" />
+            app:argType="string" /> <action
+        android:id="@+id/action_slotsMainFragment_to_settingsFragment"
+        app:destination="@id/randomizerSettingsFragment" />
     </fragment>
 
     <fragment
@@ -64,5 +70,17 @@
             app:argType="string" />
     </fragment>
 
+    <fragment
+        android:id="@+id/coinFlipFragment"
+        android:name="com.example.purramid.thepurramid.randomizers.ui.CoinFlipFragment"
+        android:label="@string/randomizer_mode_coin_flip"
+        tools:layout="@layout/fragment_coin_flip">
+        <argument
+            android:name="instanceId"
+            app:argType="string" />
+        <action
+            android:id="@+id/action_coinFlipFragment_to_randomizerSettingsFragment"
+            app:destination="@id/randomizerSettingsFragment" />
+    </fragment>
 
 </navigation>

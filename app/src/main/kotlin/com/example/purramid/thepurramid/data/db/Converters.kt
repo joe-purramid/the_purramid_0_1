@@ -5,10 +5,12 @@ import android.util.Log
 import androidx.room.TypeConverter
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.example.purramid.thepurramid.randomizers.RandomizerMode
+import com.example.purramid.thepurramid.randomizers.SlotsColumnState
 import com.example.purramid.thepurramid.randomizers.DiceSumResultType // Import new Enums
 import com.example.purramid.thepurramid.randomizers.GraphDistributionType
 import com.example.purramid.thepurramid.randomizers.GraphLineStyle
-import com.example.purramid.thepurramid.randomizers.SlotsColumnState
+import com.example.purramid.thepurramid.randomizers.CoinProbabilityMode
 import com.example.purramid.thepurramid.spotlight.SpotlightView
 import com.example.purramid.thepurramid.traffic_light.viewmodel.DbRange // Import if storing DbRange separately
 import com.example.purramid.thepurramid.traffic_light.viewmodel.LightColor
@@ -21,6 +23,8 @@ import java.util.UUID
  * Type converters to allow Room to reference complex data types.
  */
 class Converters {
+
+    private val gson = Gson() // Define Gson instance for use in converters
 
     /**
      * Converts a UUID? to a String? for storing in the database.
@@ -144,6 +148,22 @@ class Converters {
         }
     }
 
+    // Converter for SPIN Enum
+    @TypeConverter
+    fun fromRandomizerMode(value: RandomizerMode?): String? {
+        return value?.name ?: RandomizerMode.SPIN.name // Default if null
+    }
+
+    @TypeConverter
+    fun toRandomizerMode(value: String?): RandomizerMode {
+        return try {
+            value?.let { enumValueOf<RandomizerMode>(it) } ?: RandomizerMode.SPIN
+        } catch (e: IllegalArgumentException) {
+            Log.e("Converters", "Invalid RandomizerMode string: $value", e)
+            RandomizerMode.SPIN // Default on error
+        }
+    }
+
     // Converter for DiceSumResultType Enum
     @TypeConverter
     fun fromDiceSumResultType(value: DiceSumResultType?): String? {
@@ -189,6 +209,22 @@ class Converters {
         } catch (e: IllegalArgumentException) {
             Log.e("Converters", "Invalid GraphLineStyle string: $value", e)
             GraphLineStyle.SOLID // Default on error
+        }
+    }
+
+    // --- Converter for CoinProbabilityMode ---
+    @TypeConverter
+    fun fromCoinProbabilityMode(value: CoinProbabilityMode?): String? {
+        return value?.name ?: CoinProbabilityMode.NONE.name // Default if null
+    }
+
+    @TypeConverter
+    fun toCoinProbabilityMode(value: String?): CoinProbabilityMode {
+        return try {
+            value?.let { enumValueOf<CoinProbabilityMode>(it) } ?: CoinProbabilityMode.NONE
+        } catch (e: IllegalArgumentException) {
+            Log.e("Converters", "Invalid CoinProbabilityMode string: $value", e)
+            CoinProbabilityMode.NONE // Default on error
         }
     }
 

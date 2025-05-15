@@ -3,17 +3,20 @@ package com.example.purramid.thepurramid.data.db
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.example.purramid.thepurramid.randomizers.RandomizerMode
+import com.example.purramid.thepurramid.randomizers.SlotsColumnState
 import com.example.purramid.thepurramid.randomizers.DiceSumResultType
 import com.example.purramid.thepurramid.randomizers.GraphDistributionType
 import com.example.purramid.thepurramid.randomizers.GraphLineStyle
-import com.example.purramid.thepurramid.randomizers.RandomizerMode // Ensure this is imported
-import com.example.purramid.thepurramid.randomizers.SlotsColumnState
+import com.example.purramid.thepurramid.randomizers.CoinProbabilityMode
 import java.util.UUID
 
 // Default dice pool: 1d6
 const val DEFAULT_DICE_POOL_JSON = "{\"6\":1}"
 // Default empty JSON map for colors and modifiers
 const val DEFAULT_EMPTY_JSON_MAP = "{}"
+// Default color for Coin Flip (Goldenrod)
+const val DEFAULT_COIN_COLOR_INT = 0xFFDAA520.toInt()
 
 @Entity(tableName = "spin_settings")
 data class SpinSettingsEntity(
@@ -48,8 +51,13 @@ data class SpinSettingsEntity(
     var graphLineStyle: GraphLineStyle = GraphLineStyle.SOLID, // Default solid
     var graphRollCount: Int = 1000, // Default for Normal/Uniform
 
-    // --- Coin Flip Mode Specific --- (Placeholders)
-    var numCoins: Int = 1,
-
-
-    )
+    // --- Coin Flip Mode Specific ---
+    var coinColor: Int = DEFAULT_COIN_COLOR_INT,
+    var isFlipAnimationEnabled: Boolean = true,
+    var isCoinFreeFormEnabled: Boolean = false,
+    var isCoinAnnouncementEnabled: Boolean = true,
+    var coinProbabilityMode: String = CoinProbabilityMode.NONE.name, // Store enum as string
+    var coinGraphDistributionType: String = GraphDistributionType.OFF.name,
+    var coinGraphLineStyle: String = GraphLineStyle.SOLID.name,
+    var coinGraphFlipCount: Int = 1000,
+)

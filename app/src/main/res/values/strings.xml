@@ -460,13 +460,67 @@
     <string name="pick_color_for_die">Pick Color for %s</string>
     <string name="dice_label_d10_tens" translatable="false">d% (00-90)</string>
     <string name="dice_label_d10_units" translatable="false">d% (0-9)</string>
-    <string name="error_settings_not_loaded_cant_save">Settings not loaded, cannot save changes.</string>
     <string name="die_face_image">Die face image</string>
     <string name="setting_dice_configure_modifiers">Dice Modifiers</string>
     <string name="setting_dice_configure_modifiers_title">Configure Dice Modifiers</string>
 
     <!-- `` RANDOMIZER COIN FLIP MODE `` -->
     <string name="randomizer_mode_coin_flip">Coin Flip Mode</string>
+    <string name="setting_coin_color">Coin Color</string>
+    <string name="setting_coin_flip_animation">Flip Animation</string>
+    <string name="setting_coin_free_form">Free Form</string>
+    <string name="setting_coin_announcement">Coin Result Announcement</string>
+    <string name="setting_coin_probability_display">Probability Display</string>
+    <string name="setting_probability_none">None</string>
+    <string name="setting_probability_two_columns">Two Columns (H/T)</string>
+    <string name="setting_probability_grid_3x3">3×3 Grid</string>
+    <string name="setting_probability_grid_6x6">6×6 Grid</string>
+    <string name="setting_probability_grid_10x10">10×10 Grid</string>
+    <string name="setting_probability_graph_distribution">Graph Distribution</string>
+
+    <string name="flip_coins_action">Flip Coins</string>
+    <string name="tails_action">Tails</string>
+    <string name="heads_action">Heads</string>
+    <string name="reset_grid_action">Reset Grid</string> <string name="coin_image_desc">Image of %1$s coin, showing %2$s</string>
+    <string name="heads">Heads</string>
+    <string name="tails">Tails</string>
+    <string name="coin_image_desc_in_pool">Coin in pool</string>
+    <string name="manage_coin_pool">Manage Pool</string>
+    <string name="coin_pool_dialog_title">Manage Coin Pool</string>
+    <string name="add_coin_type">Add %1$s</string>
+    <string name="remove_coin_type">Remove %1$s</string>
+    <string name="count_prefix">Count: </string>
+    <string name="add_coins_to_pool_empty_state">Add coins to your pool!</string>
+    <string name="coin_flip_announce_format"><xliff:g id="heads_count">%1$d</xliff:g> Heads, <xliff:g id="tails_count">%2$d</xliff:g> Tails</string>
+    <string name="grid_cell_content_desc">Grid cell displaying coin flip result</string>
+    <string name="close_dialog">Close</string> <string name="max_coin_type_reached">Max %1$s reached</string> <string name="label_1_bit" translatable="false">1b</string>
+    <string name="label_5_bits" translatable="false">5b</string>
+    <string name="label_10_bits" translatable="false">10b</string>
+    <string name="label_25_bits" translatable="false">25b</string>
+    <string name="label_1_meatball" translatable="false">1MB</string>
+    <string name="label_2_meatballs" translatable="false">2MB</string>
+
+    <string name="ic_coins_manage_desc">Manage coin pool</string>
+    <string name="desc_flip_animation_on">Coin flip animation is ON</string>
+    <string name="desc_flip_animation_off">Coin flip animation is OFF</string>
+    <string name="desc_free_form_on">Coin free form mode is ON</string>
+    <string name="desc_free_form_off">Coin free form mode is OFF</string>
+    <string name="desc_probability_grid">Coin probability grid display</string>
+    <string name="desc_coin_color_picker">Select coin color</string>
+    <string name="desc_coin_announcement_on">Coin result announcement is ON</string>
+    <string name="desc_coin_announcement_off">Coin result announcement is OFF</string>
+
+    <!-- `` GRAPHING FOR DICE AND COIN FLIP `` -->
+    <string name="graph_distribution_placeholder">Graph will appear here</string>
+    <string name="setting_graph_distribution_type">Graph Distribution Type</string>
+    <string name="setting_graph_line_style">Graph Line Style</string>
+    <string name="setting_graph_flip_count">Number of Flips for Graph</string> <string name="graph_dist_type_off">Off</string>
+    <string name="graph_dist_type_manual">Manual</string>
+    <string name="graph_dist_type_normal">Normal</string>
+    <string name="graph_dist_type_uniform">Uniform</string>
+    <string name="graph_line_style_solid">Solid</string>
+    <string name="graph_line_style_dashed">Dashed</string>
+    <string name="graph_line_style_dotted">Dotted</string>
 
     <!-- `` RANDOMIZER SNACKBARS `` -->
     <string name="max_randomizers_general_reached_snackbar">Maximum of <xliff:g id="count">%1$d</xliff:g> Randomizer windows reached.</string>
@@ -486,6 +540,10 @@
     <string name="list_creator_button_continue_editing">Continue Editing</string>
     <string name="delete_item_title">Delete Item?</string>
     <string name="delete_item_confirmation">Are you sure you want to delete this item starting with \'%1$s\'?</string>
+
+    <string name="error_settings_not_loaded_cant_save">Settings not loaded, cannot save changes.</string>
+    <string name="error_add_coins_to_flip">Add coins to your pool to flip!</string>
+    <string name="error_max_coins_reached">Maximum of %1$d %2$s coins reached.</string> <string name="loading_settings">Loading Settings…</string>
 
 
     <!-- `` SCREEN SHADE APP `` -->
@@ -524,6 +582,7 @@
     <string name="sounds">Stopwatch sounds</string>
 
     <!-- `` TRAFFIC LIGHT APP `` -->
+    <string name="traffic_light_settings_title">Traffic Light Settings</string>
     <string name="setting_mode">Mode</string>
     <string name="setting_mode_manual">Manual Change</string>
     <string name="setting_mode_responsive">Responsive Change (Requires Microphone)</string>
@@ -596,6 +655,6 @@
 
     <string name="contact_information_title">Contact Information</string>
     <string name="company_name"><xliff:g id="tpl" translatable="false">Purramid Learning, Inc.</xliff:g></string>
-
+    <string name="contact_information">Your mailed feedback and requests are welcome at 379&#8211;121 Amherst St., Nashua, NH 03063, USA.</string>
 
 </resources>
