@@ -27,6 +27,7 @@ import com.example.purramid.thepurramid.data.db.TrafficLightStateEntity
         ClockStateEntity::class,
         TimeZoneBoundaryEntity::class,
         CityEntity::class,
+        TimerStateEntity::class,
         RandomizerInstanceEntity::class,
         ScreenShadeStateEntity::class,
         SpinItemEntity::class,
@@ -35,7 +36,7 @@ import com.example.purramid.thepurramid.data.db.TrafficLightStateEntity
         SpotlightStateEntity::class,
         TrafficLightStateEntity::class
     ],
-    version = 10, // Updated with Slots randomizer mode
+    version = 11, // Updated with Slots randomizer mode
     exportSchema = false // Set to true if you want to export the schema to a file for version control (recommended for production apps)
 )
 @TypeConverters(Converters::class) // Register the TypeConverters class
