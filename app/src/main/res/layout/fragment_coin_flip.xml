@@ -60,7 +60,7 @@
             android:layout_width="80dp"
             android:layout_height="80dp"
             android:layout_gravity="center"
-            tools:srcCompat="@drawable/ic_coin_flip_heads"
+            tools:srcCompat="@drawable/coin_flip_heads"
             android:contentDescription="@string/coin_image_desc"
             android:visibility="gone"/>
             </androidx.recyclerview.widget.RecyclerView>

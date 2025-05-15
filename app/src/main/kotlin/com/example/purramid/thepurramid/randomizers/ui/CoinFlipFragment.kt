@@ -130,7 +130,7 @@ class CoinFlipFragment : Fragment() {
         val resId = resources.getIdentifier(resName, "drawable", requireContext().packageName)
         return if (resId != 0) resId else {
             Log.w("CoinFlipFragment", "Drawable not found: $resName. Using generic placeholder.")
-            if (face == CoinFace.HEADS) R.drawable.ic_coin_flip_heads else R.drawable.ic_coin_flip_tails
+            if (face == CoinFace.HEADS) R.drawable.coin_flip_heads else R.drawable.ic_coin_flip_tails
         }
     }
 

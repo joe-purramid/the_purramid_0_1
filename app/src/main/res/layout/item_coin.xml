@@ -6,5 +6,5 @@
     android:layout_height="@dimen/coin_standard_size"
     android:layout_margin="4dp"
     android:scaleType="fitCenter"
-    tools:srcCompat="@drawable/ic_coin_flip_heads"
+    tools:srcCompat="@drawable/coin_flip_heads"
     android:contentDescription="@string/coin_image_desc_in_pool" />

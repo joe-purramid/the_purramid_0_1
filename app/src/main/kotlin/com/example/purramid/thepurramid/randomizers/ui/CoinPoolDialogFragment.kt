@@ -5,12 +5,7 @@ import android.app.Dialog
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
-import android.util.Log
 import android.view.LayoutInflater
-import android.view.View
-import android.widget.EditText
-import android.widget.ImageView
-import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.activityViewModels
@@ -162,12 +157,12 @@ class CoinPoolDialogFragment : DialogFragment() {
     private fun getCoinIconRes(coinType: CoinType): Int {
         // Return the obverse (heads) for the icon
         return when (coinType) {
-            CoinType.BIT_1 -> R.drawable.ic_1b_coin_flip_heads // Replace with actual when available
-            CoinType.BIT_5 -> R.drawable.ic_5b_coin_flip_heads
-            CoinType.BIT_10 -> R.drawable.ic_10b_coin_flip_heads
-            CoinType.BIT_25 -> R.drawable.ic_25b_coin_flip_heads
-            CoinType.MEATBALL_1 -> R.drawable.ic_1mb_coin_flip_heads
-            CoinType.MEATBALL_2 -> R.drawable.ic_2mb_coin_flip_heads
+            CoinType.BIT_1 -> R.drawable.b1_coin_flip_heads // Replace with actual when available
+            CoinType.BIT_5 -> R.drawable.b5_coin_flip_heads
+            CoinType.BIT_10 -> R.drawable.b10_coin_flip_heads
+            CoinType.BIT_25 -> R.drawable.b25_coin_flip_heads
+            CoinType.MEATBALL_1 -> R.drawable.mb1_coin_flip_heads
+            CoinType.MEATBALL_2 -> R.drawable.mb2_coin_flip_heads
         }
     }
 

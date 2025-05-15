@@ -97,7 +97,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/randomizer_mode_coin_flip"
-                app:icon="@drawable/ic_coin_flip"
+                app:icon="@drawable/coin_flip"
                 app:iconGravity="textStart" />
         </com.google.android.material.button.MaterialButtonToggleGroup>
 

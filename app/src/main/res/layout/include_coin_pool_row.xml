@@ -13,7 +13,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
-        tools:srcCompat="@drawable/ic_coin_flip_heads"
+        tools:srcCompat="@drawable/coin_flip_heads"
         android:contentDescription="@string/coin_image_desc"/>
 
     <TextView
