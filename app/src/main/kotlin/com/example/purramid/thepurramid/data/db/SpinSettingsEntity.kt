@@ -31,11 +31,11 @@ data class SpinSettingsEntity(
 
     // --- Spin Specific ---
     var isSpinEnabled: Boolean = true,
-    var isSequenceEnabled: Boolean = false
+    var isSequenceEnabled: Boolean = false,
 
     // --- Slots Specific ---
     var numSlotsColumns: Int = 3, // Default to 3 columns
-    var slotsColumnStates: List<SlotsColumnState> = emptyList() // List to hold state for each column
+    var slotsColumnStates: List<SlotsColumnState> = emptyList(), // List to hold state for each column
 
     // --- Dice Specific ---
     // Configs stored as JSON strings, handled by TypeConverters

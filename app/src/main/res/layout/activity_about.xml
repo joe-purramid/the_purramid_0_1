@@ -196,7 +196,7 @@
             android:id="@+id/contact_information_text"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/contact_information" 
+            android:text="@string/contact_information_text"
             android:textAppearance="?android:textAppearanceSmall" />
 
     </LinearLayout>

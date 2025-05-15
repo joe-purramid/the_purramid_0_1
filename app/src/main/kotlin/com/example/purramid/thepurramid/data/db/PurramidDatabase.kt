@@ -35,6 +35,7 @@ import com.example.purramid.thepurramid.data.db.TrafficLightStateEntity
         ClockStateEntity::class,
         TimeZoneBoundaryEntity::class,
         CityEntity::class,
+        TimerStateEntity::class,
         RandomizerInstanceEntity::class,
         ScreenShadeStateEntity::class,
         SpinItemEntity::class,

@@ -41,6 +41,7 @@
     <string name="color_violet_accessible">Make your clock background violet</string>
     <string name="save">Save</string>
     <string name="close">Close</string>
+    <string name="back">Back</string>
     <string name="cancel">Cancel</string>
     <string name="delete">Delete</string>
 
@@ -381,9 +382,11 @@
     <string name="setting_spin_animation">Spin Animation</string>
     <string name="setting_announce">Announce Result</string>
     <string name="add_new_list">Add New List</string>
+    <string name="list_title_hint">List Title</string>
     <string name="delete_list">Delete List</string>
     <string name="delete_list_title">Delete List?</string>
     <string name="delete_list_confirmation">Are you sure you want to delete \'%1$s\'? This cannot be undone.</string>
+    <string name="add_item">Add New Item</string>
     <string name="add_another_randomizer">Add another Randomizer</string>
 
     <!-- `` RANDOMIZER SPIN MODE `` -->
@@ -460,7 +463,9 @@
     <string name="pick_color_for_die">Pick Color for %s</string>
     <string name="dice_label_d10_tens" translatable="false">d% (00-90)</string>
     <string name="dice_label_d10_units" translatable="false">d% (0-9)</string>
+    <string name="error_settings_not_loaded_cant_save">Settings not loaded, cannot save changes.</string>
     <string name="die_face_image">Die face image</string>
+    <string name="setting_dice_sum_results_label">Rolled sum</string>
     <string name="setting_dice_configure_modifiers">Dice Modifiers</string>
     <string name="setting_dice_configure_modifiers_title">Configure Dice Modifiers</string>
 
@@ -655,6 +660,6 @@
 
     <string name="contact_information_title">Contact Information</string>
     <string name="company_name"><xliff:g id="tpl" translatable="false">Purramid Learning, Inc.</xliff:g></string>
-    <string name="contact_information">Your mailed feedback and requests are welcome at 379&#8211;121 Amherst St., Nashua, NH 03063, USA.</string>
+    <string name="contact_information_text">Your mailed feedback and requests are welcome at <xliff:g id="tpl" translatable="false">379&#8211;121 Amherst St., Nashua, NH 03063, USA.</xliff:g></string>
 
 </resources>

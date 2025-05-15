@@ -17,7 +17,7 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
             android:layout_marginBottom="16dp"
-            android:text="@string/dice_pool_title" android:textAppearance="@style/TextAppearance.MaterialComponents.Headline6" />
+            android:text="@string/dice_pool" android:textAppearance="@style/TextAppearance.MaterialComponents.Headline6" />
 
         <include
             android:id="@+id/dice_row_d4"
