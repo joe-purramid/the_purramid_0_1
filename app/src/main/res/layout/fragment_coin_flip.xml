@@ -44,26 +44,34 @@
         android:layout_marginEnd="16dp"/>
 
     <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/coinDisplayArea"
+        android:id="@+id/coinDisplayAreaRecyclerView"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_marginTop="16dp"
         android:layout_marginBottom="16dp"
-        android:background="@android:color/darker_gray"
+        android:orientation="horizontal"
+        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+        tools:listitem="@layout/item_coin"
+        tools:itemCount="5"
         app:layout_constraintTop_toBottomOf="@id/coinFlipCloseButton"
         app:layout_constraintBottom_toTopOf="@id/coinFlipActionButton"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
-
-        <ImageView
-            android:id="@+id/sampleCoinImageView"
-            android:layout_width="80dp"
-            android:layout_height="80dp"
-            android:layout_gravity="center"
-            tools:srcCompat="@drawable/coin_flip_heads"
-            android:contentDescription="@string/coin_image_desc"
-            android:visibility="gone"/>
-            </androidx.recyclerview.widget.RecyclerView>
+        app:layout_constraintEnd_toEndOf="parent"
+        android:clipToPadding="false"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:visibility="visible"/>
+    <FrameLayout
+        android:id="@+id/freeFormDisplayContainer"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="@color/free_form_background"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="@id/coinDisplayAreaRecyclerView"
+        app:layout_constraintBottom_toBottomOf="@id/coinDisplayAreaRecyclerView"
+        app:layout_constraintStart_toStartOf="@id/coinDisplayAreaRecyclerView"
+        app:layout_constraintEnd_toEndOf="@id/coinDisplayAreaRecyclerView">
+    </FrameLayout>
 
     <LinearLayout
         android:id="@+id/probabilityTwoColumnLayout"
@@ -72,10 +80,10 @@
         android:orientation="horizontal"
         android:visibility="gone"
         tools:visibility="gone"
-        app:layout_constraintTop_toTopOf="@id/coinDisplayArea"
-        app:layout_constraintBottom_toBottomOf="@id/coinDisplayArea"
-        app:layout_constraintStart_toStartOf="@id/coinDisplayArea"
-        app:layout_constraintEnd_toEndOf="@id/coinDisplayArea"
+        app:layout_constraintTop_toTopOf="@id/coinDisplayAreaRecyclerView"
+        app:layout_constraintBottom_toBottomOf="@id/coinDisplayAreaRecyclerView"
+        app:layout_constraintStart_toStartOf="@id/coinDisplayAreaRecyclerView"
+        app:layout_constraintEnd_toEndOf="@id/coinDisplayAreaRecyclerView"
         android:padding="8dp">
 
         <LinearLayout
@@ -130,10 +138,10 @@
         android:layout_height="0dp"
         android:visibility="gone"
         tools:visibility="gone"
-        app:layout_constraintTop_toTopOf="@id/coinDisplayArea"
-        app:layout_constraintBottom_toBottomOf="@id/coinDisplayArea"
-        app:layout_constraintStart_toStartOf="@id/coinDisplayArea"
-        app:layout_constraintEnd_toEndOf="@id/coinDisplayArea"
+        app:layout_constraintTop_toTopOf="@id/coinDisplayAreaRecyclerView"
+        app:layout_constraintBottom_toBottomOf="@id/coinDisplayAreaRecyclerView"
+        app:layout_constraintStart_toStartOf="@id/coinDisplayAreaRecyclerView"
+        app:layout_constraintEnd_toEndOf="@id/coinDisplayAreaRecyclerView"
         android:layout_margin="8dp"
         tools:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
         tools:spanCount="3"
@@ -145,10 +153,10 @@
         android:layout_height="0dp"
         android:visibility="gone"
         tools:visibility="gone"
-        app:layout_constraintTop_toTopOf="@id/coinDisplayArea"
-        app:layout_constraintBottom_toBottomOf="@id/coinDisplayArea"
-        app:layout_constraintStart_toStartOf="@id/coinDisplayArea"
-        app:layout_constraintEnd_toEndOf="@id/coinDisplayArea">
+        app:layout_constraintTop_toTopOf="@id/coinDisplayAreaRecyclerView"
+        app:layout_constraintBottom_toBottomOf="@id/coinDisplayAreaRecyclerView"
+        app:layout_constraintStart_toStartOf="@id/coinDisplayAreaRecyclerView"
+        app:layout_constraintEnd_toEndOf="@id/coinDisplayAreaRecyclerView">
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -176,10 +184,10 @@
         android:gravity="center"
         android:textAppearance="@style/TextAppearance.MaterialComponents.Headline5"
         android:visibility="gone"
-        app:layout_constraintTop_toTopOf="@id/coinDisplayArea"
-        app:layout_constraintBottom_toBottomOf="@id/coinDisplayArea"
-        app:layout_constraintStart_toStartOf="@id/coinDisplayArea"
-        app:layout_constraintEnd_toEndOf="@id/coinDisplayArea"
+        app:layout_constraintTop_toTopOf="@id/coinDisplayAreaRecyclerView"
+        app:layout_constraintBottom_toBottomOf="@id/coinDisplayAreaRecyclerView"
+        app:layout_constraintStart_toStartOf="@id/coinDisplayAreaRecyclerView"
+        app:layout_constraintEnd_toEndOf="@id/coinDisplayAreaRecyclerView"
         tools:text="3 Heads, 2 Tails"
         tools:visibility="visible"/>
 

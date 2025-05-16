@@ -1,7 +1,9 @@
 // CoinFlipFragment.kt
 package com.example.purramid.thepurramid.randomizers.ui
 
-import android.animation.ObjectAnimator // Keep if used for other animations
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
+import android.animation.ObjectAnimator
 import android.annotation.SuppressLint
 import android.content.ClipData
 import android.content.ClipDescription
@@ -12,11 +14,11 @@ import android.os.Bundle
 import android.util.Log
 import android.view.DragEvent
 import android.view.LayoutInflater
+import android.view.MotionEvent // Needed for MotionEvent.ACTION_DOWN
 import android.view.View
 import android.view.ViewGroup
 import android.view.animation.AccelerateDecelerateInterpolator
-// Removed Button import as it might not be directly used from here now
-import android.widget.FrameLayout
+import android.widget.FrameLayout // Keep for Free Form container
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.content.ContextCompat
@@ -28,7 +30,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.GridLayoutManager
-import androidx.recyclerview.widget.LinearLayoutManager // Added for RecyclerView
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.purramid.thepurramid.R
 import com.example.purramid.thepurramid.databinding.FragmentCoinFlipBinding
@@ -43,6 +45,7 @@ import com.example.purramid.thepurramid.randomizers.viewmodel.ProbabilityGridCel
 import com.example.purramid.thepurramid.randomizers.viewmodel.RandomizerSettingsViewModel
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
+import kotlin.math.abs // For drag slop
 import kotlinx.coroutines.launch
 import java.util.UUID
 
@@ -56,9 +59,18 @@ class CoinFlipFragment : Fragment() {
     private val settingsViewModel: RandomizerSettingsViewModel by activityViewModels()
 
     private lateinit var probabilityGridAdapter: ProbabilityGridAdapter
-    private lateinit var coinAdapter: CoinAdapter // Added adapter for coin pool
+    private lateinit var coinAdapter: CoinAdapter
 
-    private val coinViewMapForFreeForm = mutableMapOf<UUID, ImageView>() // Renamed for clarity
+    // Map to store dynamically created ImageViews for free-form mode
+    private val freeFormCoinViews = mutableMapOf<UUID, ImageView>()
+
+    // Variables for simple touch-based dragging (alternative to Android's Drag and Drop framework for this specific case)
+    private var activeDraggedCoinView: ImageView? = null
+    private var dragInitialX: Float = 0f
+    private var dragInitialY: Float = 0f
+    private var dragInitialCoinX: Float = 0f
+    private var dragInitialCoinY: Float = 0f
+    private var isDraggingCoin = false
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -68,13 +80,17 @@ class CoinFlipFragment : Fragment() {
         return binding.root
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        setupCoinAdapter() // Setup coin adapter early
+        setupCoinAdapter()
         setupUIListeners()
         setupProbabilityGridRecyclerView()
         observeViewModel()
         coinFlipViewModel.refreshSettings()
+
+        // Set touch listener for free-form dragging on its dedicated container
+        binding.freeFormDisplayContainer.setOnTouchListener(freeFormTouchListener)
     }
 
     private fun setupCoinAdapter() {
@@ -84,10 +100,11 @@ class CoinFlipFragment : Fragment() {
             animateFlips = initialSettings?.isFlipAnimationEnabled ?: true,
             getCoinDrawableResFunction = ::getCoinDrawableResource // Pass function reference
         )
-        binding.coinDisplayAreaRecyclerView.apply { // Changed ID
+        binding.coinDisplayAreaRecyclerView.apply {
             adapter = coinAdapter
             layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
-            // Add item decoration for spacing if desired
+            // Optional: Add ItemDecoration for spacing
+            // addItemDecoration(HorizontalSpaceItemDecoration(resources.getDimensionPixelSize(R.dimen.small_padding)))
         }
     }
 
@@ -109,41 +126,68 @@ class CoinFlipFragment : Fragment() {
                 CoinPoolDialogFragment.newInstance(it).show(parentFragmentManager, CoinPoolDialogFragment.TAG)
             }
         }
-        // Drag listener for Free Form needs to be on a FrameLayout, not RecyclerView.
-        // We'll handle this when Free Form is active by potentially overlaying a FrameLayout or using a different container.
-        // For now, coinDisplayAreaRecyclerView is for standard mode.
-        // binding.coinDisplayAreaRecyclerView.setOnDragListener(coinDragListener) // Remove if coinDisplayArea is now RecyclerView for standard mode
+        // The drag listener should be on the container FOR free form mode.
+        // For now, let's assume `binding.coinDisplayAreaFrame` is that container if you add it.
+        // binding.coinDisplayAreaFrame.setOnDragListener(coinDragListener)
     }
 
-    private fun getCoinDrawableResource(type: CoinType, face: CoinFace): Int {
-        // Copied from previous version, ensure R.drawable names match your actual files
-        val baseName = when (type) {
-            CoinType.BIT_1 -> "ic_1b_coin_flip"
-            CoinType.BIT_5 -> "ic_5b_coin_flip"
-            CoinType.BIT_10 -> "ic_10b_coin_flip"
-            CoinType.BIT_25 -> "ic_25b_coin_flip"
-            CoinType.MEATBALL_1 -> "ic_1mb_coin_flip"
-            CoinType.MEATBALL_2 -> "ic_2mb_coin_flip"
-        }
-        val faceName = if (face == CoinFace.HEADS) "_heads" else "_tails"
-        val resName = baseName + faceName
-        val resId = resources.getIdentifier(resName, "drawable", requireContext().packageName)
-        return if (resId != 0) resId else {
-            Log.w("CoinFlipFragment", "Drawable not found: $resName. Using generic placeholder.")
-            if (face == CoinFace.HEADS) R.drawable.coin_flip_heads else R.drawable.ic_coin_flip_tails
+    private fun handleActionButtonClick() {
+        val uiState = coinFlipViewModel.uiState.value
+        val settings = uiState.settings ?: return
+        val currentProbMode = CoinProbabilityMode.valueOf(settings.coinProbabilityMode)
+
+        if (settings.isCoinFreeFormEnabled) {
+            coinFlipViewModel.toggleFreeFormCoinFaces()
+        } else if (uiState.isProbabilityGridFull &&
+            (currentProbMode == CoinProbabilityMode.GRID_3X3 ||
+                    currentProbMode == CoinProbabilityMode.GRID_6X6 ||
+                    currentProbMode == CoinProbabilityMode.GRID_10X10)) {
+            coinFlipViewModel.resetProbabilityGrid()
+        } else {
+            coinFlipViewModel.flipCoins() // This will update uiState, triggering animation via observer
         }
     }
 
+    private fun setupProbabilityGridRecyclerView() {
+        probabilityGridAdapter = ProbabilityGridAdapter { cell ->
+            if (!cell.isFilled) {
+                coinFlipViewModel.handleGridCellTap(cell.rowIndex, cell.colIndex)
+            }
+        }
+        binding.probabilityGridLayout.adapter = probabilityGridAdapter
+    }
+
+    private fun observeViewModel() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                launch {
+                    coinFlipViewModel.uiState.collect { state ->
+                        updateUi(state)
+                    }
+                }
+                launch {
+                    settingsViewModel.settings.collect { hostSettings ->
+                        if (hostSettings?.mode == RandomizerMode.COIN_FLIP &&
+                            hostSettings.instanceId == coinFlipViewModel.uiState.value.settings?.instanceId) {
+                            coinFlipViewModel.refreshSettings()
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     private fun updateUi(state: CoinFlipUiState) {
         val settings = state.settings
         if (settings == null) {
             binding.coinFlipActionButton.isEnabled = false
             binding.coinFlipTitleTextView.text = getString(R.string.loading_settings)
+            binding.coinDisplayAreaRecyclerView.visibility = View.GONE
+            binding.freeFormDisplayContainer.visibility = View.GONE
             return
         }
         binding.coinFlipActionButton.isEnabled = !state.isFlipping && state.coinPool.isNotEmpty()
-        binding.coinFlipTitleTextView.text = getString(R.string.randomizer_mode_coin_flip)
+        // binding.coinFlipTitleTextView.text = getString(R.string.randomizer_mode_coin_flip)
 
         val currentProbMode = CoinProbabilityMode.valueOf(settings.coinProbabilityMode)
         when {
@@ -154,36 +198,33 @@ class CoinFlipFragment : Fragment() {
             else -> binding.coinFlipActionButton.setText(R.string.flip_coins_action)
         }
 
-        // Update adapter properties if settings changed
         coinAdapter.updateCoinAppearanceProperties(settings.coinColor, settings.isFlipAnimationEnabled)
 
+        // Toggle visibility between RecyclerView (standard) and a dedicated FrameLayout (free-form)
+        // You'll need to add a FrameLayout to your fragment_coin_flip.xml, e.g., android:id="@+id/freeFormDisplayContainer"
         if (settings.isCoinFreeFormEnabled) {
-            binding.coinDisplayAreaRecyclerView.visibility = View.GONE // Hide RecyclerView
-            // TODO: Setup a FrameLayout for free form coin views here, make it visible
-            // binding.freeFormCoinContainer.visibility = View.VISIBLE
-            // updateFreeFormCoinViews(state.coinPool, settings.coinColor)
-            Log.d("CoinFlipFragment", "Free Form Mode Active - RecyclerView hidden")
-            // Temporarily clear free form map to avoid conflicts
-            clearFreeFormCoinViews()
-            // For now, if free form is on, we'll just hide the recycler and clear the map
-            // The actual free form views need a separate container to be dragged upon.
-
+            binding.coinDisplayAreaRecyclerView.visibility = View.GONE
+            binding.freeFormDisplayContainer.visibility = View.VISIBLE // Make sure this ID exists in XML
+            // binding.freeFormDisplayContainer.setOnDragListener(coinDragListener) // Set listener here
+            updateFreeFormCoinViews(state.coinPool, settings.coinColor)
         } else {
             binding.coinDisplayAreaRecyclerView.visibility = View.VISIBLE
-            // TODO: Hide freeFormCoinContainer if you add one
-            // binding.freeFormCoinContainer.visibility = View.GONE
-            coinAdapter.submitList(state.coinPool)
-            Log.d("CoinFlipFragment", "Standard Mode Active - Pool submitted to RecyclerView: ${state.coinPool.size} items")
-            clearFreeFormCoinViews() // Ensure free form views are cleared when not in free form mode
+            binding.freeFormDisplayContainer.visibility = View.GONE // Make sure this ID exists in XML
+            // binding.freeFormDisplayContainer.setOnDragListener(null) // Clear listener
 
-            if (state.isFlipping && settings.isFlipAnimationEnabled) {
-                state.coinPool.forEach { coinWithResult ->
-                    coinAdapter.triggerFlipAnimationForItem(coinWithResult.id, coinWithResult.currentFace)
+            coinAdapter.submitList(state.coinPool.toList()) // Submit a new list for DiffUtil
+                if (state.lastFlipResult != null && !state.isFlipping && settings.isFlipAnimationEnabled) {
+                    state.coinPool.forEach { coinWithNewFace ->
+                        coinAdapter.updateItemAndAnimate(coinWithNewFace.id, coinWithNewFace.currentFace)
                 }
+            // } else if (!state.isFlipping) {
+                // If not flipping and not animating, ensure the adapter has the correct static data.
+                // This case is mostly covered by submitList, but an explicit re-bind might be needed if only color changed.
+            //    coinAdapter.notifyDataSetChanged() // Or more specific notifyItemRangeChanged if only properties changed
             }
         }
+        clearFreeFormCoinViews()
 
-        // Visibility of Probability Sections
         binding.probabilityTwoColumnLayout.isVisible = currentProbMode == CoinProbabilityMode.TWO_COLUMNS && !settings.isCoinFreeFormEnabled && !settings.isCoinAnnouncementEnabled
         val isGridModeActive = (currentProbMode == CoinProbabilityMode.GRID_3X3 || currentProbMode == CoinProbabilityMode.GRID_6X6 || currentProbMode == CoinProbabilityMode.GRID_10X10)
         binding.probabilityGridLayout.isVisible = isGridModeActive && !settings.isCoinFreeFormEnabled && !settings.isCoinAnnouncementEnabled
@@ -196,7 +237,6 @@ class CoinFlipFragment : Fragment() {
             probabilityGridAdapter.submitList(state.probabilityGrid)
         }
 
-        // Announcement Text
         val announcementShouldBeVisible = settings.isCoinAnnouncementEnabled && state.lastFlipResult != null && !state.isFlipping && !settings.isCoinFreeFormEnabled && currentProbMode == CoinProbabilityMode.NONE
         if (announcementShouldBeVisible) {
             binding.coinFlipAnnouncementTextView.text = getString(R.string.coin_flip_announce_format, state.lastFlipResult!!.totalHeads, state.lastFlipResult.totalTails)
@@ -210,122 +250,133 @@ class CoinFlipFragment : Fragment() {
         }
     }
 
-
-    // Free form specific logic (will need a separate container than the RecyclerView)
-    // For now, these will target a conceptual 'binding.freeFormCoinContainer' which you'd add to XML.
-    // Ensure coinDisplayAreaRecyclerView is GONE when free form is active.
-    private fun getFreeFormContainer(): FrameLayout {
-        // This is a placeholder. You'd ideally have a dedicated FrameLayout in your XML
-        // that overlays or replaces the RecyclerView area for free form mode.
-        // For this example, we'll attempt to use coinDisplayAreaRecyclerView's parent if it's a FrameLayout,
-        // or throw an error. This is NOT ideal for production.
-        if (binding.coinDisplayAreaRecyclerView.parent is FrameLayout) {
-            return binding.coinDisplayAreaRecyclerView.parent as FrameLayout
+    private fun getCoinDrawableResource(type: CoinType, face: CoinFace): Int {
+        val baseName = when (type) {
+            CoinType.BIT_1 -> "b1_coin_flip" // Updated as per your convention
+            CoinType.BIT_5 -> "b5_coin_flip"
+            CoinType.BIT_10 -> "b10_coin_flip"
+            CoinType.BIT_25 -> "b25_coin_flip"
+            CoinType.MEATBALL_1 -> "mb1_coin_flip"
+            CoinType.MEATBALL_2 -> "mb2_coin_flip"
         }
-        // A better approach:
-        // return binding.freeFormCoinContainer // where freeFormCoinContainer is a FrameLayout in your XML
-        Log.e("CoinFlipFragment", "Free form requires a dedicated FrameLayout container not yet implemented. Using RecyclerView parent as fallback (not recommended).")
-        return binding.coinDisplayAreaRecyclerView.parent as FrameLayout // Risky fallback
+        val faceName = if (face == CoinFace.HEADS) "_heads" else "_tails"
+        val resName = baseName + faceName
+        val currentContext = context ?: return R.drawable.ic_coin_flip_heads // Should not happen in fragment
+        val resId = resources.getIdentifier(resName, "drawable", requireContext().packageName)
+        return if (resId != 0) resId else {
+            Log.w("CoinFlipFragment", "Drawable not found: $resName. Using generic placeholder.")
+            // Fallback to generic placeholder from your assets (if you have them)
+            // For now, using the ones you provided earlier as example fallbacks
+            if (face == CoinFace.HEADS) R.drawable.ic_coin_flip_heads else R.drawable.ic_coin_flip_tails
+        }
     }
 
-
     private fun updateFreeFormCoinViews(pool: List<CoinInPool>, colorInt: Int) {
-        val container = getFreeFormContainer() // Get the correct container for free form
-        if (container == binding.coinDisplayAreaRecyclerView && binding.coinDisplayAreaRecyclerView.isVisible) {
-            Log.e("CoinFlipFragment", "Attempting to use RecyclerView for FreeForm. This should be a FrameLayout.")
-            return // Avoid drawing on RecyclerView
-        }
+        val container = binding.freeFormDisplayContainer
+        val currentCoinIdsInPool = pool.map { it.id }.toSet()
 
-        val currentCoinIds = pool.map { it.id }.toSet()
-
-        // Remove views for coins no longer in the pool or if container is wrong
-        val viewsToRemove = coinViewMapForFreeForm.filterKeys { it !in currentCoinIds }
+        // Remove views for coins no longer in the pool
+        val viewsToRemove = freeFormCoinViews.filterKeys { it !in currentCoinIdsInPool }
         viewsToRemove.forEach { (id, view) ->
-            (view.parent as? ViewGroup)?.removeView(view) // Remove from its actual parent
-            coinViewMapForFreeForm.remove(id)
+            container.removeView(view)
+            freeFormCoinViews.remove(id)
         }
 
-        // Add/Update views for coins in the pool
-        pool.forEach { coin ->
-            val coinView = coinViewMapForFreeForm.getOrPut(coin.id) {
+        pool.forEachIndexed { index, coin ->
+            val coinView = freeFormCoinViews.getOrPut(coin.id) {
                 ImageView(requireContext()).apply {
-                    val sizePx = requireContext().resources.getDimensionPixelSize(R.dimen.coin_freeform_size)
+                    val sizePx = resources.getDimensionPixelSize(R.dimen.coin_freeform_size)
                     layoutParams = FrameLayout.LayoutParams(sizePx, sizePx)
                     contentDescription = getString(R.string.coin_image_desc, coin.type.label, coin.currentFace.name.lowercase())
-                    setOnLongClickListener { v ->
-                        val item = ClipData.Item(coin.id.toString() as CharSequence)
-                        val mimeTypes = arrayOf(ClipDescription.MIMETYPE_TEXT_PLAIN)
-                        val dragData = ClipData(coin.id.toString(), mimeTypes, item)
-                        val shadowBuilder = View.DragShadowBuilder(v)
-                        v.startDragAndDrop(dragData, shadowBuilder, v, 0)
-                        true
-                    }
-                    container.addView(this) // Add to the correct container
+                    // Touch listener for individual coin dragging is now handled by the container's listener
+                    container.addView(this)
                 }
             }
             coinView.setImageResource(getCoinDrawableResource(coin.type, coin.currentFace))
-            applyCoinTint(coinView, colorInt)
-            coinView.x = coin.xPos
-            coinView.y = coin.yPos
+            applyCoinTint(coinView, colorInt, settingsViewModel.settings.value?.coinColor)
+            coinView.tag = coin.id // Store coin ID in tag for easy retrieval in touch listener
+
+            // Initial positioning or update position if already set
+            if (coin.xPos == 0f && coin.yPos == 0f && !isDraggingCoin) { // Only set initial if not already positioned and not dragging
+                // Simple staggered initial position
+                coinView.x = (index % 4) * (resources.getDimensionPixelSize(R.dimen.coin_freeform_size) + 10f)
+                coinView.y = (index / 4) * (resources.getDimensionPixelSize(R.dimen.coin_freeform_size) + 10f)
+                coinFlipViewModel.updateCoinPositionInFreeForm(coin.id, coinView.x, coinView.y) // Save initial position
+            } else {
+                coinView.x = coin.xPos
+                coinView.y = coin.yPos
+            }
             coinView.visibility = View.VISIBLE
         }
     }
 
-    private fun clearFreeFormCoinViews() {
-        val container = getFreeFormContainer()
-        coinViewMapForFreeForm.forEach { (_, view) -> container.removeView(view) }
-        coinViewMapForFreeForm.clear()
+    private fun clearFreeFormCoinViewsMemory() {
+        binding.freeFormDisplayContainer.removeAllViews() // Assuming this ID exists
+        freeFormCoinViews.clear()
     }
 
-
-    @SuppressLint("NewApi")
-    private val coinDragListener = View.OnDragListener { v, event ->
-        val draggedView = event.localState as? ImageView ?: return@OnDragListener false
-        // val owner = draggedView.parent as? ViewGroup // Not always reliable if view is re-parented
+    @SuppressLint("ClickableViewAccessibility")
+    private val freeFormTouchListener = View.OnTouchListener { view, event ->
+        // This listener is on freeFormDisplayContainer
+        val container = view as FrameLayout
+        val x = event.x
+        val y = event.y
 
         when (event.action) {
-            DragEvent.ACTION_DRAG_STARTED -> {
-                draggedView.visibility = View.INVISIBLE
-                true
-            }
-            DragEvent.ACTION_DROP -> {
-                val container = v as FrameLayout // This is the coinDisplayArea (or freeFormCoinContainer)
-                val x = event.x - (draggedView.width / 2)
-                val y = event.y - (draggedView.height / 2)
+            MotionEvent.ACTION_DOWN -> {
+                var touchedCoinView: ImageView? = null
+                var touchedCoinId: UUID? = null
 
-                val coinIdString = event.clipDescription?.label?.toString()
-                if (coinIdString != null) {
-                    try {
-                        val coinId = UUID.fromString(coinIdString)
-                        val newX = x.coerceIn(0f, (container.width - draggedView.width).toFloat())
-                        val newY = y.coerceIn(0f, (container.height - draggedView.height).toFloat())
-
-                        // Update ViewModel first
-                        coinFlipViewModel.updateCoinPositionInFreeForm(coinId, newX, newY)
-                        // The UI should update via the observer, but for immediate feedback:
-                        draggedView.x = newX
-                        draggedView.y = newY
-
-                    } catch (e: IllegalArgumentException) {
-                        Log.e("CoinFlipFragment", "Invalid UUID from drag event: $coinIdString")
+                // Check if touch is on an existing coin
+                for ((id, iv) in freeFormCoinViews) {
+                    if (x >= iv.x && x <= iv.x + iv.width && y >= iv.y && y <= iv.y + iv.height) {
+                        touchedCoinView = iv
+                        touchedCoinId = id
+                        break
                     }
                 }
-                draggedView.visibility = View.VISIBLE
-                true
-            }
-            DragEvent.ACTION_DRAG_ENDED -> {
-                if (!event.result) { // Dropped outside a valid target
-                    draggedView.visibility = View.VISIBLE
+
+                if (touchedCoinView != null && touchedCoinId != null) {
+                    activeDraggedCoinView = touchedCoinView
+                    isDraggingCoin = true
+                    dragInitialX = x
+                    dragInitialY = y
+                    dragInitialCoinX = touchedCoinView.x
+                    dragInitialCoinY = touchedCoinView.y
+                    touchedCoinView.bringToFront() // Bring dragged coin to front
+                    return@OnTouchListener true // Consumed
                 }
-                true
+                return@OnTouchListener false // Did not touch a coin, let other listeners handle (if any)
             }
-            else -> true // Consume other drag events like ENTERED, EXITED, LOCATION
+            MotionEvent.ACTION_MOVE -> {
+                if (isDraggingCoin && activeDraggedCoinView != null) {
+                    val newX = dragInitialCoinX + (x - dragInitialX)
+                    val newY = dragInitialCoinY + (y - dragInitialY)
+
+                    activeDraggedCoinView!!.x = newX.coerceIn(0f, (container.width - activeDraggedCoinView!!.width).toFloat())
+                    activeDraggedCoinView!!.y = newY.coerceIn(0f, (container.height - activeDraggedCoinView!!.height).toFloat())
+                    return@OnTouchListener true // Consumed
+                }
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                if (isDraggingCoin && activeDraggedCoinView != null) {
+                    val finalX = activeDraggedCoinView!!.x
+                    val finalY = activeDraggedCoinView!!.y
+                    (activeDraggedCoinView!!.tag as? UUID)?.let { coinId ->
+                        coinFlipViewModel.updateCoinPositionInFreeForm(coinId, finalX, finalY)
+                    }
+                }
+                activeDraggedCoinView = null
+                isDraggingCoin = false
+                return@OnTouchListener true // Consumed if dragging was active
+            }
         }
+        false
     }
 
-    private fun applyCoinTint(imageView: ImageView, colorInt: Int?) {
-        val actualColor = colorInt ?: coinFlipViewModel.uiState.value.settings?.coinColor ?: ContextCompat.getColor(requireContext(), R.color.goldenrod)
-        if (actualColor != Color.TRANSPARENT) { // Avoid tinting if color is meant to be transparent (use default)
+    private fun applyCoinTint(imageView: ImageView, colorIntFromSetting: Int?, defaultColorFromSettings: Int?) {
+        val actualColor = colorIntFromSetting ?: defaultColorFromSettings ?: ContextCompat.getColor(requireContext(), R.color.goldenrod)
+        if (actualColor != Color.TRANSPARENT) {
             imageView.colorFilter = PorterDuffColorFilter(actualColor, PorterDuff.Mode.SRC_IN)
         } else {
             imageView.clearColorFilter()
@@ -334,11 +385,7 @@ class CoinFlipFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
-        // Clear drag listener from the correct view if it was set
-        // If coinDisplayAreaRecyclerView is not the drag target for freeform, this is fine.
-        // If you have a separate freeFormCoinContainer, clear its listener.
-        (binding.coinDisplayAreaRecyclerView.parent as? ViewGroup)?.setOnDragListener(null) // Example if parent was used.
-        clearFreeFormCoinViews()
+        clearFreeFormCoinViewsMemory()
         _binding = null
     }
 }

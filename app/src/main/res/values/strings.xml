@@ -587,6 +587,8 @@
     <string name="sounds">Stopwatch sounds</string>
 
     <!-- `` TRAFFIC LIGHT APP `` -->
+    <string name="traffic_light_vertical_desc">A vertically oriented traffic light.</string>
+    <string name="traffic_light_horizontal_desc">A horizontally oriented traffic light.</string>
     <string name="traffic_light_settings_title">Traffic Light Settings</string>
     <string name="setting_mode">Mode</string>
     <string name="setting_mode_manual">Manual Change</string>
