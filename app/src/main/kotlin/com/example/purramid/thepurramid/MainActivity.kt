@@ -6,6 +6,7 @@ import android.animation.AnimatorListenerAdapter
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
 import android.annotation.SuppressLint // Keep if needed for touch listener
+import android.app.ActivityOptions
 import android.content.Context
 import android.content.Intent
 // import android.content.res.Configuration
@@ -21,6 +22,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
+import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
 // import androidx.activity.result.ActivityResultLauncher
@@ -201,20 +203,21 @@ class MainActivity : AppCompatActivity() {
                     title = getString(R.string.randomizers_title),
                     iconResId = R.drawable.ic_random,
                     id = "randomizers",
-                    action = { context ->
-                        // Simpler launch logic from MainActivity for Randomizers
+                    action = { _ ->
                         val activeRandomizerCount = RandomizerInstanceManager.getActiveInstanceCount()
-                        val intent = Intent(context, RandomizersHostActivity::class.java)
-
                         if (activeRandomizerCount > 0) {
                             Log.d(TAG, "Randomizers active ($activeRandomizerCount), reordering to front.")
-                            intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+                            val intent = Intent(this@MainActivity, RandomizersHostActivity::class.java).apply {
+                                // No specific instanceId needed here for REORDER_TO_FRONT to bring an existing task forward.
+                                // The system will pick one of the tasks running RandomizersHostActivity.
+                                addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+                            }
+                            startActivity(intent) // No special ActivityOptions needed for reordering
                         } else {
-                            Log.d(TAG, "No active Randomizers, launching new instance (HostActivity will init defaults).")
-                            // No instanceId extra is put here. RandomizersHostActivity will detect this.
-                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) // Good for a new primary window
+                            Log.d(TAG, "No active Randomizers, launching new offset instance.")
+                            // Call the function that handles new UUID, offset bounds, and ActivityOptions
+                            launchNewRandomizerInstance()
                         }
-                        context.startActivity(intent)
                     }
                 ),
 
@@ -270,6 +273,48 @@ class MainActivity : AppCompatActivity() {
                 )
             )
         )
+    }
+
+    private fun launchNewRandomizerInstance() {
+        val instanceCount = RandomizerInstanceManager.getActiveInstanceCount()
+        Log.d(TAG, "Current Randomizer Instance Count: $instanceCount for new launch") // Use your existing TAG
+
+        val GdpToPx = resources.displayMetrics.density
+
+        val baseOffsetDp = 50f
+        val cascadeStepDp = 40f
+        val offsetX = (baseOffsetDp * GdpToPx).toInt() + (instanceCount * (cascadeStepDp * GdpToPx).toInt())
+        val offsetY = (baseOffsetDp * GdpToPx).toInt() + (instanceCount * (cascadeStepDp * GdpToPx).toInt())
+
+        val defaultWidthDp = 800f
+        val defaultHeightDp = 600f
+        val windowWidth = (defaultWidthDp * GdpToPx).toInt()
+        val windowHeight = (defaultHeightDp * GdpToPx).toInt()
+
+        if (offsetX + windowWidth > screenWidthPx) { /* Adjust offsetX */ }
+        if (offsetY + windowHeight > screenHeightPx) { /* Adjust offsetY */ }
+
+        val newBounds = Rect(offsetX, offsetY, offsetX + windowWidth, offsetY + windowHeight)
+        Log.d(TAG, "Calculated bounds for new Randomizer window: $newBounds")
+
+        val newInstanceId = UUID.randomUUID()
+        Log.d(TAG, "New Randomizer Instance ID: $newInstanceId")
+
+        val intent = Intent(this, RandomizersHostActivity::class.java).apply {
+            putExtra(RandomizersHostActivity.EXTRA_INSTANCE_ID, newInstanceId.toString())
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+
+        val activityOptions = ActivityOptions.makeBasic()
+        activityOptions.launchBounds = newBounds
+
+        try {
+            startActivity(intent, activityOptions.toBundle())
+            Log.i(TAG, "Successfully started new RandomizersHostActivity instance with custom bounds.")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error starting RandomizersHostActivity with custom bounds: ${e.localizedMessage}", e)
+            // Consider showing a Toast to the user here
+        }
     }
 
     private fun launchExistingRandomizer(instanceId: UUID) {
@@ -422,3 +467,23 @@ class MainActivity : AppCompatActivity() {
         }
     }
 }
+
+// TODO Address how services are handling multiple instances of [clock, timers, etc.] compared to
+// the individual free form windows of Randomizers (which is an activity and not a service
+
+// TODO: [MULTI-INSTANCE RE-ARCHITECTURE] Revisit the multi-instance behavior for all app intents
+// (Clock, Spotlight, Timers, ScreenShade, TrafficLight). The current vision is to allow
+// up to four distinct, draggable, and individually configurable instances for each of these,
+// similar to how Randomizers are intended to work.
+// This will require:
+// 1. Modifying each respective Activity (e.g., ClockActivity, SpotlightActivity) to:
+//    a. Become a persistent, windowed UI host (not finish after starting a service).
+//    b. Accept a unique instance ID (e.g., a UUID string).
+//    c. Manage its state (settings, position, UI state) based on this instance ID.
+// 2. Implementing a robust instance management system (perhaps a generic version of
+//    RandomizerInstanceManager or a per-type manager) for MainActivity to accurately
+//    track active Activity windows of each type.
+// 3. Updating the `launchMultiInstanceActivity` function in MainActivity to use this
+//    robust tracking for its "count < MAX_INSTANCES_PER_TYPE" logic and for
+//    reliably bringing a specific existing instance to the front if the max is reached.
+// This work is deferred until after the current Coin Flip development phase.
