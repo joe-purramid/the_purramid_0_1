@@ -1,18 +1,26 @@
 // DiceViewModel.kt
 package com.example.purramid.thepurramid.randomizers.viewmodel
 
+import android.app.Application
+import android.content.SharedPreferences
 import android.util.Log
 import androidx.lifecycle.LiveData
+import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.Transformations
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.purramid.thepurramid.R
 import com.example.purramid.thepurramid.data.db.DEFAULT_DICE_POOL_JSON
 import com.example.purramid.thepurramid.data.db.DEFAULT_EMPTY_JSON_MAP
+import com.example.purramid.thepurramid.data.db.DEFAULT_SETTINGS_ID
 import com.example.purramid.thepurramid.data.db.RandomizerDao
 import com.example.purramid.thepurramid.data.db.SpinSettingsEntity
 import com.example.purramid.thepurramid.randomizers.DiceSumResultType
+import com.example.purramid.thepurramid.randomizers.GraphDistributionType
+import com.example.purramid.thepurramid.randomizers.RandomizerInstanceManager
+import com.example.purramid.thepurramid.randomizers.RandomizerMode
 import com.example.purramid.thepurramid.randomizers.ui.DicePoolDialogFragment // For D10_KEYS
 import com.example.purramid.thepurramid.util.Event
 import com.google.gson.Gson
@@ -28,64 +36,194 @@ import kotlin.random.Random
 // Original raw rolls: Map<Sides, List<IndividualRollValue>>
 typealias RawDiceRolls = Map<Int, List<Int>>
 
-// Data class to hold all processed results for UI and announcement
-data class ProcessedDiceResult(
-    val isPercentile: Boolean,
-    val rawRolls: RawDiceRolls?, // For standard pool, or component rolls for percentile (00-90, 0-9)
-    val percentileValue: Int?, // Final summed (and modified) percentile value (1-100+)
-    val individualModifiedRolls: Map<Int, List<Int>>?, // Standard pool: Raw roll + modifier for that die type
-    val sumPerTypeWithModifier: Map<Int, Int>?, // Standard pool: Sum of (raw rolls for type) + modifier for that type
-    val totalSumWithModifiers: Int?, // Standard pool: Grand total
-    val sumResultType: DiceSumResultType,
-    val announcementString: String,
-    val singleModifierAppliedToPercentile: Int? = null // Store the modifier value if applied to percentile
-    val d20CritsRolled: Int = 0
+// Percentile setting On
+data class PercentileRollDetail(
+    val tensDieRoll: Int,
+    val unitsDieRoll: Int,
+    val rawSum: Int,
+    val modifierApplied: Int,
+    val finalValue: Int
 )
+
+// Data class to hold all processed results for UI and announcement
+data class FullProcessedDiceResult(
+    val standardDiceRolls: Map<Int, List<Int>>,
+    val rawRolls: RawDiceRolls?, // For standard pool, or component rolls for percentile (00-90, 0-9)
+    val isPercentile: Boolean,
+    val percentileResults: List<PercentileRollDetail>,
+    val individualModifiedRolls: Map<Int, List<Int>>,
+    val sumPerTypeWithModifier: Map<Int, Int>,
+    val totalSumWithModifiers: Int,
+    val sumResultType: String, // From DiceSumResultType.kt
+    val percentileValue: Int?, // Final summed (and modified) percentile value (1-100+)
+    val singleModifierAppliedToPercentile: Int? = null // Store the modifier value if applied to percentile
+    val announcementString: String,
+    val d20CritsRolled: Int
+)
+
+// Define data structures for graph display
+data class GraphDataPoint(val value: Int, val frequency: Int, val label: String = value.toString())
+
+sealed class DiceGraphDisplayData {
+    data class BarData(
+        val dataSetLabel: String,
+        val points: List<GraphDataPoint>
+    ) : DiceGraphDisplayData()
+
+    // You can add other types like LineData, PieData etc. as needed
+    // For INDIVIDUAL_DICE_TYPES, you might have a list of BarData or a more complex structure
+    data class GroupedBarData(
+        val groupedDataSets: Map<String, List<GraphDataPoint>> // e.g., "D6" -> List of points for D6 faces
+    ) : DiceGraphDisplayData()
+
+    object Empty : DiceGraphDisplayData()
+    object NotApplicable : DiceGraphDisplayData() // For when graph type is not set or invalid
+}
 
 @HiltViewModel
 class DiceViewModel @Inject constructor(
+    application: Application,
     private val randomizerDao: RandomizerDao,
-    savedStateHandle: SavedStateHandle
-) : ViewModel() {
+    private val sharedPreferences: SharedPreferences,
+    private val savedStateHandle: SavedStateHandle
+) : RandomizerViewModel(application, randomizerDao, sharedPreferences, savedStateHandle) {
 
     companion object {
         const val KEY_INSTANCE_ID = "instanceId"
         private const val TAG = "DiceViewModel"
         const val PERCENTILE_DIE_TYPE_KEY = -100 // Arbitrary distinct key for d%
         const val D10_MODIFIER_KEY = 10 // Modifier for a d10 is used for percentile
+        // Key for saving/restoring graph accumulated data if needed across process death,
+        private const val SAVED_STATE_GRAPH_SUM_FREQUENCIES = "graphSumFrequencies"
+        private const val SAVED_STATE_GRAPH_INDIVIDUAL_FREQUENCIES = "graphIndividualFrequencies"
+        private const val SAVED_STATE_GRAPH_FLIP_COUNT_HISTORY = "graphFlipCountHistory"
     }
 
     private val instanceId: UUID? = savedStateHandle.get<String>(KEY_INSTANCE_ID)?.let {
         try { UUID.fromString(it) } catch (e: IllegalArgumentException) { null }
     }
 
-    private val _settings = MutableLiveData<SpinSettingsEntity?>()
-    val settings: LiveData<SpinSettingsEntity?> = _settings
+    private val gson = Gson()
 
-    private val _processedDiceResult = MutableLiveData<ProcessedDiceResult?>()
-    val processedDiceResult: LiveData<ProcessedDiceResult?> = _processedDiceResult
-
-    // These LiveData hold the raw, unmodified values primarily for visual display of die faces
+    // LiveData for raw dice pool results
     private val _rawDicePoolResults = MutableLiveData<RawDiceRolls?>(null)
     val rawDicePoolResults: LiveData<RawDiceRolls?> = _rawDicePoolResults
 
+    // LiveData for raw percentile components
     private val _rawPercentileResultComponents = MutableLiveData<Pair<Int, Int>?>(null) // Pair(tens roll, units roll)
     val rawPercentileResultComponents: LiveData<Pair<Int, Int>?> = _rawPercentileResultComponents
 
-    private val _errorEvent = MutableLiveData<Event<String>>()
-    val errorEvent: LiveData<Event<String>> = _errorEvent
+    // Processed result including announcement string and crit tracking
+    private val _processedDiceResult = MediatorLiveData<ProcessedDiceResult?>()
+    val processedDiceResult: LiveData<ProcessedDiceResult?> = _processedDiceResult
 
-    private val gson = Gson()
+    // --- Graph Data ---
+    private val _diceGraphData = MutableLiveData<DiceGraphDisplayData>(DiceGraphDisplayData.Empty)
+    val diceGraphData: LiveData<DiceGraphDisplayData> = _diceGraphData
+
+    // Internal accumulation structures for graph data
+    // These will be updated with each roll if graph is enabled.
+    private var sumFrequencies: MutableMap<Int, Int> = mutableMapOf()
+    // Key: Dice Sides (e.g., 6 for D6), Value: Map<Face Value, Frequency>
+    private var individualDiceFaceFrequencies: MutableMap<Int, MutableMap<Int, Int>> = mutableMapOf()
+    private var currentGraphRollEventsCount: Int = 0 // Number of "roll" actions recorded for the graph
 
     init {
-        if (instanceId != null) {
-            loadSettings(instanceId)
-        } else {
-            Log.e(TAG, "Critical Error: Instance ID is null or invalid.")
-            _errorEvent.postValue(Event("Invalid Instance ID"))
-            _settings.postValue(null)
+        // Initialize settings observation from RandomizerViewModel
+        // The settings LiveData from the parent class will trigger updates.
+        // Restore graph data if available in savedStateHandle (e.g., after process death)
+        restoreGraphDataFromSavedState()
+
+
+        // Logic for _processedDiceResult
+        _processedDiceResult.addSource(_rawDicePoolResults) { results ->
+            results?.let {
+                val currentSettings = settings.value ?: getDefaultSettingsBlocking(instanceId.value.toString())
+                if (currentSettings.isPercentileDiceEnabled) return@addSource // Handled by percentile observer
+                _processedDiceResult.value = processDicePoolRoll(it, currentSettings)
+                // NEW: Update graph data after processing pool results
+                if (currentSettings.isDiceGraphEnabled) {
+                }
+            } ?: run { _processedDiceResult.value = null }
+        }
+        _processedDiceResult.addSource(_rawPercentileResultComponents) { components ->
+            components?.let {
+                val currentSettings = settings.value ?: getDefaultSettingsBlocking(instanceId.value.toString())
+                if (!currentSettings.isPercentileDiceEnabled) return@addSource
+                _processedDiceResult.value = processPercentileRoll(it, currentSettings)
+                // Percentile dice currently don't have a specific graph distribution defined.
+                // If they were to be graphed, logic would go here. For now, graph updates on pool results.
+            } ?: run { _processedDiceResult.value = null }
+        }
+        _processedDiceResult.addSource(settings) { currentSettings ->
+            // If settings change (e.g., graph enabled/disabled, type changed),
+            // we might need to re-evaluate or clear graph data.
+            if (currentSettings != null) {
+                if (!currentSettings.isDiceGraphEnabled) {
+                    // If graph gets disabled, clear displayed data (but maybe keep accumulated until manual reset?)
+                    _diceGraphData.value = DiceGraphDisplayData.Empty
+                } else {
+                    // If graph is enabled, or type changes, regenerate display data from current accumulation
+                    regenerateGraphDisplayData(currentSettings)
+                }
+                // Update processed result if settings affecting it change
+                refreshProcessedResultsOnSettingsChange(currentSettings)
+            }
         }
     }
+
+    private fun refreshProcessedResultsOnSettingsChange(currentSettings: SpinSettingsEntity) {
+        if (currentSettings.isPercentileDiceEnabled) {
+            _rawPercentileResultComponents.value?.let {
+                _processedDiceResult.value = processPercentileRoll(it, currentSettings)
+            }
+        } else {
+            _rawDicePoolResults.value?.let {
+                _processedDiceResult.value = processDicePoolRoll(it, currentSettings)
+                if (currentSettings.isDiceGraphEnabled) {
+                    updateGraphData(it, currentSettings)
+                }
+            }
+        }
+    }
+
+    private fun restoreGraphDataFromSavedState() {
+        savedStateHandle.get<String>(SAVED_STATE_GRAPH_SUM_FREQUENCIES)?.let { json ->
+            try {
+                sumFrequencies = gson.fromJson(json, object : TypeToken<MutableMap<Int, Int>>() {}.type) ?: mutableMapOf()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error restoring sumFrequencies from SavedStateHandle", e)
+            }
+        }
+        savedStateHandle.get<String>(SAVED_STATE_GRAPH_INDIVIDUAL_FREQUENCIES)?.let { json ->
+            try {
+                individualDiceFaceFrequencies = gson.fromJson(json, object : TypeToken<MutableMap<Int, MutableMap<Int, Int>>>() {}.type) ?: mutableMapOf()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error restoring individualDiceFaceFrequencies from SavedStateHandle", e)
+            }
+        }
+        currentGraphRollEventsCount = savedStateHandle.get<Int>(SAVED_STATE_GRAPH_FLIP_COUNT_HISTORY) ?: 0
+
+        // After restoring, if graph is enabled, regenerate display data
+        settings.value?.let {
+            if (it.isDiceGraphEnabled) {
+                regenerateGraphDisplayData(it)
+            }
+        }
+    }
+
+    private fun saveGraphDataToSavedState() {
+        try {
+            savedStateHandle[SAVED_STATE_GRAPH_SUM_FREQUENCIES] = gson.toJson(sumFrequencies)
+            savedStateHandle[SAVED_STATE_GRAPH_INDIVIDUAL_FREQUENCIES] = gson.toJson(individualDiceFaceFrequencies)
+            savedStateHandle[SAVED_STATE_GRAPH_FLIP_COUNT_HISTORY] = currentGraphRollEventsCount
+        } catch (e: Exception) {
+            Log.e(TAG, "Error saving graph data to SavedStateHandle", e)
+        }
+    }
+
+    private val _errorEvent = MutableLiveData<Event<String>>()
+    val errorEvent: LiveData<Event<String>> = _errorEvent
 
     private fun loadSettings(id: UUID) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -120,13 +258,14 @@ class DiceViewModel @Inject constructor(
             val poolConfig = parseDicePoolConfig(currentSettings.dicePoolConfigJson)
                 ?: parseDicePoolConfig(DEFAULT_DICE_POOL_JSON) ?: emptyMap()
 
-            val currentRawRolls = mutableMapOf<Int, MutableList<Int>>()
+            val currentRawStandardRolls = mutableMapOf<Int, MutableList<Int>>()
             val currentIndividualModifiedRolls = mutableMapOf<Int, MutableList<Int>>()
             val currentSumPerTypeWithModifier = mutableMapOf<Int, Int>()
             var currentTotalSumWithModifiers = 0
             var d20CritCount = 0
-
             val rolledPercentiles = mutableListOf<PercentileRollDetail>()
+            val PERCENTILE_DIE_TYPE_KEY = -100 // Placeholder - ensure this key is correctly defined
+            val D10_MODIFIER_KEY = -10 // Placeholder - ensure this key is correctly defined
 
             poolConfig.forEach { (sidesOrKey, count) ->
                 if (count <= 0) return@forEach // Skip if count is zero or less
@@ -172,11 +311,21 @@ class DiceViewModel @Inject constructor(
                     }
                     currentRawStandardRolls[sidesOrKey] = rollsForThisType
                     currentIndividualModifiedRolls[sidesOrKey] = modifiedRollsForThisType
-                    val sumForThisTypeWithMod = sumForThisTypeRaw + modifier
-                    currentSumPerTypeWithModifier[sidesOrKey] = sumForThisTypeWithMod
-                    currentTotalSumWithModifiers += sumForThisTypeWithMod
+                    // val sumForThisTypeWithMod = sumForThisTypeRaw + modifier
+                    currentSumPerTypeWithModifier[sidesOrKey] = sumForThisTypeRaw + modifier // If modifier is per type once
+                    currentTotalSumWithModifiers += currentSumPerTypeWithModifier[sidesOrKey]!!
                 }
             }
+
+            // *** INTEGRATION POINT FOR GRAPH DATA UPDATE ***
+            if (!currentSettings.isPercentileDiceEnabled && currentSettings.isDiceGraphEnabled) {
+                // Convert currentRawStandardRolls to the DiceRollResults format expected by updateGraphData
+                // The DiceRollResults class I defined was: data class DiceRollResults(val entries: Map<Int, List<Int>>)
+                // Your currentRawStandardRolls is Map<Int, MutableList<Int>>, which is compatible.
+                val graphRollResults = DiceRollResults(currentRawStandardRolls.toMap()) // Ensure it's an immutable copy if necessary
+                updateGraphData(graphRollResults, currentSettings) // Call the graph update method
+            }
+
             val announcement = formatCombinedAnnouncement(
                 standardRolls = currentRawStandardRolls,
                 percentileRolls = rolledPercentiles,
@@ -196,11 +345,24 @@ class DiceViewModel @Inject constructor(
             )
 
             withContext(Dispatchers.Main) {
-                _rawStandardDiceRollsForDisplay.value = currentRawStandardRolls
-                _rawPercentileRollsForDisplay.value = rolledPercentiles.map { Pair(it.tensDieRoll, it.unitsDieRoll) }
-                _processedDiceResult.value = finalProcessedResult
+                // _rawStandardDiceRollsForDisplay.value = currentRawStandardRolls
+                // _rawPercentileRollsForDisplay.value = rolledPercentiles.map { Pair(it.tensDieRoll, it.unitsDieRoll) }
+                _processedDiceResult.value = adaptToSimplerProcessedDiceResult(finalProcessedResult)
             }
         }
+    }
+
+    private fun adaptToSimplerProcessedDiceResult(fullResult: FullProcessedDiceResult): ProcessedDiceResult {
+        return ProcessedDiceResult(
+            announcementString = fullResult.announcementString,
+            finalSum = fullResult.totalSumWithModifiers, // Or however finalSum is defined
+            d20CritsRolled = fullResult.d20CritsRolled,
+            isPercentile = fullResult.percentileResults.isNotEmpty(),
+            // Populate rawRolls for ProcessedDiceResult if needed by other logic,
+            // though graph uses its own DiceRollResults instance.
+            rawRolls = fullResult.standardDiceRolls, // Or combine standard and percentile appropriately
+            percentileValue = if (fullResult.percentileResults.isNotEmpty()) fullResult.percentileResults.first().finalValue else null
+        )
     }
 
     private fun formatCombinedAnnouncement(

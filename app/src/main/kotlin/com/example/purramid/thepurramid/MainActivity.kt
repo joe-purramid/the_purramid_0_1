@@ -96,6 +96,7 @@ class IntentAdapter(private val intents: List<AppIntent>, private val onItemClic
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
+    private lateinit var adapter: AppIntentAdapter
     private var isIntentsVisible = false
     private val allIntents = mutableListOf<AppIntent>()
     // Keep screen pixel dimensions if needed for other things
@@ -113,10 +114,14 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        setupRecyclerView()
+
         // Calculate screen dimensions in pixels
         val displayMetrics = resources.displayMetrics
         screenWidthPx = displayMetrics.widthPixels
         screenHeightPx = displayMetrics.heightPixels
+
+        // TODO: Decide whether to expand definition of screen dimensions for 2K and 4K
 
         // --- Calculate Window Size Classes ---
         val wmc = WindowMetricsCalculator.getOrCreate()
@@ -182,6 +187,38 @@ class MainActivity : AppCompatActivity() {
         setInitialFreeformWindowSize()
         // *** Add Restoration Logic ***
         restoreRandomizerInstances()
+    }
+
+    private fun setupRecyclerView() {
+        // Assuming AppIntent is a data class or enum holding info for each app tile
+        val appIntents = listOf(
+            AppIntent("Clock", R.drawable.ic_clock, AppIntent.AppType.CLOCK),
+            AppIntent("Timers", R.drawable.ic_timer, AppIntent.AppType.TIMERS),
+            AppIntent("Randomizers", R.drawable.ic_random, AppIntent.AppType.RANDOMIZERS), // Ensure you have a launcher icon
+            AppIntent("Traffic Light", R.drawable.ic_traffic_light, AppIntent.AppType.TRAFFIC_LIGHT),
+            AppIntent("Screen Shade", R.drawable.ic_shade, AppIntent.AppType.SCREEN_SHADE),
+            AppIntent("Spotlight", R.drawable.ic_spotlight, AppIntent.AppType.SPOTLIGHT),
+            AppIntent("About", R.drawable.ic_about, AppIntent.AppType.ABOUT)
+        )
+
+        adapter = AppIntentAdapter(appIntents, this)
+        binding.recyclerViewAppIntents.layoutManager = GridLayoutManager(this, 3) // Adjust span count as needed
+        binding.recyclerViewAppIntents.adapter = adapter
+    }
+
+    override fun onAppIntentClicked(appIntent: AppIntent) {
+        when (appIntent.type) {
+            AppIntent.AppType.CLOCK -> startActivity(Intent(this, ClockActivity::class.java))
+            AppIntent.AppType.TIMERS -> startActivity(Intent(this, TimersActivity::class.java))
+            AppIntent.AppType.TRAFFIC_LIGHT -> startActivity(Intent(this, TrafficLightActivity::class.java))
+            AppIntent.AppType.SCREEN_SHADE -> startActivity(Intent(this, ScreenShadeActivity::class.java))
+            AppIntent.AppType.SPOTLIGHT -> startActivity(Intent(this, SpotlightActivity::class.java))
+            AppIntent.AppType.RANDOMIZERS -> {
+                launchNewRandomizerInstanceWithBounds()
+            }
+            // Handle other app intent types
+            else -> Log.w("MainActivity", "Unknown app intent type clicked: ${appIntent.name}")
+        }
     }
 
     // Define Intents
@@ -263,7 +300,7 @@ class MainActivity : AppCompatActivity() {
                 ),
                 AppIntent(
                     title = getString(R.string.about),
-                    iconResId = R.drawable.ic_about, // Ensure you have ic_about
+                    iconResId = R.drawable.ic_about,
                     id = "about",
                     action = { context ->
                         val intent = Intent(context, AboutActivity::class.java)
@@ -314,6 +351,55 @@ class MainActivity : AppCompatActivity() {
         } catch (e: Exception) {
             Log.e(TAG, "Error starting RandomizersHostActivity with custom bounds: ${e.localizedMessage}", e)
             // Consider showing a Toast to the user here
+        }
+    }
+
+    private fun launchNewRandomizerInstanceWithBounds() {
+        val newInstanceId = UUID.randomUUID()
+
+        // Calculate bounds for the new window
+        val activeInstances = RandomizerInstanceManager.getActiveInstanceCount() //
+        val baseOffsetPx = 20 // Base offset from screen edge in pixels - adjust as needed
+        val cascadeOffsetPx = 50 // Pixels to offset each new window - adjust as needed
+
+        // It's good practice to ensure offsets don't push windows completely off-screen
+        // For simplicity, this example assumes a large enough screen.
+        // You might want to get screen dimensions to make this more robust.
+        val displayMetrics = DisplayMetrics()
+        windowManager.defaultDisplay.getMetrics(displayMetrics)
+        val screenWidth = displayMetrics.widthPixels
+        val screenHeight = displayMetrics.heightPixels
+
+        val newLeft = baseOffsetPx + (activeInstances * cascadeOffsetPx)
+        val newTop = baseOffsetPx + (activeInstances * cascadeOffsetPx)
+
+        val defaultWidth = 400
+        val defaultHeight = 400
+
+        // Ensure the window doesn't start too far off to the right or bottom
+        val maxLeft = screenWidth - defaultWidth - baseOffsetPx
+        val maxTop = screenHeight - defaultHeight - baseOffsetPx
+        val constrainedLeft = newLeft.coerceAtMost(maxLeft.coerceAtLeast(baseOffsetPx))
+        val constrainedTop = newTop.coerceAtMost(maxTop.coerceAtLeast(baseOffsetPx))
+
+        // val newBounds = Rect(newLeft, newTop, newLeft + defaultWidth, newTop + defaultHeight)
+        // For a more robust calculation using constrained values:
+        val newBounds = Rect(constrainedLeft, constrainedTop, constrainedLeft + defaultWidth, constrainedTop + defaultHeight)
+
+
+        val intent = Intent(this, RandomizersHostActivity::class.java).apply {
+            putExtra(RandomizersHostActivity.EXTRA_INSTANCE_ID, newInstanceId.toString())
+        }
+
+        val activityOptions = ActivityOptions.makeBasic()
+        activityOptions.launchBounds = newBounds
+
+        try {
+            startActivity(intent, activityOptions.toBundle())
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Failed to launch RandomizersHostActivity", e)
+            // Show a toast or some feedback to the user
+            android.widget.Toast.makeText(this, "Error opening Randomizers", android.widget.Toast.LENGTH_SHORT).show()
         }
     }
 

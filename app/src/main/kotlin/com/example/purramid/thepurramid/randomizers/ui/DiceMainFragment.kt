@@ -29,13 +29,22 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
+import com.github.mikephil.charting.charts.BarChart
+import com.github.mikephil.charting.data.BarData
+import com.github.mikephil.charting.data.BarDataSet
+import com.github.mikephil.charting.data.BarEntry
+import com.github.mikephil.charting.formatter.IndexAxisValueFormatter // For labels
+import com.github.mikephil.charting.utils.ColorTemplate // For colors
 import com.example.purramid.thepurramid.R
 import com.example.purramid.thepurramid.data.db.DEFAULT_EMPTY_JSON_MAP
 import com.example.purramid.thepurramid.data.db.SpinSettingsEntity
 import com.example.purramid.thepurramid.databinding.FragmentDiceMainBinding
 import com.example.purramid.thepurramid.databinding.ItemDieResultBinding
+import com.example.purramid.thepurramid.randomizers.GraphLineStyle // For potential style choices
+import com.example.purramid.thepurramid.randomizers.viewmodel.DiceGraphDisplayData // From ViewModel
 import com.example.purramid.thepurramid.randomizers.viewmodel.DiceRollResults
 import com.example.purramid.thepurramid.randomizers.viewmodel.DiceViewModel
+import com.example.purramid.thepurramid.randomizers.viewmodel.GraphDataPoint // From ViewModel
 import com.example.purramid.thepurramid.randomizers.viewmodel.ProcessedDiceResult
 import com.example.purramid.thepurramid.ui.PurramidPalette // Assuming this exists for default colors
 import com.google.android.flexbox.FlexboxLayout // For LayoutParams
@@ -73,6 +82,8 @@ class DiceMainFragment : Fragment() {
     private val announcementHandler = Handler(Looper.getMainLooper())
     private var announcementRunnable: Runnable? = null
 
+    private lateinit var diceBarChart: BarChart // Reference to the chart
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -83,8 +94,38 @@ class DiceMainFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        binding = FragmentDiceMainBinding.bind(view)
+
+        diceBarChart = binding.diceBarChart // Initialize the chart view from binding
+        setupDiceChartAppearance() // New method to configure chart style
+
         setupListeners()
         observeViewModel()
+    }
+
+    private fun setupDiceChartAppearance() {
+        diceBarChart.description.isEnabled = false
+        diceBarChart.setDrawGridBackground(false)
+        diceBarChart.setDrawBarShadow(false)
+        diceBarChart.setFitBars(true) // Makes bars fit into the screen width
+
+        // X-axis configuration
+        val xAxis = diceBarChart.xAxis
+        xAxis.position = com.github.mikephil.charting.components.XAxis.XAxisPosition.BOTTOM
+        xAxis.setDrawGridLines(false)
+        xAxis.granularity = 1f // minimum interval between axis values.
+
+        // Y-axis (Left) configuration
+        val leftAxis = diceBarChart.axisLeft
+        leftAxis.setDrawGridLines(true)
+        leftAxis.axisMinimum = 0f // start at 0
+
+        // Y-axis (Right) configuration - disable it
+        diceBarChart.axisRight.isEnabled = false
+
+        // Legend configuration
+        diceBarChart.legend.isEnabled = true // Enable if you have multiple datasets (e.g., for GroupedBarData)
+        // Or false if only one dataset and label is clear
     }
 
     override fun onDestroyView() {
@@ -154,13 +195,29 @@ class DiceMainFragment : Fragment() {
                             binding.diceRollButton.isEnabled = !(settings.isPercentileDiceEnabled == false &&
                                     (viewModel.parseDicePoolConfig(settings.dicePoolConfigJson)?.values?.sum()
                                         ?: 0) == 0)
+                            binding.diceGraphViewContainer.visibility = View.GONE
+                            binding.diceResetButton.visibility = View.GONE
                             if (!settings.isAnnounceEnabled) {
                                 clearAnnouncement()
                             }
                             if (!settings.isDiceCritCelebrationEnabled) {
                                 binding.konfettiViewDice.stopGracefully()
                             }
+                            return@observe
                         }
+                        val isGraphCurrentlyEnabled = settings.isDiceGraphEnabled
+                        binding.diceGraphViewContainer.visibility = if (isGraphCurrentlyEnabled) View.VISIBLE else View.GONE
+                        binding.diceResetButton.visibility = if (isGraphCurrentlyEnabled) View.VISIBLE else View.GONE
+
+                        if (isGraphCurrentlyEnabled) {
+                            diceBarChart.invalidate() // Force redraw if it became visible with existing data
+                        } else {
+                            diceBarChart.clear()
+                            diceBarChart.data = null
+                            diceBarChart.invalidate()
+                        }
+                        // Cache settings if needed locally, though viewModel.settings.value is often preferred
+                        this@DiceMainFragment.settings = settings // Assuming 'this.settings' is a Fragment property
                     }
                 }
                 launch {
@@ -184,6 +241,155 @@ class DiceMainFragment : Fragment() {
                     viewModel.errorEvent.observe(lifecycleOwner) { event ->
                         event?.getContentIfNotHandled()?.let { errorMessage ->
                             showErrorSnackbar(errorMessage)
+                        }
+                    }
+                }
+                launch {
+                    viewModel.diceGraphData.observe(viewLifecycleOwner) { graphData ->
+                        // Ensure graph should be visible based on current settings
+                        // (The settings observer already handles overall visibility of the container)
+                        if (viewModel.settings.value?.isDiceGraphEnabled != true) {
+                            // Optionally, ensure chart is cleared if it somehow gets data while container is hidden
+                            if (diceBarChart.data != null) {
+                                diceBarChart.clear()
+                                diceBarChart.data = null
+                                diceBarChart.invalidate()
+                            }
+                            return@observe
+                        }
+                        // diceBarChart.visibility = View.VISIBLE // Container visibility handled by settings observer
+
+                        when (graphData) {
+                            is DiceGraphDisplayData.BarData -> {
+                                if (graphData.points.isEmpty()) {
+                                    diceBarChart.clear()
+                                    diceBarChart.data = null
+                                    diceBarChart.setNoDataText("No graph data yet. Roll some dice!")
+                                    diceBarChart.invalidate()
+                                    return@observe
+                                }
+                                val entries = ArrayList<BarEntry>()
+                                val labels = ArrayList<String>()
+                                graphData.points.forEachIndexed { index, point ->
+                                    entries.add(BarEntry(index.toFloat(), point.frequency.toFloat()))
+                                    labels.add(point.label)
+                                }
+
+                                val dataSet = BarDataSet(entries, graphData.dataSetLabel)
+                                dataSet.colors = ColorTemplate.MATERIAL_COLORS.toList()
+                                dataSet.valueTextSize = 10f
+
+                                val barData = BarData(dataSet)
+                                diceBarChart.data = barData
+                                diceBarChart.xAxis.valueFormatter = IndexAxisValueFormatter(labels)
+                                diceBarChart.xAxis.labelCount = labels.size.coerceAtLeast(1) // Ensure at least 1 for formatter
+
+                                diceBarChart.animateY(1000)
+                                diceBarChart.invalidate()
+                            }
+                            is DiceGraphDisplayData.GroupedBarData -> {
+                                if (graphData.groupedDataSets.isEmpty()) {
+                                    diceBarChart.clear()
+                                    diceBarChart.data = null
+                                    diceBarChart.setNoDataText("No grouped data available.")
+                                    diceBarChart.invalidate()
+                                    return@observe
+                                }
+
+                                val allLabels = mutableSetOf<String>()
+                                // Determine all unique x-axis labels first to ensure consistent indexing
+                                graphData.groupedDataSets.values.forEach { points ->
+                                    points.forEach { point -> allLabels.add(point.label) }
+                                }
+                                val distinctXLabels = allLabels.toList().sorted() // Or maintain a specific order
+
+                                val dataSets = mutableListOf<IBarDataSet>() // Use IBarDataSet for the list
+
+                                var colorIndex = 0
+                                graphData.groupedDataSets.forEach { (groupLabel, points) ->
+                                    val entries = ArrayList<BarEntry>()
+                                    // Map points to their index in distinctXLabels
+                                    distinctXLabels.forEachIndexed { xIndex, label ->
+                                        val point = points.find { it.label == label }
+                                        if (point != null) {
+                                            entries.add(BarEntry(xIndex.toFloat(), point.frequency.toFloat()))
+                                        } else {
+                                            // Add a zero entry if this group doesn't have this label,
+                                            // or handle as per chart library requirement for sparse grouped data
+                                            // entries.add(BarEntry(xIndex.toFloat(), 0f))
+                                        }
+                                    }
+                                    // Alternative: Only add entries for labels present in this group
+                                    // points.forEach { point ->
+                                    //    val xIndex = distinctXLabels.indexOf(point.label)
+                                    //    if (xIndex != -1) entries.add(BarEntry(xIndex.toFloat(), point.frequency.toFloat()))
+                                    // }
+
+
+                                    if (entries.isNotEmpty()) { // Only add dataset if it has entries
+                                        val dataSet = BarDataSet(entries, groupLabel)
+                                        dataSet.color = ColorTemplate.MATERIAL_COLORS[colorIndex % ColorTemplate.MATERIAL_COLORS.size]
+                                        dataSet.valueTextSize = 10f
+                                        dataSets.add(dataSet)
+                                        colorIndex++
+                                    }
+                                }
+
+
+                                if (dataSets.isEmpty()) {
+                                    diceBarChart.clear()
+                                    diceBarChart.data = null
+                                    diceBarChart.setNoDataText("No data for grouped chart.")
+                                    diceBarChart.invalidate()
+                                    return@observe
+                                }
+
+                                val barData = BarData(dataSets)
+                                diceBarChart.data = barData
+
+                                diceBarChart.xAxis.valueFormatter = IndexAxisValueFormatter(distinctXLabels)
+                                diceBarChart.xAxis.granularity = 1f
+                                diceBarChart.xAxis.isGranularityEnabled = true
+                                diceBarChart.xAxis.setCenterAxisLabels(true)
+                                diceBarChart.xAxis.axisMinimum = 0f
+                                diceBarChart.xAxis.axisMaximum = distinctXLabels.size.toFloat()
+
+
+                                val groupSpace = 0.1f
+                                val barSpace = 0.05f // space between bars of the same group
+                                // barWidth should be calculated to fit N datasets
+                                // (barWidth + barSpace) * numDataSets + groupSpace = 1.0 (the space for a whole group)
+                                val numDataSets = dataSets.size
+                                if (numDataSets > 0) {
+                                    val barWidth = (1.0f - groupSpace - (barSpace * (numDataSets -1) )) / numDataSets
+                                    barData.barWidth = barWidth
+                                }
+
+
+                                if (numDataSets > 1) { // Only group if there are multiple datasets
+                                    diceBarChart.groupBars(0f, groupSpace, barSpace)
+                                }
+
+                                diceBarChart.animateY(1000)
+                                diceBarChart.invalidate()
+                            }
+                            is DiceGraphDisplayData.Empty -> {
+                                diceBarChart.clear()
+                                diceBarChart.data = null
+                                diceBarChart.setNoDataText("No graph data yet. Roll some dice!")
+                                diceBarChart.invalidate()
+                            }
+                            is DiceGraphDisplayData.NotApplicable -> {
+                                diceBarChart.clear()
+                                diceBarChart.data = null
+                                diceBarChart.setNoDataText("Graph type not applicable for current settings.")
+                                diceBarChart.invalidate()
+                            }
+                            null -> {
+                                diceBarChart.clear()
+                                diceBarChart.data = null
+                                diceBarChart.invalidate()
+                            }
                         }
                     }
                 }
