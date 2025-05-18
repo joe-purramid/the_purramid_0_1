@@ -9,10 +9,9 @@ import com.example.purramid.thepurramid.randomizers.RandomizerMode
 import com.example.purramid.thepurramid.randomizers.SlotsColumnState
 import com.example.purramid.thepurramid.randomizers.DiceSumResultType // Import new Enums
 import com.example.purramid.thepurramid.randomizers.GraphDistributionType
-import com.example.purramid.thepurramid.randomizers.GraphLineStyle
+import com.example.purramid.thepurramid.randomizers.GraphPlotType
 import com.example.purramid.thepurramid.randomizers.CoinProbabilityMode
 import com.example.purramid.thepurramid.spotlight.SpotlightView
-import com.example.purramid.thepurramid.traffic_light.viewmodel.DbRange // Import if storing DbRange separately
 import com.example.purramid.thepurramid.traffic_light.viewmodel.LightColor
 import com.example.purramid.thepurramid.traffic_light.viewmodel.Orientation
 import com.example.purramid.thepurramid.traffic_light.viewmodel.ResponsiveModeSettings
@@ -196,19 +195,19 @@ class Converters {
         }
     }
 
-    // Converter for GraphLineStyle Enum
+    // Converter for GraphPlotType Enum
     @TypeConverter
-    fun fromGraphLineStyle(value: GraphLineStyle?): String? {
-        return value?.name ?: GraphLineStyle.SOLID.name // Default if null
+    fun fromGraphLineStyle(value: GraphPlotType?): String? {
+        return value?.name ?: GraphPlotType.HISTOGRAM.name // Default if null
     }
 
     @TypeConverter
-    fun toGraphLineStyle(value: String?): GraphLineStyle {
+    fun toGraphLineStyle(value: String?): GraphPlotType {
         return try {
-            value?.let { enumValueOf<GraphLineStyle>(it) } ?: GraphLineStyle.SOLID
+            value?.let { enumValueOf<GraphPlotType>(it) } ?: GraphPlotType.HISTOGRAM
         } catch (e: IllegalArgumentException) {
-            Log.e("Converters", "Invalid GraphLineStyle string: $value", e)
-            GraphLineStyle.SOLID // Default on error
+            Log.e("Converters", "Invalid GraphPlotType string: $value", e)
+            GraphPlotType.HISTOGRAM // Default on error
         }
     }
 

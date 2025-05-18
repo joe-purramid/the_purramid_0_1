@@ -40,11 +40,9 @@ import com.example.purramid.thepurramid.data.db.DEFAULT_EMPTY_JSON_MAP
 import com.example.purramid.thepurramid.data.db.SpinSettingsEntity
 import com.example.purramid.thepurramid.databinding.FragmentDiceMainBinding
 import com.example.purramid.thepurramid.databinding.ItemDieResultBinding
-import com.example.purramid.thepurramid.randomizers.GraphLineStyle // For potential style choices
 import com.example.purramid.thepurramid.randomizers.viewmodel.DiceGraphDisplayData // From ViewModel
 import com.example.purramid.thepurramid.randomizers.viewmodel.DiceRollResults
 import com.example.purramid.thepurramid.randomizers.viewmodel.DiceViewModel
-import com.example.purramid.thepurramid.randomizers.viewmodel.GraphDataPoint // From ViewModel
 import com.example.purramid.thepurramid.randomizers.viewmodel.ProcessedDiceResult
 import com.example.purramid.thepurramid.ui.PurramidPalette // Assuming this exists for default colors
 import com.google.android.flexbox.FlexboxLayout // For LayoutParams

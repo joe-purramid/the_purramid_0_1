@@ -518,14 +518,14 @@
     <!-- `` GRAPHING FOR DICE AND COIN FLIP `` -->
     <string name="graph_distribution_placeholder">Graph will appear here</string>
     <string name="setting_graph_distribution_type">Graph Distribution Type</string>
-    <string name="setting_graph_line_style">Graph Line Style</string>
+    <string name="setting_graph_plot_type">Graph Plot Type</string>
     <string name="setting_graph_flip_count">Number of Flips for Graph</string> <string name="graph_dist_type_off">Off</string>
     <string name="graph_dist_type_manual">Manual</string>
     <string name="graph_dist_type_normal">Normal</string>
     <string name="graph_dist_type_uniform">Uniform</string>
-    <string name="graph_line_style_solid">Solid</string>
-    <string name="graph_line_style_dashed">Dashed</string>
-    <string name="graph_line_style_dotted">Dotted</string>
+    <string name="graph_plot_type_histogram">Bar graph</string>
+    <string name="graph_plot_type_line">Line graph</string>
+    <string name="graph_plot_type_qq">Q-Q probability plot</string>
 
     <!-- `` RANDOMIZER SNACKBARS `` -->
     <string name="max_randomizers_general_reached_snackbar">Maximum of <xliff:g id="count">%1$d</xliff:g> Randomizer windows reached.</string>

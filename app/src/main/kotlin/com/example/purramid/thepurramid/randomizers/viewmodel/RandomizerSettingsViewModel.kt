@@ -8,13 +8,12 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.purramid.thepurramid.R
-import com.example.purramid.thepurramid.data.db.DEFAULT_EMPTY_JSON_MAP
 import com.example.purramid.thepurramid.data.db.RandomizerDao
 import com.example.purramid.thepurramid.data.db.SpinSettingsEntity
 import com.example.purramid.thepurramid.data.db.DEFAULT_COIN_COLOR_INT // Import default coin color
 import com.example.purramid.thepurramid.randomizers.DiceSumResultType
 import com.example.purramid.thepurramid.randomizers.GraphDistributionType
-import com.example.purramid.thepurramid.randomizers.GraphLineStyle
+import com.example.purramid.thepurramid.randomizers.GraphPlotType
 import com.example.purramid.thepurramid.randomizers.RandomizerMode
 import com.example.purramid.thepurramid.randomizers.CoinProbabilityMode // Import new Enum
 import com.example.purramid.thepurramid.util.Event
@@ -74,7 +73,7 @@ class RandomizerSettingsViewModel @Inject constructor(
                         isCoinAnnouncementEnabled = true,
                         coinProbabilityMode = CoinProbabilityMode.NONE.name,
                         coinGraphDistributionType = GraphDistributionType.OFF.name,
-                        coinGraphLineStyle = GraphLineStyle.SOLID.name,
+                        coinGraphPlotType = GraphPlotType.HISTOGRAM.name,
                         coinGraphFlipCount = 1000
                     )
                     randomizerDao.saveSettings(defaultSettings)
@@ -269,7 +268,7 @@ class RandomizerSettingsViewModel @Inject constructor(
                 if (newMode != CoinProbabilityMode.GRAPH_DISTRIBUTION) {
                     updatedSettings = updatedSettings.copy(
                         coinGraphDistributionType = GraphDistributionType.OFF.name,
-                        coinGraphLineStyle = GraphLineStyle.SOLID.name, // Reset to default
+                        coinGraphPlotType = GraphPlotType.HISTOGRAM.name, // Reset to default
                         coinGraphFlipCount = 1000 // Reset to default
                     )
                 }
@@ -282,8 +281,8 @@ class RandomizerSettingsViewModel @Inject constructor(
         updateSettingsField { it.copy(coinGraphDistributionType = newType.name) }
     }
 
-    fun updateCoinGraphLineStyle(newStyle: GraphLineStyle) {
-        updateSettingsField { it.copy(coinGraphLineStyle = newStyle.name) }
+    fun updateCoinGraphLineStyle(newStyle: GraphPlotType) {
+        updateSettingsField { it.copy(coinGraphPlotType = newStyle.name) }
     }
 
     fun updateCoinGraphFlipCount(count: Int) {

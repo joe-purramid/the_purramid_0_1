@@ -7,7 +7,7 @@ import com.example.purramid.thepurramid.randomizers.RandomizerMode
 import com.example.purramid.thepurramid.randomizers.SlotsColumnState
 import com.example.purramid.thepurramid.randomizers.DiceSumResultType
 import com.example.purramid.thepurramid.randomizers.GraphDistributionType
-import com.example.purramid.thepurramid.randomizers.GraphLineStyle
+import com.example.purramid.thepurramid.randomizers.GraphPlotType
 import com.example.purramid.thepurramid.randomizers.CoinProbabilityMode
 import java.util.UUID
 
@@ -48,7 +48,7 @@ data class SpinSettingsEntity(
     var isDiceCritCelebrationEnabled: Boolean = false, // Default off
     var diceSumResultType: DiceSumResultType = DiceSumResultType.INDIVIDUAL, // Default
     var graphDistributionType: GraphDistributionType = GraphDistributionType.OFF, // Default off
-    var graphLineStyle: GraphLineStyle = GraphLineStyle.SOLID, // Default solid
+    var graphPlotType: GraphPlotType = GraphPlotType.HISTOGRAM, // Default solid
     var graphRollCount: Int = 1000, // Default for Normal/Uniform
 
     // --- Coin Flip Mode Specific ---
@@ -58,6 +58,6 @@ data class SpinSettingsEntity(
     var isCoinAnnouncementEnabled: Boolean = true,
     var coinProbabilityMode: String = CoinProbabilityMode.NONE.name, // Store enum as string
     var coinGraphDistributionType: String = GraphDistributionType.OFF.name,
-    var coinGraphLineStyle: String = GraphLineStyle.SOLID.name,
+    var coinGraphPlotType: String = GraphPlotType.HISTOGRAM.name,
     var coinGraphFlipCount: Int = 1000,
 )

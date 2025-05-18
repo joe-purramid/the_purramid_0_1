@@ -1,14 +1,11 @@
 // RandomizerSettingsFragment.kt
 package com.example.purramid.thepurramid.randomizers.ui
 
-import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
-import android.text.InputFilter
 import android.util.Log
-import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -31,10 +28,9 @@ import com.example.purramid.thepurramid.data.db.RandomizerInstanceEntity
 import com.example.purramid.thepurramid.data.db.SpinSettingsEntity
 import com.example.purramid.thepurramid.randomizers.DiceSumResultType
 import com.example.purramid.thepurramid.databinding.FragmentRandomizerSettingsBinding
-import com.example.purramid.thepurramid.randomizers.RandomizerInstanceManager
 import com.example.purramid.thepurramid.randomizers.RandomizerMode
 import com.example.purramid.thepurramid.randomizers.GraphDistributionType
-import com.example.purramid.thepurramid.randomizers.GraphLineStyle
+import com.example.purramid.thepurramid.randomizers.GraphPlotType
 import com.example.purramid.thepurramid.randomizers.CoinProbabilityMode // New Import
 import com.example.purramid.thepurramid.randomizers.RandomizersHostActivity
 import com.example.purramid.thepurramid.randomizers.viewmodel.RandomizerSettingsViewModel
@@ -142,15 +138,15 @@ class RandomizerSettingsFragment : Fragment() {
         binding.autoCompleteCoinGraphDistributionType.setAdapter(graphDistributionTypeAdapter)
 
 
-        // Graph Line Style (shared by Dice and Coin)
-        val graphLineStyleNames = GraphLineStyle.values().map {
+        // Graph Plot Type (shared by Dice and Coin)
+        val graphPlotTypeNames = GraphPlotType.values().map {
             getString(when (it) {
-                GraphLineStyle.SOLID -> R.string.graph_line_style_solid
-                GraphLineStyle.DASHED -> R.string.graph_line_style_dashed
-                GraphLineStyle.DOTTED -> R.string.graph_line_style_dotted
+                GraphPlotType.HISTOGRAM -> R.string.graph_plot_type_histogram
+                GraphPlotType.LINE_GRAPH -> R.string.graph_plot_type_line
+                GraphPlotType.QQ_PLOT -> R.string.graph_plot_type_qq
             })
         }.toTypedArray()
-        graphLineStyleAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, graphLineStyleNames)
+        graphLineStyleAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, graphPlotTypeNames)
         // binding.autoCompleteDiceGraphLineStyle.setAdapter(graphLineStyleAdapter) // For Dice (if you add it)
         binding.autoCompleteCoinGraphLineStyle.setAdapter(graphLineStyleAdapter)
     }
@@ -334,7 +330,7 @@ class RandomizerSettingsFragment : Fragment() {
         binding.autoCompleteCoinGraphLineStyle.onItemClickListener =
             AdapterView.OnItemClickListener { _, _, position, _ ->
                 if (isUpdatingProgrammatically) return@OnItemClickListener
-                val selectedEnum = GraphLineStyle.values()[position]
+                val selectedEnum = GraphPlotType.values()[position]
                 viewModel.updateCoinGraphLineStyle(selectedEnum)
             }
         binding.textFieldCoinGraphFlipCount.doOnTextChanged { text, _, _, _ ->
@@ -394,8 +390,8 @@ class RandomizerSettingsFragment : Fragment() {
                 val coinGraphDistType = GraphDistributionType.valueOf(settingsEntity.coinGraphDistributionType)
                 setSpinnerSelection(binding.autoCompleteCoinGraphDistributionType, graphDistributionTypeAdapter, coinGraphDistType.ordinal)
 
-                val coinGraphLineStyle = GraphLineStyle.valueOf(settingsEntity.coinGraphLineStyle)
-                setSpinnerSelection(binding.autoCompleteCoinGraphLineStyle, graphLineStyleAdapter, coinGraphLineStyle.ordinal)
+                val coinGraphPlotType = GraphPlotType.valueOf(settingsEntity.coinGraphPlotType)
+                setSpinnerSelection(binding.autoCompleteCoinGraphLineStyle, graphLineStyleAdapter, coinGraphPlotType.ordinal)
 
                 if (binding.textFieldCoinGraphFlipCount.text.toString() != settingsEntity.coinGraphFlipCount.toString()) {
                     binding.textFieldCoinGraphFlipCount.setText(settingsEntity.coinGraphFlipCount.toString())
