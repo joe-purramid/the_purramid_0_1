@@ -11,36 +11,43 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
+import android.widget.AutoCompleteTextView
 import android.widget.CompoundButton
 import android.widget.LinearLayout
+import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.core.view.children
 import androidx.core.view.isVisible
+import androidx.core.widget.doAfterTextChanged
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import com.example.purramid.thepurramid.R
 import com.example.purramid.thepurramid.data.db.RandomizerDao
 import com.example.purramid.thepurramid.data.db.RandomizerInstanceEntity
 import com.example.purramid.thepurramid.data.db.SpinSettingsEntity
-import com.example.purramid.thepurramid.randomizers.DiceSumResultType
 import com.example.purramid.thepurramid.databinding.FragmentRandomizerSettingsBinding
-import com.example.purramid.thepurramid.randomizers.RandomizerMode
+import com.example.purramid.thepurramid.randomizers.DiceSumResultType
 import com.example.purramid.thepurramid.randomizers.GraphDistributionType
-import com.example.purramid.thepurramid.randomizers.GraphPlotType
-import com.example.purramid.thepurramid.randomizers.CoinProbabilityMode // New Import
+import com.example.purramid.thepurramid.randomizers.PlotType // Your new enum
+import com.example.purramid.thepurramid.randomizers.RandomizerMode
 import com.example.purramid.thepurramid.randomizers.RandomizersHostActivity
 import com.example.purramid.thepurramid.randomizers.viewmodel.RandomizerSettingsViewModel
-import com.example.purramid.thepurramid.ui.PurramidPalette // Import PurramidPalette
-import com.example.purramid.thepurramid.util.dpToPx
+import com.example.purramid.thepurramid.ui.PurramidPalette // For color picker
+import com.google.android.material.chip.Chip
+import com.google.android.material.colorpicker.MaterialColorPickerDialog
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import java.util.UUID
 import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @AndroidEntryPoint
 class RandomizerSettingsFragment : Fragment() {
@@ -48,29 +55,19 @@ class RandomizerSettingsFragment : Fragment() {
     private var _binding: FragmentRandomizerSettingsBinding? = null
     private val binding get() = _binding!!
 
+    private val settingsViewModel: RandomizerSettingsViewModel by activityViewModels()
     private val args: RandomizerSettingsFragmentArgs by navArgs()
-    private val viewModel: RandomizerSettingsViewModel by activityViewModels()
+
+    private lateinit var currentSettingsEntity: SpinSettingsEntity
+    private var initialBackgroundColor: Int = Color.BLACK // Default or from palette
 
     @Inject
-    lateinit var randomizerDao: RandomizerDao
-    private var currentInstanceIdForCloning: UUID? = null
-
-    private var isUpdatingProgrammatically = false // Consolidated flag
+    lateinit var randomizerDao: RandomizerDao // Injected for "Add Another" functionality
 
     companion object {
-        private const val MAX_INSTANCES_GENERAL = 7
-        private const val MAX_INSTANCES_DICE = 7
-        private const val TAG = "SettingsFragment"
+        private const val TAG = "RandomizerSettingsFrag"
+        private const val MAX_RANDOMIZER_INSTANCES = 4
     }
-
-    // Adapters for dropdowns
-    private lateinit var sumResultsAdapter: ArrayAdapter<String>
-    private lateinit var coinProbabilityAdapter: ArrayAdapter<String>
-    private lateinit var graphDistributionTypeAdapter: ArrayAdapter<String> // For Dice & Coin
-    private lateinit var graphLineStyleAdapter: ArrayAdapter<String>      // For Dice & Coin
-
-    private var selectedCoinColorView: View? = null
-
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -82,553 +79,441 @@ class RandomizerSettingsFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        currentInstanceIdForCloning = try { UUID.fromString(args.instanceId) } catch (e: Exception) { null }
+        Log.d(TAG, "onViewCreated for instanceId: ${args.instanceId}")
 
-        setupSpinners() // Consolidated spinner setup
-        setupCoinColorPalette()
+        observeSettings()
         setupListeners()
-        observeViewModel()
         updateAddAnotherButtonState()
+    }
+
+    private fun observeSettings() {
+        settingsViewModel.settings.observe(viewLifecycleOwner) { settings ->
+            if (settings == null) {
+                Log.e(TAG, "Settings are null for instanceId: ${args.instanceId}. Attempting to re-load or use defaults.")
+                // Attempt to re-trigger load or create defaults if this state is unexpected.
+                // For now, we might disable UI or show error.
+                // binding.mainSettingsContainer.isVisible = false // Example
+                return@observe
+            }
+            Log.d(TAG, "Settings observed: ${settings.instanceId}, Mode: ${settings.mode}")
+            currentSettingsEntity = settings
+            initialBackgroundColor = settings.backgroundColor
+            updateUiWithSettings()
+        }
+
+        settingsViewModel.errorEvent.observe(viewLifecycleOwner) { event ->
+            event.getContentIfNotHandled()?.let { errorMessage ->
+                Snackbar.make(binding.root, errorMessage, Snackbar.LENGTH_LONG).show()
+            }
+        }
+        // If instanceId is passed via navArgs, ViewModel uses SavedStateHandle to get it and load.
+        // Explicit call to settingsViewModel.loadSettings(args.instanceId) is generally not needed
+        // if ViewModel's init block handles loading via SavedStateHandle.
+    }
+
+    private fun updateUiWithSettings() {
+        if (!::currentSettingsEntity.isInitialized) {
+            Log.w(TAG, "updateUiWithSettings called before currentSettingsEntity is initialized.")
+            return
+        }
+
+        binding.mainSettingsContainer.isVisible = true // Show UI once settings are loaded
+
+        // Mode Selector
+        binding.modeChipGroup.setOnCheckedChangeListener(null) // Temporarily remove listener
+        val modeChipId = getChipIdForMode(currentSettingsEntity.mode)
+        if (modeChipId != -1) {
+            binding.modeChipGroup.check(modeChipId)
+        }
+        binding.modeChipGroup.setOnCheckedChangeListener(modeChipChangeListener)
+
+        // Show/Hide mode-specific setting groups
+        binding.spinSettingsGroup.isVisible = currentSettingsEntity.mode == RandomizerMode.SPIN
+        binding.slotsSettingsGroup.isVisible = currentSettingsEntity.mode == RandomizerMode.SLOTS
+        binding.diceSettingsGroup.isVisible = currentSettingsEntity.mode == RandomizerMode.DICE
+        binding.coinFlipSettingsLayout.isVisible = currentSettingsEntity.mode == RandomizerMode.COIN_FLIP
+
+        // Background Color Picker Button
+        updateBackgroundColorButton(currentSettingsEntity.backgroundColor)
+
+        // Populate Spin Settings
+        if (currentSettingsEntity.mode == RandomizerMode.SPIN) {
+            binding.switchSpinSoundEnabled.isChecked = currentSettingsEntity.isSoundEnabled
+            binding.switchSpinHapticFeedback.isChecked = currentSettingsEntity.isHapticFeedbackEnabled
+            binding.switchSpinResultAnnouncement.isChecked = currentSettingsEntity.isAnnounceEnabled
+            binding.switchSpinConfetti.isChecked = currentSettingsEntity.isConfettiEnabled
+            binding.textFieldSpinDuration.setText(currentSettingsEntity.spinDurationMillis.toString())
+            binding.textFieldSpinMaxItems.setText(currentSettingsEntity.spinMaxItems.toString())
+        }
+
+        // Populate Slots Settings
+        if (currentSettingsEntity.mode == RandomizerMode.SLOTS) {
+            binding.switchSlotsSound.isChecked = currentSettingsEntity.isSlotsSoundEnabled
+            binding.switchSlotsHaptic.isChecked = currentSettingsEntity.isSlotsHapticFeedbackEnabled
+            binding.switchSlotsResultAnnouncement.isChecked = currentSettingsEntity.isSlotsAnnounceResultEnabled
+            binding.textFieldSlotsSpinDuration.setText(currentSettingsEntity.slotsSpinDuration.toString())
+            binding.textFieldSlotsReelVariation.setText(currentSettingsEntity.slotsReelStopVariation.toString())
+        }
+
+        // Populate Dice Settings
+        if (currentSettingsEntity.mode == RandomizerMode.DICE) {
+            binding.switchDiceAnimationEnabled.isChecked = currentSettingsEntity.isDiceAnimationEnabled
+            binding.switchDiceSumResultsEnabled.isChecked = currentSettingsEntity.isDiceSumResultsEnabled
+            binding.switchDicePips.isChecked = currentSettingsEntity.useDicePips
+            binding.switchDiceResultAnnouncement.isChecked = currentSettingsEntity.isAnnounceEnabled
+            binding.switchDiceCritCelebration.isChecked = currentSettingsEntity.isDiceCritCelebrationEnabled
+
+            binding.switchDiceGraphEnabled.isChecked = currentSettingsEntity.isDiceGraphEnabled
+            val diceGraphOptionsVisibility = if (currentSettingsEntity.isDiceGraphEnabled) View.VISIBLE else View.GONE
+
+            binding.diceGraphPlotTypeLayout.visibility = diceGraphOptionsVisibility
+            binding.diceGraphDistributionTypeLayout.visibility = diceGraphOptionsVisibility
+            binding.diceGraphFlipCountLayout.visibility = diceGraphOptionsVisibility
+
+            if (currentSettingsEntity.isDiceGraphEnabled) {
+                setupGraphPlotTypeDropdown(
+                    autoCompleteView = binding.diceGraphPlotTypeDropDown,
+                    currentPlotTypeString = currentSettingsEntity.diceGraphPlotType,
+                    defaultPlotType = PlotType.HISTOGRAM,
+                    isDiceMode = true // Indicate it's for Dice
+                )
+                setupGraphDistributionTypeDropdown(
+                    autoCompleteView = binding.diceGraphDistributionTypeDropDown,
+                    currentDistributionTypeString = currentSettingsEntity.diceGraphDistributionType,
+                    defaultDistributionType = GraphDistributionType.SUM_OF_ALL_DICE,
+                    isDiceMode = true
+                )
+                binding.textFieldDiceGraphFlipCount.setText(currentSettingsEntity.diceGraphFlipCount.takeIf { it > 0 }?.toString() ?: "")
+            }
+        }
+
+        // Populate Coin Flip Settings
+        if (currentSettingsEntity.mode == RandomizerMode.COIN_FLIP) {
+            binding.switchCoinFlipAnimationEnabled.isChecked = currentSettingsEntity.isFlipAnimationEnabled
+            binding.switchCoinFreeFormEnabled.isChecked = currentSettingsEntity.isCoinFreeFormEnabled
+            binding.switchCoinResultAnnouncement.isChecked = currentSettingsEntity.isCoinAnnouncementEnabled
+            binding.textFieldCoinColor.setText(String.format("#%06X", 0xFFFFFF and currentSettingsEntity.coinColor)) // Show hex
+
+            binding.switchCoinGraphEnabled.isChecked = currentSettingsEntity.isCoinGraphEnabled
+            val coinGraphOptionsVisibility = if (currentSettingsEntity.isCoinGraphEnabled) View.VISIBLE else View.GONE
+
+            binding.menuCoinGraphPlotTypeLayout.visibility = coinGraphOptionsVisibility // Ensure this ID exists for coin plot type layout
+            binding.coinGraphDistributionTypeLayout.visibility = coinGraphOptionsVisibility
+            binding.coinGraphFlipCountLayout.visibility = coinGraphOptionsVisibility
+
+            if (currentSettingsEntity.isCoinGraphEnabled) {
+                setupGraphPlotTypeDropdown(
+                    autoCompleteView = binding.autoCompleteCoinGraphPlotType, // Use your actual ID for coin plot type dropdown
+                    currentPlotTypeString = currentSettingsEntity.coinGraphPlotType,
+                    defaultPlotType = PlotType.HISTOGRAM,
+                    isDiceMode = false // Indicate it's for Coin
+                )
+                setupGraphDistributionTypeDropdown(
+                    autoCompleteView = binding.coinGraphDistributionTypeDropDown, // Use your actual ID
+                    currentDistributionTypeString = currentSettingsEntity.coinGraphDistributionType,
+                    defaultDistributionType = GraphDistributionType.NONE, // Or appropriate default for coins
+                    isDiceMode = false
+                )
+                binding.textFieldCoinGraphFlipCount.setText(currentSettingsEntity.coinGraphFlipCount.takeIf { it > 0 }?.toString() ?: "")
+            }
+        }
+    }
+
+    private fun setupGraphPlotTypeDropdown(
+        autoCompleteView: AutoCompleteTextView,
+        currentPlotTypeString: String?,
+        defaultPlotType: PlotType,
+        isDiceMode: Boolean // To update the correct field in currentSettingsEntity
+    ) {
+        val plotTypes = PlotType.values()
+        val plotTypeDisplayNames = plotTypes.map {
+            when (it) {
+                PlotType.HISTOGRAM -> getString(R.string.plot_type_histogram)
+                PlotType.LINE_GRAPH -> getString(R.string.plot_type_line_graph)
+                PlotType.QQ_PLOT -> getString(R.string.plot_type_qq_graph)
+            }
+        }
+
+        val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, plotTypeDisplayNames)
+        autoCompleteView.setAdapter(adapter)
+
+        val currentPlotType = PlotType.values().find { it.name == currentPlotTypeString } ?: defaultPlotType
+        autoCompleteView.setText(plotTypeDisplayNames[plotTypes.indexOf(currentPlotType)], false)
+
+        // Listener is set in setupSpecificListeners to avoid issues with adapter re-creation
+    }
+
+
+    private fun setupGraphDistributionTypeDropdown(
+        autoCompleteView: AutoCompleteTextView,
+        currentDistributionTypeString: String?,
+        defaultDistributionType: GraphDistributionType,
+        isDiceMode: Boolean
+    ) {
+        val distributionTypes = GraphDistributionType.values()
+        val displayNames = distributionTypes.map { it.name.replace("_", " ").capitalizeWords() } // Simple formatting
+
+        val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, displayNames)
+        autoCompleteView.setAdapter(adapter)
+
+        val currentType = GraphDistributionType.values().find { it.name == currentDistributionTypeString } ?: defaultDistributionType
+        autoCompleteView.setText(displayNames[distributionTypes.indexOf(currentType)], false)
+    }
+
+
+    private val modeChipChangeListener = CompoundButton.OnCheckedChangeListener { chip, isChecked ->
+        if (isChecked && ::currentSettingsEntity.isInitialized) {
+            val newMode = when (chip.id) {
+                R.id.chipSpin -> RandomizerMode.SPIN
+                R.id.chipSlots -> RandomizerMode.SLOTS
+                R.id.chipDice -> RandomizerMode.DICE
+                R.id.chipCoinFlip -> RandomizerMode.COIN_FLIP
+                else -> currentSettingsEntity.mode // Should not happen
+            }
+            if (currentSettingsEntity.mode != newMode) {
+                Log.d(TAG, "Mode changed to: $newMode")
+                currentSettingsEntity = currentSettingsEntity.copy(mode = newMode)
+                settingsViewModel.updateMode(newMode) // Update ViewModel which should persist and reload settings for new mode structure
+                // updateUiWithSettings() will be called by the observer on settingsViewModel.settings
+            }
+        }
+    }
+
+    private fun setupListeners() {
+        binding.closeSettingsButton.setOnClickListener { onCloseSettingsClicked() }
+        binding.buttonAddAnotherRandomizer.setOnClickListener { addAnotherRandomizer() }
+
+        binding.modeChipGroup.setOnCheckedChangeListener(modeChipChangeListener)
+
+        // Background Color Picker
+        binding.buttonChangeBackgroundColor.setOnClickListener { openColorPicker() }
+
+        // Spin Settings Listeners
+        binding.switchSpinSoundEnabled.setOnCheckedChangeListener { _, isChecked -> if (::currentSettingsEntity.isInitialized) currentSettingsEntity = currentSettingsEntity.copy(isSoundEnabled = isChecked) }
+        binding.switchSpinHapticFeedback.setOnCheckedChangeListener { _, isChecked -> if (::currentSettingsEntity.isInitialized) currentSettingsEntity = currentSettingsEntity.copy(isHapticFeedbackEnabled = isChecked) }
+        binding.switchSpinResultAnnouncement.setOnCheckedChangeListener { _, isChecked -> if (::currentSettingsEntity.isInitialized) currentSettingsEntity = currentSettingsEntity.copy(isAnnounceEnabled = isChecked) }
+        binding.switchSpinConfetti.setOnCheckedChangeListener { _, isChecked -> if (::currentSettingsEntity.isInitialized) currentSettingsEntity = currentSettingsEntity.copy(isConfettiEnabled = isChecked) }
+        binding.textFieldSpinDuration.doAfterTextChanged { text -> if (::currentSettingsEntity.isInitialized) currentSettingsEntity = currentSettingsEntity.copy(spinDurationMillis = text.toString().toLongOrNull() ?: 2000L) }
+        binding.textFieldSpinMaxItems.doAfterTextChanged { text -> if (::currentSettingsEntity.isInitialized) currentSettingsEntity = currentSettingsEntity.copy(spinMaxItems = text.toString().toIntOrNull() ?: 20) }
+        binding.buttonEditSpinList.setOnClickListener {
+            currentSettingsEntity.instanceId.let {
+                val action = RandomizerSettingsFragmentDirections.actionRandomizerSettingsFragmentToListEditorActivity(it.toString())
+                findNavController().navigate(action)
+            }
+        }
+
+
+        // Slots Settings Listeners
+        binding.switchSlotsSound.setOnCheckedChangeListener { _, isChecked -> if (::currentSettingsEntity.isInitialized) currentSettingsEntity = currentSettingsEntity.copy(isSlotsSoundEnabled = isChecked) }
+        binding.switchSlotsHaptic.setOnCheckedChangeListener { _, isChecked -> if (::currentSettingsEntity.isInitialized) currentSettingsEntity = currentSettingsEntity.copy(isSlotsHapticFeedbackEnabled = isChecked) }
+        binding.switchSlotsResultAnnouncement.setOnCheckedChangeListener { _, isChecked -> if (::currentSettingsEntity.isInitialized) currentSettingsEntity = currentSettingsEntity.copy(isSlotsAnnounceResultEnabled = isChecked) }
+        binding.textFieldSlotsSpinDuration.doAfterTextChanged { text -> if (::currentSettingsEntity.isInitialized) currentSettingsEntity = currentSettingsEntity.copy(slotsSpinDuration = text.toString().toLongOrNull() ?: 1000L) }
+        binding.textFieldSlotsReelVariation.doAfterTextChanged { text -> if (::currentSettingsEntity.isInitialized) currentSettingsEntity = currentSettingsEntity.copy(slotsReelStopVariation = text.toString().toLongOrNull() ?: 200L) }
+        binding.buttonEditSlotsLists.setOnClickListener { /* TODO: Navigate to Slots List Editor */ }
+
+
+        // Dice Settings Listeners
+        binding.switchDiceAnimationEnabled.setOnCheckedChangeListener { _, isChecked -> if (::currentSettingsEntity.isInitialized) currentSettingsEntity = currentSettingsEntity.copy(isDiceAnimationEnabled = isChecked) }
+        binding.switchDiceSumResultsEnabled.setOnCheckedChangeListener { _, isChecked -> if (::currentSettingsEntity.isInitialized) currentSettingsEntity = currentSettingsEntity.copy(isDiceSumResultsEnabled = isChecked) }
+        binding.switchDicePips.setOnCheckedChangeListener { _, isChecked -> if (::currentSettingsEntity.isInitialized) currentSettingsEntity = currentSettingsEntity.copy(useDicePips = isChecked) }
+        binding.switchDiceResultAnnouncement.setOnCheckedChangeListener { _, isChecked -> if (::currentSettingsEntity.isInitialized) currentSettingsEntity = currentSettingsEntity.copy(isAnnounceEnabled = isChecked) } // Re-uses isAnnounceEnabled
+        binding.switchDiceCritCelebration.setOnCheckedChangeListener { _, isChecked -> if (::currentSettingsEntity.isInitialized) currentSettingsEntity = currentSettingsEntity.copy(isDiceCritCelebrationEnabled = isChecked) }
+        binding.buttonManageDicePool.setOnClickListener { if (::currentSettingsEntity.isInitialized) DicePoolDialogFragment.newInstance(currentSettingsEntity.instanceId).show(parentFragmentManager, DicePoolDialogFragment.TAG) }
+        binding.buttonManageDiceModifiers.setOnClickListener { if (::currentSettingsEntity.isInitialized) DiceModifiersDialogFragment.newInstance(currentSettingsEntity.instanceId).show(parentFragmentManager, DiceModifiersDialogFragment.TAG) }
+        binding.buttonManageDiceColors.setOnClickListener { if (::currentSettingsEntity.isInitialized) DiceColorPickerDialogFragment.newInstance(currentSettingsEntity.instanceId).show(parentFragmentManager, DiceColorPickerDialogFragment.TAG)}
+
+        binding.switchDiceGraphEnabled.setOnCheckedChangeListener { _, isChecked ->
+            if (::currentSettingsEntity.isInitialized) {
+                currentSettingsEntity = currentSettingsEntity.copy(isDiceGraphEnabled = isChecked)
+                val visibility = if (isChecked) View.VISIBLE else View.GONE
+                binding.diceGraphPlotTypeLayout.visibility = visibility
+                binding.diceGraphDistributionTypeLayout.visibility = visibility
+                binding.diceGraphFlipCountLayout.visibility = visibility
+                if (isChecked) { // If enabling, ensure dropdowns are populated/refreshed
+                    setupGraphPlotTypeDropdown(binding.diceGraphPlotTypeDropDown, currentSettingsEntity.diceGraphPlotType, PlotType.HISTOGRAM, true)
+                    setupGraphDistributionTypeDropdown(binding.diceGraphDistributionTypeDropDown, currentSettingsEntity.diceGraphDistributionType, GraphDistributionType.SUM_OF_ALL_DICE, true)
+                }
+            }
+        }
+        binding.diceGraphPlotTypeDropDown.onItemClickListener = AdapterView.OnItemClickListener { _, _, position, _ ->
+            if (::currentSettingsEntity.isInitialized) {
+                val selectedPlotType = PlotType.values()[position]
+                currentSettingsEntity = currentSettingsEntity.copy(diceGraphPlotType = selectedPlotType.name)
+            }
+        }
+        binding.diceGraphDistributionTypeDropDown.onItemClickListener = AdapterView.OnItemClickListener { _, _, position, _ ->
+            if (::currentSettingsEntity.isInitialized) {
+                val selectedDistType = GraphDistributionType.values()[position]
+                currentSettingsEntity = currentSettingsEntity.copy(diceGraphDistributionType = selectedDistType.name)
+            }
+        }
+        binding.textFieldDiceGraphFlipCount.doAfterTextChanged { text ->
+            if (::currentSettingsEntity.isInitialized) {
+                currentSettingsEntity = currentSettingsEntity.copy(diceGraphFlipCount = text.toString().toIntOrNull() ?: 0)
+            }
+        }
+
+        // Coin Flip Settings Listeners
+        binding.switchCoinFlipAnimationEnabled.setOnCheckedChangeListener { _, isChecked -> if (::currentSettingsEntity.isInitialized) currentSettingsEntity = currentSettingsEntity.copy(isFlipAnimationEnabled = isChecked) }
+        binding.switchCoinFreeFormEnabled.setOnCheckedChangeListener { _, isChecked -> if (::currentSettingsEntity.isInitialized) currentSettingsEntity = currentSettingsEntity.copy(isCoinFreeFormEnabled = isChecked) }
+        binding.switchCoinResultAnnouncement.setOnCheckedChangeListener { _, isChecked -> if (::currentSettingsEntity.isInitialized) currentSettingsEntity = currentSettingsEntity.copy(isCoinAnnouncementEnabled = isChecked) }
+        binding.textFieldCoinColor.doOnTextChanged { text, _, _, _ -> /* Parsed in openCoinColorPicker */ }
+        binding.buttonPickCoinColor.setOnClickListener { if (::currentSettingsEntity.isInitialized) openCoinColorPicker() }
+        binding.buttonManageCoinPool.setOnClickListener { if (::currentSettingsEntity.isInitialized) CoinPoolDialogFragment.newInstance(currentSettingsEntity.instanceId).show(parentFragmentManager, CoinPoolDialogFragment.TAG) }
+
+
+        binding.switchCoinGraphEnabled.setOnCheckedChangeListener { _, isChecked ->
+            if (::currentSettingsEntity.isInitialized) {
+                currentSettingsEntity = currentSettingsEntity.copy(isCoinGraphEnabled = isChecked)
+                val visibility = if (isChecked) View.VISIBLE else View.GONE
+                binding.menuCoinGraphPlotTypeLayout.visibility = visibility // Use your actual ID
+                binding.coinGraphDistributionTypeLayout.visibility = visibility
+                binding.coinGraphFlipCountLayout.visibility = visibility
+                if (isChecked) { // If enabling, ensure dropdowns are populated/refreshed
+                    setupGraphPlotTypeDropdown(binding.autoCompleteCoinGraphPlotType, currentSettingsEntity.coinGraphPlotType, PlotType.HISTOGRAM, false)
+                    setupGraphDistributionTypeDropdown(binding.coinGraphDistributionTypeDropDown, currentSettingsEntity.coinGraphDistributionType, GraphDistributionType.NONE, false)
+                }
+            }
+        }
+        binding.autoCompleteCoinGraphPlotType.onItemClickListener = AdapterView.OnItemClickListener { _, _, position, _ -> // Use your actual ID
+            if (::currentSettingsEntity.isInitialized) {
+                val selectedPlotType = PlotType.values()[position]
+                currentSettingsEntity = currentSettingsEntity.copy(coinGraphPlotType = selectedPlotType.name)
+            }
+        }
+        binding.coinGraphDistributionTypeDropDown.onItemClickListener = AdapterView.OnItemClickListener { _, _, position, _ -> // Use your actual ID
+            if (::currentSettingsEntity.isInitialized) {
+                val selectedDistType = GraphDistributionType.values()[position]
+                currentSettingsEntity = currentSettingsEntity.copy(coinGraphDistributionType = selectedDistType.name)
+            }
+        }
+        binding.textFieldCoinGraphFlipCount.doAfterTextChanged { text ->
+            if (::currentSettingsEntity.isInitialized) {
+                currentSettingsEntity = currentSettingsEntity.copy(coinGraphFlipCount = text.toString().toIntOrNull() ?: 0)
+            }
+        }
+    }
+
+    private fun updateBackgroundColorButton(color: Int) {
+        val drawable = ContextCompat.getDrawable(requireContext(), R.drawable.color_square_background) as? GradientDrawable
+        drawable?.setColor(color)
+        binding.buttonChangeBackgroundColor.icon = drawable
+        binding.textFieldRandomizerBackgroundColor.setText(String.format("#%06X", 0xFFFFFF and color))
+    }
+
+    private fun openColorPicker() {
+        val initialColor = currentSettingsEntity.backgroundColor
+        val colorPicker = MaterialColorPickerDialog.Builder(requireContext())
+            .setTitle("Choose Background Color")
+            .setColor(initialColor)
+            .setListener { color, _ ->
+                currentSettingsEntity = currentSettingsEntity.copy(backgroundColor = color)
+                updateBackgroundColorButton(color)
+            }
+            .show()
+    }
+    private fun openCoinColorPicker() {
+        val initialColor = currentSettingsEntity.coinColor
+        val colorPicker = MaterialColorPickerDialog.Builder(requireContext())
+            .setTitle("Choose Coin Color")
+            .setColor(initialColor)
+            .setListener { color, _ ->
+                currentSettingsEntity = currentSettingsEntity.copy(coinColor = color)
+                binding.textFieldCoinColor.setText(String.format("#%06X", 0xFFFFFF and color))
+            }
+            .show()
+    }
+
+
+    private fun getChipIdForMode(mode: RandomizerMode): Int {
+        return when (mode) {
+            RandomizerMode.SPIN -> R.id.chipSpin
+            RandomizerMode.SLOTS -> R.id.chipSlots
+            RandomizerMode.DICE -> R.id.chipDice
+            RandomizerMode.COIN_FLIP -> R.id.chipCoinFlip
+        }
+    }
+
+    private fun saveCurrentSettings() {
+        if (::currentSettingsEntity.isInitialized) {
+            Log.d(TAG, "Saving settings for instance ${currentSettingsEntity.instanceId}")
+            settingsViewModel.saveSettings(currentSettingsEntity)
+        } else {
+            Log.w(TAG, "saveCurrentSettings called but currentSettingsEntity not initialized.")
+        }
+    }
+
+    private fun onCloseSettingsClicked() {
+        saveCurrentSettings()
+        activity?.finish() // Finishes the RandomizersHostActivity
+    }
+
+    override fun onPause() {
+        super.onPause()
+        saveCurrentSettings()
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
-        selectedCoinColorView = null
     }
-
-    private fun setupSpinners() {
-        // Dice Sum Results
-        val sumResultTypeNames = DiceSumResultType.values().map {
-            getString(when (it) {
-                DiceSumResultType.INDIVIDUAL -> R.string.dice_sum_type_individual
-                DiceSumResultType.SUM_TYPE -> R.string.dice_sum_type_sum_type
-                DiceSumResultType.SUM_TOTAL -> R.string.dice_sum_type_sum_total
-            })
-        }.toTypedArray()
-        sumResultsAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, sumResultTypeNames)
-        binding.autoCompleteTextViewSumResults.setAdapter(sumResultsAdapter)
-
-        // Coin Probability
-        val coinProbNames = CoinProbabilityMode.values().map {
-            getString(when (it) {
-                CoinProbabilityMode.NONE -> R.string.setting_probability_none
-                CoinProbabilityMode.TWO_COLUMNS -> R.string.setting_probability_two_columns
-                CoinProbabilityMode.GRID_3X3 -> R.string.setting_probability_grid_3x3
-                CoinProbabilityMode.GRID_6X6 -> R.string.setting_probability_grid_6x6
-                CoinProbabilityMode.GRID_10X10 -> R.string.setting_probability_grid_10x10
-                CoinProbabilityMode.GRAPH_DISTRIBUTION -> R.string.setting_probability_graph_distribution
-            })
-        }.toTypedArray()
-        coinProbabilityAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, coinProbNames)
-        binding.autoCompleteCoinProbability.setAdapter(coinProbabilityAdapter)
-
-        // Graph Distribution Type (shared by Dice and Coin)
-        val graphDistTypeNames = GraphDistributionType.values().map {
-            getString(when (it) {
-                GraphDistributionType.OFF -> R.string.graph_dist_type_off
-                GraphDistributionType.MANUAL -> R.string.graph_dist_type_manual
-                GraphDistributionType.NORMAL -> R.string.graph_dist_type_normal
-                GraphDistributionType.UNIFORM -> R.string.graph_dist_type_uniform
-            })
-        }.toTypedArray()
-        graphDistributionTypeAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, graphDistTypeNames)
-        // Assuming you'll have autoCompleteDiceGraphDistributionType and autoCompleteCoinGraphDistributionType
-        // binding.autoCompleteDiceGraphDistributionType.setAdapter(graphDistributionTypeAdapter) // For Dice (if you add it)
-        binding.autoCompleteCoinGraphDistributionType.setAdapter(graphDistributionTypeAdapter)
-
-
-        // Graph Plot Type (shared by Dice and Coin)
-        val graphPlotTypeNames = GraphPlotType.values().map {
-            getString(when (it) {
-                GraphPlotType.HISTOGRAM -> R.string.graph_plot_type_histogram
-                GraphPlotType.LINE_GRAPH -> R.string.graph_plot_type_line
-                GraphPlotType.QQ_PLOT -> R.string.graph_plot_type_qq
-            })
-        }.toTypedArray()
-        graphLineStyleAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, graphPlotTypeNames)
-        // binding.autoCompleteDiceGraphLineStyle.setAdapter(graphLineStyleAdapter) // For Dice (if you add it)
-        binding.autoCompleteCoinGraphLineStyle.setAdapter(graphLineStyleAdapter)
-    }
-
-    private fun setupCoinColorPalette() {
-        binding.coinColorPalette.removeAllViews()
-        val defaultColorInt = context?.let { ContextCompat.getColor(it, R.color.goldenrod) } ?: Color.YELLOW
-
-        PurramidPalette.appStandardPalette.forEachIndexed { index, namedColor ->
-            val colorView = View(requireContext()).apply {
-                val sizeInDp = 32 // Smaller for settings
-                val marginInDp = 4
-                val sizeInPx = requireContext().dpToPx(sizeInDp)
-                val marginInPx = requireContext().dpToPx(marginInDp)
-
-                layoutParams = LinearLayout.LayoutParams(sizeInPx, sizeInPx).apply {
-                    setMargins(marginInPx, marginInPx, marginInPx, marginInPx)
-                }
-                background = GradientDrawable().apply {
-                    shape = GradientDrawable.OVAL
-                    setColor(namedColor.colorInt)
-                    // Initial stroke based on whether it's selected (will be updated by observer)
-                    val outlineColor = if (Color.luminance(namedColor.colorInt) > 0.5) Color.BLACK else Color.WHITE
-                    setStroke(requireContext().dpToPx(1), outlineColor)
-                }
-                tag = namedColor.colorInt // Store colorInt in tag for easy retrieval
-                setOnClickListener {
-                    if (isUpdatingProgrammatically) return@setOnClickListener
-                    viewModel.updateCoinColor(namedColor.colorInt)
-                    // updateCoinColorSelectionUI will be called by the observer
-                }
-                // Long press for tooltip
-                setOnLongClickListener {
-                    val tooltipText = namedColor.name
-                    val tooltip = Toast.makeText(context, tooltipText, Toast.LENGTH_SHORT)
-                    // Position tooltip (this is a basic example, consider TooltipCompat for better positioning)
-                    val location = IntArray(2)
-                    it.getLocationOnScreen(location)
-                    tooltip.setGravity(android.view.Gravity.TOP or android.view.Gravity.START, location[0], location[1] - it.height - 20)
-                    tooltip.show()
-                    true
-                }
-            }
-            binding.coinColorPalette.addView(colorView)
-        }
-    }
-
-    private fun updateCoinColorSelectionUI(selectedColorInt: Int) {
-        isUpdatingProgrammatically = true
-        binding.coinColorPalette.children.forEach { view ->
-            val viewColorInt = view.tag as? Int
-            if (viewColorInt != null) {
-                val drawable = view.background as? GradientDrawable
-                if (viewColorInt == selectedColorInt) {
-                    drawable?.setStroke(requireContext().dpToPx(3), ContextCompat.getColor(requireContext(), R.color.design_default_color_primary)) // Highlight color
-                    selectedCoinColorView = view
-                } else {
-                    val outlineColor = if (Color.luminance(viewColorInt) > 0.5) Color.BLACK else Color.WHITE
-                    drawable?.setStroke(requireContext().dpToPx(1), outlineColor)
-                }
-            }
-        }
-        isUpdatingProgrammatically = false
-    }
-
-
-    private fun setupListeners() {
-        binding.closeSettingsButton.setOnClickListener {
-            findNavController().popBackStack()
-        }
-
-        // Common button for List Editor - visibility controlled by mode
-        val listEditorClickListener = View.OnClickListener {
-            try {
-                val action = RandomizerSettingsFragmentDirections.actionSettingsToListCreator(null)
-                findNavController().navigate(action)
-            } catch (e: Exception) {
-                Log.e(TAG, "Navigation to List Creator failed.", e)
-                Snackbar.make(requireView(), "Cannot open List Editor", Snackbar.LENGTH_SHORT).show()
-            }
-        }
-        binding.buttonListEditor.setOnClickListener(listEditorClickListener)
-        binding.buttonListEditorSlots.setOnClickListener(listEditorClickListener)
-
-
-        binding.modeToggleGroup.addOnButtonCheckedListener { _, checkedId, isChecked ->
-            if (isUpdatingProgrammatically || !isChecked) return@addOnButtonCheckedListener
-            val selectedMode = when (checkedId) {
-                R.id.buttonModeSpin -> RandomizerMode.SPIN
-                R.id.buttonModeSlots -> RandomizerMode.SLOTS
-                R.id.buttonModeDice -> RandomizerMode.DICE
-                R.id.buttonModeCoinFlip -> RandomizerMode.COIN_FLIP
-                else -> viewModel.settings.value?.mode
-            }
-            selectedMode?.let { viewModel.updateMode(it) }
-            updateAddAnotherButtonState()
-        }
-
-        binding.slotsNumColumnsToggleGroup.addOnButtonCheckedListener { _, checkedId, isChecked ->
-            if (isUpdatingProgrammatically || !isChecked) return@addOnButtonCheckedListener
-            val numColumns = when (checkedId) {
-                R.id.buttonSlotsColumns3 -> 3
-                R.id.buttonSlotsColumns5 -> 5
-                else -> viewModel.settings.value?.numSlotsColumns ?: 3
-            }
-            viewModel.updateNumSlotsColumns(numColumns)
-        }
-
-        // --- Switches Listeners ---
-        val commonSwitchListener = CompoundButton.OnCheckedChangeListener { buttonView, isChecked ->
-            if (isUpdatingProgrammatically) return@OnCheckedChangeListener
-            when (buttonView.id) {
-                R.id.switchIsAnnounceEnabled -> viewModel.updateIsAnnounceEnabled(isChecked)
-                R.id.switchIsCelebrateEnabled -> viewModel.updateIsCelebrateEnabled(isChecked) // General celebrate (Spin)
-                R.id.switchSpin -> viewModel.updateIsSpinEnabled(isChecked) // Spin specific
-                R.id.switchIsSequenceEnabled -> viewModel.updateIsSequenceEnabled(isChecked) // Spin specific
-                // Dice
-                R.id.switchUseDicePips -> viewModel.updateUseDicePips(isChecked)
-                R.id.switchIsPercentileDiceEnabled -> viewModel.updateIsPercentileDiceEnabled(isChecked)
-                R.id.switchIsDiceAnimationEnabled -> viewModel.updateIsDiceAnimationEnabled(isChecked)
-                R.id.switchIsDiceCritCelebrationEnabled -> viewModel.updateIsDiceCritCelebrationEnabled(isChecked)
-                // Coin Flip
-                R.id.switchCoinFlipAnimation -> viewModel.updateIsFlipAnimationEnabled(isChecked)
-                R.id.switchCoinFreeForm -> viewModel.updateIsCoinFreeFormEnabled(isChecked)
-                R.id.switchCoinAnnouncement -> viewModel.updateIsCoinAnnouncementEnabled(isChecked)
-            }
-        }
-        binding.switchIsAnnounceEnabled.setOnCheckedChangeListener(commonSwitchListener)
-        binding.switchIsCelebrateEnabled.setOnCheckedChangeListener(commonSwitchListener)
-        binding.switchSpin.setOnCheckedChangeListener(commonSwitchListener)
-        binding.switchIsSequenceEnabled.setOnCheckedChangeListener(commonSwitchListener)
-        binding.switchUseDicePips.setOnCheckedChangeListener(commonSwitchListener)
-        binding.switchIsPercentileDiceEnabled.setOnCheckedChangeListener(commonSwitchListener)
-        binding.switchIsDiceAnimationEnabled.setOnCheckedChangeListener(commonSwitchListener)
-        binding.switchIsDiceCritCelebrationEnabled.setOnCheckedChangeListener(commonSwitchListener)
-        binding.switchCoinFlipAnimation.setOnCheckedChangeListener(commonSwitchListener)
-        binding.switchCoinFreeForm.setOnCheckedChangeListener(commonSwitchListener)
-        binding.switchCoinAnnouncement.setOnCheckedChangeListener(commonSwitchListener)
-
-
-        // --- Buttons for Dialogs ---
-        binding.buttonDicePoolConfig.setOnClickListener {
-            currentInstanceIdForCloning?.let { instanceId ->
-                DicePoolDialogFragment.newInstance(instanceId).show(parentFragmentManager, DicePoolDialogFragment.TAG)
-            } ?: Log.e(TAG, "Cannot open Dice Pool Config: Instance ID is null")
-        }
-        binding.buttonConfigureDiceColors.setOnClickListener {
-            currentInstanceIdForCloning?.let { instanceId ->
-                DiceColorPickerDialogFragment.newInstance(instanceId)
-                    .show(parentFragmentManager, DiceColorPickerDialogFragment.TAG)
-            } ?: Log.e(TAG, "Cannot open Dice Color Picker: Instance ID is null")
-        }
-        binding.buttonConfigureDiceModifiers.setOnClickListener {
-            currentInstanceIdForCloning?.let { instanceId ->
-                DiceModifiersDialogFragment.newInstance(instanceId)
-                    .show(parentFragmentManager, DiceModifiersDialogFragment.TAG)
-            } ?: Log.e(TAG, "Cannot open Dice Modifiers: Instance ID is null")
-        }
-
-        // --- Dropdown (AutoCompleteTextView) Listeners ---
-        binding.autoCompleteTextViewSumResults.onItemClickListener =
-            AdapterView.OnItemClickListener { _, _, position, _ ->
-                if (isUpdatingProgrammatically) return@OnItemClickListener
-                val selectedEnum = DiceSumResultType.values()[position]
-                viewModel.updateDiceSumResultType(selectedEnum)
-            }
-
-        binding.autoCompleteCoinProbability.onItemClickListener =
-            AdapterView.OnItemClickListener { _, _, position, _ ->
-                if (isUpdatingProgrammatically) return@OnItemClickListener
-                val selectedEnum = CoinProbabilityMode.values()[position]
-                viewModel.updateCoinProbabilityMode(selectedEnum)
-            }
-
-        binding.autoCompleteCoinGraphDistributionType.onItemClickListener =
-            AdapterView.OnItemClickListener { _, _, position, _ ->
-                if (isUpdatingProgrammatically) return@OnItemClickListener
-                val selectedEnum = GraphDistributionType.values()[position]
-                viewModel.updateCoinGraphDistributionType(selectedEnum)
-            }
-        binding.autoCompleteCoinGraphLineStyle.onItemClickListener =
-            AdapterView.OnItemClickListener { _, _, position, _ ->
-                if (isUpdatingProgrammatically) return@OnItemClickListener
-                val selectedEnum = GraphPlotType.values()[position]
-                viewModel.updateCoinGraphLineStyle(selectedEnum)
-            }
-        binding.textFieldCoinGraphFlipCount.doOnTextChanged { text, _, _, _ ->
-            if (isUpdatingProgrammatically) return@doOnTextChanged
-            val count = text.toString().toIntOrNull() ?: 1000 // Default if parse fails
-            viewModel.updateCoinGraphFlipCount(count.coerceIn(1, 10000)) // Example range
-        }
-        // Add similar listeners for Dice Graph settings if those AutoCompleteTextViews are separate
-
-
-        binding.buttonAddAnotherRandomizer.setOnClickListener {
-            handleAddAnotherInstance()
-        }
-    }
-
-    private fun observeViewModel() {
-        val lifecycleOwner = viewLifecycleOwner
-        viewModel.settings.observe(lifecycleOwner) { settingsEntity ->
-            isUpdatingProgrammatically = true // Block listeners
-
-            if (settingsEntity != null) {
-                updateModeSelectionUI(settingsEntity.mode)
-
-                // Common settings (visibility might depend on mode further down)
-                binding.switchIsAnnounceEnabled.isChecked = settingsEntity.isAnnounceEnabled
-                binding.switchIsCelebrateEnabled.isChecked = settingsEntity.isCelebrateEnabled
-
-                // Spin specific
-                binding.switchSpin.isChecked = settingsEntity.isSpinEnabled
-                binding.switchIsSequenceEnabled.isChecked = settingsEntity.isSequenceEnabled
-
-                // Slots specific
-                val slotsButtonToCheck = when (settingsEntity.numSlotsColumns) {
-                    5 -> R.id.buttonSlotsColumns5
-                    else -> R.id.buttonSlotsColumns3
-                }
-                if (binding.slotsNumColumnsToggleGroup.checkedButtonId != slotsButtonToCheck) {
-                    binding.slotsNumColumnsToggleGroup.check(slotsButtonToCheck)
-                }
-
-                // Dice specific
-                binding.switchUseDicePips.isChecked = settingsEntity.useDicePips
-                binding.switchIsPercentileDiceEnabled.isChecked = settingsEntity.isPercentileDiceEnabled
-                binding.switchIsDiceAnimationEnabled.isChecked = settingsEntity.isDiceAnimationEnabled
-                binding.switchIsDiceCritCelebrationEnabled.isChecked = settingsEntity.isDiceCritCelebrationEnabled
-                setSpinnerSelection(binding.autoCompleteTextViewSumResults, sumResultsAdapter, settingsEntity.diceSumResultType.ordinal)
-
-                // Coin Flip specific
-                updateCoinColorSelectionUI(settingsEntity.coinColor)
-                binding.switchCoinFlipAnimation.isChecked = settingsEntity.isFlipAnimationEnabled
-                binding.switchCoinFreeForm.isChecked = settingsEntity.isCoinFreeFormEnabled
-                binding.switchCoinAnnouncement.isChecked = settingsEntity.isCoinAnnouncementEnabled
-
-                val coinProbMode = CoinProbabilityMode.valueOf(settingsEntity.coinProbabilityMode)
-                setSpinnerSelection(binding.autoCompleteCoinProbability, coinProbabilityAdapter, coinProbMode.ordinal)
-
-                val coinGraphDistType = GraphDistributionType.valueOf(settingsEntity.coinGraphDistributionType)
-                setSpinnerSelection(binding.autoCompleteCoinGraphDistributionType, graphDistributionTypeAdapter, coinGraphDistType.ordinal)
-
-                val coinGraphPlotType = GraphPlotType.valueOf(settingsEntity.coinGraphPlotType)
-                setSpinnerSelection(binding.autoCompleteCoinGraphLineStyle, graphLineStyleAdapter, coinGraphPlotType.ordinal)
-
-                if (binding.textFieldCoinGraphFlipCount.text.toString() != settingsEntity.coinGraphFlipCount.toString()) {
-                    binding.textFieldCoinGraphFlipCount.setText(settingsEntity.coinGraphFlipCount.toString())
-                }
-
-                updateControlEnablementAndVisibility(settingsEntity) // New combined function
-                binding.textViewSettingsPlaceholder.visibility = View.GONE
-                // enableAllControls(true) // enableAllControls is now part of updateControlEnablementAndVisibility
-
-            } else {
-                // Handle null settings (error case)
-                binding.textViewSettingsPlaceholder.text = getString(R.string.error_settings_load_failed)
-                binding.textViewSettingsPlaceholder.visibility = View.VISIBLE
-                enableAllControls(false) // Disable all controls
-                binding.modeToggleGroup.clearChecked()
-                binding.slotsNumColumnsToggleGroup.clearChecked()
-                binding.autoCompleteTextViewSumResults.setText("", false)
-                binding.autoCompleteCoinProbability.setText("", false)
-                binding.autoCompleteCoinGraphDistributionType.setText("", false)
-                binding.autoCompleteCoinGraphLineStyle.setText("", false)
-                binding.textFieldCoinGraphFlipCount.setText("")
-                updateCoinColorSelectionUI(ContextCompat.getColor(requireContext(), R.color.goldenrod)) // Default color UI
-            }
-            isUpdatingProgrammatically = false // Re-enable listeners
-        }
-
-        viewModel.errorEvent.observe(lifecycleOwner) { event ->
-            event.getContentIfNotHandled()?.let { resId ->
-                if (resId != 0) { // Check if it's a real error or just a clear event
-                    val message = getString(resId)
-                    if (resId == R.string.error_settings_instance_id_failed) {
-                        Log.e(TAG, "Critical Error: $message - Navigating back.")
-                        findNavController().popBackStack()
-                    } else {
-                        Snackbar.make(requireView(), message, Snackbar.LENGTH_LONG)
-                            .setAction(getString(R.string.snackbar_action_ok)) {}
-                            .show()
-                    }
-                }
-            }
-        }
-    }
-
-    private fun <T> setSpinnerSelection(spinner: AutoCompleteTextView, adapter: ArrayAdapter<T>, selectionOrdinal: Int) {
-        if (selectionOrdinal >= 0 && selectionOrdinal < adapter.count) {
-            val selectionName = adapter.getItem(selectionOrdinal).toString()
-            if (spinner.text.toString() != selectionName) {
-                spinner.setText(selectionName, false)
-            }
-        } else {
-            spinner.setText("", false) // Clear if invalid ordinal
-        }
-    }
-
-
-    private fun enableAllControls(enabled: Boolean) {
-        // This is a fallback, more granular control is in updateControlEnablementAndVisibility
-        binding.modeToggleGroup.isEnabled = enabled
-        binding.buttonListEditor.isEnabled = enabled
-        binding.buttonListEditorSlots.isEnabled = enabled
-        binding.slotsNumColumnsToggleGroup.isEnabled = enabled
-        binding.buttonDicePoolConfig.isEnabled = enabled
-        binding.buttonConfigureDiceColors.isEnabled = enabled
-        binding.buttonConfigureDiceModifiers.isEnabled = enabled
-        // ... and so on for all switches and input fields ...
-        binding.switchIsAnnounceEnabled.isEnabled = enabled
-        // ... all other switches ...
-        binding.autoCompleteTextViewSumResults.isEnabled = enabled
-        // ... all coin flip controls ...
-        binding.coinColorPalette.children.forEach { it.isEnabled = enabled }
-        binding.switchCoinFlipAnimation.isEnabled = enabled
-        binding.switchCoinFreeForm.isEnabled = enabled
-        binding.switchCoinAnnouncement.isEnabled = enabled
-        binding.autoCompleteCoinProbability.isEnabled = enabled
-        binding.autoCompleteCoinGraphDistributionType.isEnabled = enabled
-        binding.autoCompleteCoinGraphLineStyle.isEnabled = enabled
-        binding.textFieldCoinGraphFlipCount.isEnabled = enabled
-
-        binding.buttonAddAnotherRandomizer.isEnabled = enabled
-        if (enabled) updateAddAnotherButtonState() // Apply logic if enabling
-    }
-
-    private fun updateModeSelectionUI(currentMode: RandomizerMode) {
-        isUpdatingProgrammatically = true // Block mode toggle listener temporarily
-        val buttonIdToCheck = when (currentMode) {
-            RandomizerMode.SPIN -> R.id.buttonModeSpin
-            RandomizerMode.SLOTS -> R.id.buttonModeSlots
-            RandomizerMode.DICE -> R.id.buttonModeDice
-            RandomizerMode.COIN_FLIP -> R.id.buttonModeCoinFlip
-        }
-        if (binding.modeToggleGroup.checkedButtonId != buttonIdToCheck) {
-            binding.modeToggleGroup.check(buttonIdToCheck)
-        }
-        isUpdatingProgrammatically = false
-
-        // Update visibility of mode-specific sections
-        binding.spinSpecificSettingsLayout.isVisible = currentMode == RandomizerMode.SPIN
-        binding.slotsSettingsLayout.isVisible = currentMode == RandomizerMode.SLOTS
-        binding.diceSettingsLayout.isVisible = currentMode == RandomizerMode.DICE
-        binding.coinFlipSettingsLayout.isVisible = currentMode == RandomizerMode.COIN_FLIP
-
-        // List editor button visibility (shared by Spin and Slots)
-        binding.buttonListEditor.isVisible = currentMode == RandomizerMode.SPIN
-        binding.buttonListEditorSlots.isVisible = currentMode == RandomizerMode.SLOTS
-
-
-        // Update general "Announce" and "Celebrate" switch visibility based on mode
-        val announceVisibleForMode = currentMode in listOf(RandomizerMode.SPIN, RandomizerMode.SLOTS, RandomizerMode.DICE)
-        binding.switchIsAnnounceEnabled.isVisible = announceVisibleForMode
-        // General "Celebrate" is only for Spin
-        binding.switchIsCelebrateEnabled.isVisible = currentMode == RandomizerMode.SPIN
-
-        updateAddAnotherButtonState()
-        viewModel.settings.value?.let { updateControlEnablementAndVisibility(it) }
-    }
-
-    private fun updateControlEnablementAndVisibility(settings: SpinSettingsEntity) {
-        isUpdatingProgrammatically = true // Block listeners during these updates
-
-        val currentMode = settings.mode
-
-        // --- General Announce & Celebrate ---
-        // Visibility is already set by updateModeSelectionUI
-        // Enablement of general Announce (based on other conflicting settings within its mode)
-        when (currentMode) {
-            RandomizerMode.SPIN -> {
-                binding.switchIsAnnounceEnabled.isEnabled = !settings.isSequenceEnabled
-                binding.switchIsCelebrateEnabled.isEnabled = !settings.isSequenceEnabled && settings.isAnnounceEnabled
-            }
-            RandomizerMode.DICE -> {
-                binding.switchIsAnnounceEnabled.isEnabled = settings.graphDistributionType == GraphDistributionType.OFF
-            }
-            RandomizerMode.SLOTS -> {
-                binding.switchIsAnnounceEnabled.isEnabled = true // Slots Announce is independent for now
-            }
-            RandomizerMode.COIN_FLIP -> {
-                // General Announce switch maps to Coin-specific Announce
-                binding.switchIsAnnounceEnabled.isChecked = settings.isCoinAnnouncementEnabled
-                binding.switchIsAnnounceEnabled.isEnabled = !settings.isCoinFreeFormEnabled &&
-                        CoinProbabilityMode.valueOf(settings.coinProbabilityMode) == CoinProbabilityMode.NONE
-            }
-        }
-
-
-        // --- Dice Specific (dependent on Dice Announce) ---
-        if (currentMode == RandomizerMode.DICE) {
-            val diceAnnounceOn = settings.isAnnounceEnabled // General announce maps to dice announce
-            binding.menuSumResultsLayout.isVisible = diceAnnounceOn
-            binding.buttonConfigureDiceModifiers.isEnabled = diceAnnounceOn
-            binding.switchIsDiceCritCelebrationEnabled.isVisible = diceAnnounceOn
-            binding.switchIsDiceCritCelebrationEnabled.isEnabled = diceAnnounceOn // Already checks announce in VM, but UI can reflect too
-        }
-
-        // --- Coin Flip Specific (dependent on each other) ---
-        if (currentMode == RandomizerMode.COIN_FLIP) {
-            val coinProbMode = CoinProbabilityMode.valueOf(settings.coinProbabilityMode)
-
-            // Coin Announcement switch
-            binding.switchCoinAnnouncement.isEnabled = !settings.isCoinFreeFormEnabled && coinProbMode == CoinProbabilityMode.NONE
-            // binding.switchCoinAnnouncement.isChecked = settings.isCoinAnnouncementEnabled // This is set by general Announce observer
-
-            // Coin Free Form switch
-            binding.switchCoinFreeForm.isEnabled = !settings.isCoinAnnouncementEnabled && coinProbMode == CoinProbabilityMode.NONE
-
-            // Coin Probability dropdown
-            binding.menuCoinProbabilityLayout.isEnabled = !settings.isCoinAnnouncementEnabled && !settings.isCoinFreeFormEnabled
-
-            // Coin Graph sub-settings
-            val showCoinGraphSettings = coinProbMode == CoinProbabilityMode.GRAPH_DISTRIBUTION &&
-                    !settings.isCoinAnnouncementEnabled && !settings.isCoinFreeFormEnabled
-            binding.coinGraphSettingsLayout.isVisible = showCoinGraphSettings
-            binding.autoCompleteCoinGraphDistributionType.isEnabled = showCoinGraphSettings
-            binding.autoCompleteCoinGraphLineStyle.isEnabled = showCoinGraphSettings
-            binding.textFieldCoinGraphFlipCountLayout.isEnabled = showCoinGraphSettings
-            binding.textFieldCoinGraphFlipCount.isEnabled = showCoinGraphSettings
-        }
-
-        isUpdatingProgrammatically = false
-    }
-
 
     private fun updateAddAnotherButtonState() {
-        val currentMode = viewModel.settings.value?.mode
-        lifecycleScope.launch { // Use coroutine for DB access
-            val currentInstanceCount = withContext(Dispatchers.IO) {
-                randomizerDao.getAllNonDefaultInstances().size
+        viewLifecycleOwner.lifecycleScope.launch {
+            val activeInstances = withContext(Dispatchers.IO) {
+                randomizerDao.getActiveInstancesCount()
             }
-            val limit = if (currentMode == RandomizerMode.DICE) MAX_INSTANCES_DICE else MAX_INSTANCES_GENERAL
-            binding.buttonAddAnotherRandomizer.isEnabled = currentInstanceCount < limit
+            binding.buttonAddAnotherRandomizer.isEnabled = activeInstances < MAX_RANDOMIZER_INSTANCES
+            Log.d(TAG, "Active instances: $activeInstances, Add Another button enabled: ${binding.buttonAddAnotherRandomizer.isEnabled}")
         }
     }
 
-    private fun handleAddAnotherInstance() {
-        val currentSettingsEntity = viewModel.settings.value
-        if (currentSettingsEntity == null) {
-            Snackbar.make(binding.root, R.string.error_settings_not_loaded_cant_save, Snackbar.LENGTH_SHORT).show()
+    private fun addAnotherRandomizer() {
+        if (!::currentSettingsEntity.isInitialized) {
+            Snackbar.make(binding.root, "Current settings not loaded, cannot clone.", Snackbar.LENGTH_SHORT).show()
             return
         }
 
-        lifecycleScope.launch {
-            val currentInstanceCount = withContext(Dispatchers.IO) {
-                randomizerDao.getAllNonDefaultInstances().size
-            }
-            val limit = if (currentSettingsEntity.mode == RandomizerMode.DICE) MAX_INSTANCES_DICE else MAX_INSTANCES_GENERAL
-
-            if (currentInstanceCount >= limit) {
-                val messageResId = if (currentSettingsEntity.mode == RandomizerMode.DICE) {
-                    R.string.max_randomizers_dice_reached_snackbar
-                } else {
-                    R.string.max_randomizers_general_reached_snackbar
-                }
-                Snackbar.make(binding.root, getString(messageResId, limit), Snackbar.LENGTH_LONG).show()
+        viewLifecycleOwner.lifecycleScope.launch {
+            val activeInstances = withContext(Dispatchers.IO) { randomizerDao.getActiveInstancesCount() }
+            if (activeInstances >= MAX_RANDOMIZER_INSTANCES) {
+                Snackbar.make(binding.root, "Maximum number of randomizer windows reached.", Snackbar.LENGTH_LONG).show()
                 return@launch
             }
 
+            // Save current settings BEFORE cloning, so the clone gets the latest changes.
+            settingsViewModel.saveSettings(currentSettingsEntity)
+
             val newInstanceId = UUID.randomUUID()
-            // Clone current settings for the new instance
             val newSettings = currentSettingsEntity.copy(
                 instanceId = newInstanceId,
-                // Reset any instance-specific states if necessary, e.g., selected list for slots
-                slotsColumnStates = emptyList() // Example: reset slots column states
+                // Reset any instance-specific states if necessary
+                slotsColumnStates = emptyList(), // Example
+                // Consider if graph data should be cloned or reset for the new instance
+                // For now, graph-related settings are cloned, but accumulated graph data is not.
+                // Resetting fields like spin list ID, slots list ID if they shouldn't be shared.
+                currentSpinListId = null // Example: New instance starts with no list selected
             )
             val newInstanceEntity = RandomizerInstanceEntity(instanceId = newInstanceId)
 
             try {
                 withContext(Dispatchers.IO) {
-                    randomizerDao.saveSettings(newSettings)
-                    randomizerDao.saveInstance(newInstanceEntity)
+                    randomizerDao.saveSettings(newSettings) // Save settings for the NEW instance
+                    randomizerDao.saveInstance(newInstanceEntity) // Save the NEW instance record
                 }
-                Log.d(TAG, "Cloned settings and created new instance: $newInstanceId")
+                Log.d(TAG, "Cloned settings from ${currentSettingsEntity.instanceId} and created new instance: $newInstanceId")
 
-                val intent = Intent(requireActivity(), RandomizersHostActivity::class.java).apply {
-                    putExtra(RandomizersHostActivity.EXTRA_INSTANCE_ID, newInstanceId.toString())
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-                requireActivity().startActivity(intent)
+                // Launch the new RandomizersHostActivity with the NEW instance ID
+                (activity as? MainActivity)?.launchNewRandomizerInstanceWithBounds(newInstanceId.toString())
+
+
+                // The RandomizerSettingsViewModel has a cloneSettingsForNewInstance method.
+                // The current logic in this fragment directly creates and saves the new settings.
+                // This is a valid approach. The ViewModel's method might be for a different cloning trigger.
+
                 updateAddAnotherButtonState() // Refresh button state
+                // Potentially close this settings window or navigate, depending on UX desired
+                // activity?.finish() // Closes the current RandomizersHostActivity window
 
             } catch (e: Exception) {
                 Log.e(TAG, "Error saving new cloned instance or launching activity", e)
@@ -637,3 +522,6 @@ class RandomizerSettingsFragment : Fragment() {
         }
     }
 }
+
+// Helper extension function for String capitalization
+fun String.capitalizeWords(): String = split(" ").joinToString(" ") { it.lowercase().replaceFirstChar(Char::titlecase) }
