@@ -71,7 +71,6 @@ data class ProbabilityGridCell(
     }
 }
 
-
 data class CoinFlipUiState(
     val settings: SpinSettingsEntity? = null, // Loaded from RandomizerSettingsViewModel/DB
     val coinPool: List<CoinInPool> = emptyList(),
@@ -370,6 +369,77 @@ class CoinFlipViewModel @Inject constructor(
             val probMode = CoinProbabilityMode.valueOf(modeName)
             initializeProbabilityGrid(probMode) // This also sets isProbabilityGridFull to false
         }
+    }
+
+    fun generateCoinGraph() { // Removed parameters, will get them from uiState.settings
+        val currentSettings = _uiState.value.settings
+        if (currentSettings == null || CoinProbabilityMode.valueOf(currentSettings.coinProbabilityMode) != CoinProbabilityMode.GRAPH_DISTRIBUTION || !currentSettings.isCoinGraphEnabled) {
+            _uiState.update { it.copy(coinGraphData = CoinGraphDisplayData.Empty, errorEvent = Event("Graph not applicable with current settings.")) }
+            return
+        }
+
+        val flipCountForSim = currentSettings.coinGraphFlipCount
+        val poolToSim = _uiState.value.coinPool
+
+        if (poolToSim.isEmpty()) {
+            _uiState.update { it.copy(errorEvent = Event("Cannot generate graph with empty coin pool."), coinGraphData = CoinGraphDisplayData.Empty) }
+            return
+        }
+        if (flipCountForSim <= 0) {
+            _uiState.update { it.copy(errorEvent = Event("Graph flip count must be positive."), coinGraphData = CoinGraphDisplayData.Empty) }
+            return
+        }
+
+        _uiState.update { it.copy(isGeneratingGraph = true) }
+        viewModelScope.launch(Dispatchers.Default) {
+            // headsCountFrequencies: Key = Number of heads in one multi-coin flip, Value = Frequency
+            val headsCountFrequencies = mutableMapOf<Int, Int>()
+
+            repeat(flipCountForSim) {
+                var currentEventHeads = 0
+                poolToSim.forEach { _ -> // Simulate flipping each coin in the defined pool for one event
+                    if (Random.nextBoolean()) {
+                        currentEventHeads++
+                    }
+                }
+                headsCountFrequencies[currentEventHeads] = (headsCountFrequencies[currentEventHeads] ?: 0) + 1
+            }
+
+            val points = headsCountFrequencies.entries
+                .sortedBy { it.key }
+                .map { GraphDataPoint(value = it.key, frequency = it.value, label = "${it.key} Heads") }
+
+            val plotType = try {
+                GraphPlotType.valueOf(currentSettings.coinGraphPlotType)
+            } catch (e: Exception) {
+                Log.w(TAG, "Invalid coinGraphPlotType '${currentSettings.coinGraphPlotType}', defaulting to HISTOGRAM.")
+                GraphPlotType.HISTOGRAM
+            }
+
+            val newGraphData = when (plotType) {
+                GraphPlotType.HISTOGRAM -> CoinGraphDisplayData.BarData(points)
+                GraphPlotType.LINE_GRAPH -> CoinGraphDisplayData.LineData(points)
+                GraphPlotType.QQ_PLOT -> {
+                    Log.w(TAG, "Q-Q Plot for coin flips not yet implemented. Defaulting to Histogram.")
+                    CoinGraphDisplayData.BarData(points) // Fallback for NYI
+                }
+            }
+
+            withContext(Dispatchers.Main) {
+                _uiState.update { it.copy(coinGraphData = newGraphData, isGeneratingGraph = false) }
+            }
+        }
+    }
+
+    private fun updateGraphIfNeeded() { // Renamed to reflect its new purpose
+        val settings = _uiState.value.settings ?: return
+        val probMode = CoinProbabilityMode.valueOf(settings.coinProbabilityMode)
+        if (probMode != CoinProbabilityMode.GRAPH_DISTRIBUTION || !settings.isCoinGraphEnabled) {
+            if (_uiState.value.coinGraphData !is CoinGraphDisplayData.Empty) {
+                _uiState.update { it.copy(coinGraphData = CoinGraphDisplayData.Empty) }
+            }
+        }
+        // Else, existing graph data remains until user refreshes or settings affecting its parameters change.
     }
 
     override fun onCleared() {

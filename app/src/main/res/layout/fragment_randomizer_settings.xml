@@ -200,13 +200,15 @@
                 app:selectionRequired="true">
 
                 <Button
-                    android:id="@+id/buttonSlotsColumns3" style="?attr/materialButtonOutlinedStyle"
+                    android:id="@+id/buttonSlotsColumns3"
+                    style="?attr/materialButtonOutlinedStyle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/setting_slots_columns_3" />
 
                 <Button
-                    android:id="@+id/buttonSlotsColumns5" style="?attr/materialButtonOutlinedStyle"
+                    android:id="@+id/buttonSlotsColumns5"
+                    style="?attr/materialButtonOutlinedStyle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/setting_slots_columns_5" />

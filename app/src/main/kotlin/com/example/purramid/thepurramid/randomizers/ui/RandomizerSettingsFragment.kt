@@ -139,20 +139,34 @@ class RandomizerSettingsFragment : Fragment() {
         // Populate Spin Settings
         if (currentSettingsEntity.mode == RandomizerMode.SPIN) {
             binding.switchSpinSoundEnabled.isChecked = currentSettingsEntity.isSoundEnabled
-            binding.switchSpinHapticFeedback.isChecked = currentSettingsEntity.isHapticFeedbackEnabled
             binding.switchSpinResultAnnouncement.isChecked = currentSettingsEntity.isAnnounceEnabled
+            binding.switchSpinSequenceEnabled.isChecked = currentSettingsEntity.isSequenceEnabled
             binding.switchSpinConfetti.isChecked = currentSettingsEntity.isConfettiEnabled
             binding.textFieldSpinDuration.setText(currentSettingsEntity.spinDurationMillis.toString())
             binding.textFieldSpinMaxItems.setText(currentSettingsEntity.spinMaxItems.toString())
         }
 
+        // When sequence is enabled, confetti and announcement might be disabled
+        if (currentSettingsEntity.isSequenceEnabled) {
+            binding.switchSpinResultAnnouncement.isEnabled = false
+            binding.switchSpinConfetti.isEnabled = false
+        } else {
+            binding.switchSpinResultAnnouncement.isEnabled = true
+            // Confetti enablement depends on announcement, see section C
+            binding.switchSpinConfetti.isEnabled = currentSettingsEntity.isAnnounceEnabled
+        }
+
         // Populate Slots Settings
         if (currentSettingsEntity.mode == RandomizerMode.SLOTS) {
             binding.switchSlotsSound.isChecked = currentSettingsEntity.isSlotsSoundEnabled
-            binding.switchSlotsHaptic.isChecked = currentSettingsEntity.isSlotsHapticFeedbackEnabled
             binding.switchSlotsResultAnnouncement.isChecked = currentSettingsEntity.isSlotsAnnounceResultEnabled
             binding.textFieldSlotsSpinDuration.setText(currentSettingsEntity.slotsSpinDuration.toString())
             binding.textFieldSlotsReelVariation.setText(currentSettingsEntity.slotsReelStopVariation.toString())
+        }
+        when (currentSettingsEntity.numSlotsColumns) {
+            3 -> binding.toggleSlotsColumns.check(R.id.buttonSlotsColumns3)
+            5 -> binding.toggleSlotsColumns.check(R.id.buttonSlotsColumns5)
+            else -> binding.toggleSlotsColumns.check(R.id.buttonSlotsColumns3) // Default
         }
 
         // Populate Dice Settings
@@ -290,27 +304,79 @@ class RandomizerSettingsFragment : Fragment() {
 
         // Spin Settings Listeners
         binding.switchSpinSoundEnabled.setOnCheckedChangeListener { _, isChecked -> if (::currentSettingsEntity.isInitialized) currentSettingsEntity = currentSettingsEntity.copy(isSoundEnabled = isChecked) }
-        binding.switchSpinHapticFeedback.setOnCheckedChangeListener { _, isChecked -> if (::currentSettingsEntity.isInitialized) currentSettingsEntity = currentSettingsEntity.copy(isHapticFeedbackEnabled = isChecked) }
-        binding.switchSpinResultAnnouncement.setOnCheckedChangeListener { _, isChecked -> if (::currentSettingsEntity.isInitialized) currentSettingsEntity = currentSettingsEntity.copy(isAnnounceEnabled = isChecked) }
-        binding.switchSpinConfetti.setOnCheckedChangeListener { _, isChecked -> if (::currentSettingsEntity.isInitialized) currentSettingsEntity = currentSettingsEntity.copy(isConfettiEnabled = isChecked) }
+        binding.switchSpinResultAnnouncement.setOnCheckedChangeListener { _, isChecked ->
+            if (!::currentSettingsEntity.isInitialized) return@setOnCheckedChangeListener
+            currentSettingsEntity = currentSettingsEntity.copy(isAnnounceEnabled = isChecked)
+            if (binding.switchSpinSequenceEnabled.isChecked) { // Sequence mode takes precedence
+                binding.switchSpinConfetti.isEnabled = false
+                return@setOnCheckedChangeListener
+            }
+            binding.switchSpinConfetti.isEnabled = isChecked
+            if (!isChecked) { // If announcement is turned off
+                binding.switchSpinConfetti.isChecked = false // Turn off confetti as well
+                currentSettingsEntity = currentSettingsEntity.copy(isConfettiEnabled = false)
+            }
+        }
+        binding.switchSpinSequenceEnabled.setOnCheckedChangeListener { _, isChecked ->
+            if (!::currentSettingsEntity.isInitialized) return@setOnCheckedChangeListener
+            currentSettingsEntity = currentSettingsEntity.copy(isSequenceEnabled = isChecked)
+            // Update dependent controls
+            if (isChecked) {
+                binding.switchSpinResultAnnouncement.isEnabled = false
+                binding.switchSpinResultAnnouncement.isChecked = false // Optionally turn off
+                binding.switchSpinConfetti.isEnabled = false
+                binding.switchSpinConfetti.isChecked = false // Optionally turn off
+            } else {
+                binding.switchSpinResultAnnouncement.isEnabled = true
+                // Re-evaluate confetti enablement based on announcement
+                binding.switchSpinConfetti.isEnabled = binding.switchSpinResultAnnouncement.isChecked
+            }
+        }
+        binding.switchSpinConfetti.setOnCheckedChangeListener { _, isChecked ->
+            if (!::currentSettingsEntity.isInitialized) return@setOnCheckedChangeListener
+            // Only allow confetti to be checked if announcement is enabled and sequence is not
+            if (binding.switchSpinResultAnnouncement.isChecked && !binding.switchSpinSequenceEnabled.isChecked) {
+                currentSettingsEntity = currentSettingsEntity.copy(isConfettiEnabled = isChecked)
+            } else {
+                // If conditions not met, force confetti to off
+                (it as CompoundButton).isChecked = false
+                currentSettingsEntity = currentSettingsEntity.copy(isConfettiEnabled = false)
+            }
+        }
         binding.textFieldSpinDuration.doAfterTextChanged { text -> if (::currentSettingsEntity.isInitialized) currentSettingsEntity = currentSettingsEntity.copy(spinDurationMillis = text.toString().toLongOrNull() ?: 2000L) }
         binding.textFieldSpinMaxItems.doAfterTextChanged { text -> if (::currentSettingsEntity.isInitialized) currentSettingsEntity = currentSettingsEntity.copy(spinMaxItems = text.toString().toIntOrNull() ?: 20) }
         binding.buttonEditSpinList.setOnClickListener {
-            currentSettingsEntity.instanceId.let {
-                val action = RandomizerSettingsFragmentDirections.actionRandomizerSettingsFragmentToListEditorActivity(it.toString())
-                findNavController().navigate(action)
-            }
+            if (!::currentSettingsEntity.isInitialized) return@setOnClickListener
+            val instanceIdString = currentSettingsEntity.instanceId.toString()
+            val listIdToEdit = currentSettingsEntity.currentSpinListId
+            // You'll need a NavAction that can take both instanceId and an optional listId
+            // If listIdToEdit is null, ListEditorActivity treats it as "create new for this instance"
+            // If listIdToEdit is not null, ListEditorActivity loads that list.
+            val action = RandomizerSettingsFragmentDirections.actionRandomizerSettingsFragmentToListEditorActivity(
+                instanceId = instanceIdString,
+                listId = listIdToEdit ?: -1L // Pass -1L or another indicator for "new list" if your editor expects a Long
+            )
+            findNavController().navigate(action)
         }
-
 
         // Slots Settings Listeners
         binding.switchSlotsSound.setOnCheckedChangeListener { _, isChecked -> if (::currentSettingsEntity.isInitialized) currentSettingsEntity = currentSettingsEntity.copy(isSlotsSoundEnabled = isChecked) }
-        binding.switchSlotsHaptic.setOnCheckedChangeListener { _, isChecked -> if (::currentSettingsEntity.isInitialized) currentSettingsEntity = currentSettingsEntity.copy(isSlotsHapticFeedbackEnabled = isChecked) }
         binding.switchSlotsResultAnnouncement.setOnCheckedChangeListener { _, isChecked -> if (::currentSettingsEntity.isInitialized) currentSettingsEntity = currentSettingsEntity.copy(isSlotsAnnounceResultEnabled = isChecked) }
         binding.textFieldSlotsSpinDuration.doAfterTextChanged { text -> if (::currentSettingsEntity.isInitialized) currentSettingsEntity = currentSettingsEntity.copy(slotsSpinDuration = text.toString().toLongOrNull() ?: 1000L) }
         binding.textFieldSlotsReelVariation.doAfterTextChanged { text -> if (::currentSettingsEntity.isInitialized) currentSettingsEntity = currentSettingsEntity.copy(slotsReelStopVariation = text.toString().toLongOrNull() ?: 200L) }
         binding.buttonEditSlotsLists.setOnClickListener { /* TODO: Navigate to Slots List Editor */ }
-
+        binding.toggleSlotsColumns.addOnButtonCheckedListener { group, checkedId, isChecked ->
+            if (isChecked && ::currentSettingsEntity.isInitialized) {
+                val newColumnCount = when (checkedId) {
+                    R.id.buttonSlotsColumns3 -> 3
+                    R.id.buttonSlotsColumns5 -> 5
+                    else -> currentSettingsEntity.numSlotsColumns // Should not happen
+                }
+                if (currentSettingsEntity.numSlotsColumns != newColumnCount) {
+                    currentSettingsEntity = currentSettingsEntity.copy(numSlotsColumns = newColumnCount)
+                }
+            }
+        }
 
         // Dice Settings Listeners
         binding.switchDiceAnimationEnabled.setOnCheckedChangeListener { _, isChecked -> if (::currentSettingsEntity.isInitialized) currentSettingsEntity = currentSettingsEntity.copy(isDiceAnimationEnabled = isChecked) }

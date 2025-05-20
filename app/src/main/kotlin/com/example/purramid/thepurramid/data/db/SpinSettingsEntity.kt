@@ -32,10 +32,12 @@ data class SpinSettingsEntity(
     // --- Spin Specific ---
     var isSpinEnabled: Boolean = true,
     var isSequenceEnabled: Boolean = false,
+    val currentSpinListId: Long? = null, // Assuming Long is the type of your List ID
 
     // --- Slots Specific ---
-    var numSlotsColumns: Int = 3, // Default to 3 columns
+    val numSlotsColumns: Int = 3, // Default to 3 columns
     var slotsColumnStates: List<SlotsColumnState> = emptyList(), // List to hold state for each column
+    val currentSlotsListId: Long? = null,
 
     // --- Dice Specific ---
     // Configs stored as JSON strings, handled by TypeConverters

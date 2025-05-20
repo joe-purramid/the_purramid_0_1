@@ -529,6 +529,8 @@
     <string name="graph_plot_type_histogram">Bar graph</string>
     <string name="graph_plot_type_line">Line graph</string>
     <string name="graph_plot_type_qq">Q-Q probability plot</string>
+    <string name="graph_coin_flip_heads">Frequency of Heads flips</string>
+    <string name="graph_coin_flip_tails">Frequency of Tails flips</string>
 
     <!-- `` RANDOMIZER SNACKBARS `` -->
     <string name="max_randomizers_general_reached_snackbar">Maximum of <xliff:g id="count">%1$d</xliff:g> Randomizer windows reached.</string>

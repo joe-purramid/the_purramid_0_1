@@ -377,6 +377,49 @@ class DiceMainFragment : Fragment() {
                                 diceBarChart.setNoDataText("No graph data yet. Roll some dice!")
                                 diceBarChart.invalidate()
                             }
+                            is DiceGraphDisplayData.LineChartData -> {
+                                if (graphData.points.isEmpty()) {
+                                    diceBarChart.clear()
+                                    diceBarChart.data = null // Important to null out data
+                                    diceBarChart.setNoDataText("No data for line chart.") // Use String Resource
+                                    diceBarChart.invalidate()
+                                    return@observe
+                                }
+                                val entries = ArrayList<com.github.mikephil.charting.data.Entry>()
+                                // For LineChart, X values are the actual dice sum values
+                                graphData.points.forEach { point -> // Assuming points are already sorted by value if needed by plot
+                                    entries.add(com.github.mikephil.charting.data.Entry(point.value.toFloat(), point.frequency.toFloat()))
+                                }
+
+                                val dataSet = LineDataSet(entries, graphData.dataSetLabel)
+                                dataSet.color = ContextCompat.getColor(requireContext(), R.color.design_default_color_primary) // Use theme color
+                                dataSet.valueTextColor = ContextCompat.getColor(requireContext(), R.color.design_default_color_on_surface) // Use theme color
+                                dataSet.lineWidth = 2f
+                                dataSet.setCircleColor(ContextCompat.getColor(requireContext(), R.color.design_default_color_primary))
+                                dataSet.circleRadius = 4f
+                                dataSet.setDrawCircleHole(false)
+                                dataSet.valueTextSize = 10f
+                                // dataSet.setDrawFilled(true) // Optional fill
+                                // dataSet.fillColor = ContextCompat.getColor(requireContext(), R.color.design_default_color_primary_dark)
+                                // dataSet.fillAlpha = 50
+                                dataSet.mode = LineDataSet.Mode.CUBIC_BEZIER // Smoother line
+
+                                val lineData = LineData(dataSet)
+                                diceBarChart.data = lineData // BarChart view can render LineData
+
+                                // X-axis formatting for line chart where X is the actual value
+                                val xAxis = diceBarChart.xAxis
+                                xAxis.valueFormatter = com.github.mikephil.charting.formatter.DefaultAxisValueFormatter(0) // Show numbers as is
+                                // Adjust granularity and label count if X values are sparse or too dense
+                                // Example: If sums range from 2 to 12, this is fine. If wider, may need adjustments.
+                                // xAxis.granularity = 1f
+                                // xAxis.setLabelCount(graphData.points.size, false) // Force label count might be too much
+
+                                diceBarChart.axisLeft.axisMinimum = 0f // Ensure Y starts at 0
+                                diceBarChart.axisRight.isEnabled = false
+                                diceBarChart.animateX(1000) // Animate X for line chart
+                                diceBarChart.invalidate()
+                            }
                             is DiceGraphDisplayData.NotApplicable -> {
                                 diceBarChart.clear()
                                 diceBarChart.data = null

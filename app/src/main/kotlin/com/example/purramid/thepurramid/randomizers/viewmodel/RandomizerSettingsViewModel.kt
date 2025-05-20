@@ -182,16 +182,26 @@ class RandomizerSettingsViewModel @Inject constructor(
         updateSettingsField { it.copy(isSpinEnabled = enabled) }
     }
 
-    fun updateIsSequenceEnabled(enabled: Boolean) {
-        updateSettingsField { settings ->
-            if (enabled) { // Turning Sequence ON (for Spin)
-                settings.copy(isSequenceEnabled = true, isAnnounceEnabled = false, isCelebrateEnabled = false)
-            } else {
-                settings.copy(isSequenceEnabled = false)
-            }
-        }
-    }
+    // In RandomizerSettingsViewModel.kt
+    fun updateSpinSequenceEnabled(isEnabled: Boolean) {
+        val current = _settings.value ?: return // _settings is MutableLiveData
+        var newAnnounceEnabled = current.isAnnounceEnabled
+        var newConfettiEnabled = current.isConfettiEnabled
 
+        if (isEnabled) { // If sequence is being turned ON
+            newAnnounceEnabled = false // Turn off announcement
+            newConfettiEnabled = false // Turn off confetti
+        }
+        // else: if sequence is being turned OFF, announce/confetti retain previous valid states
+        // or re-evaluate based on other rules.
+
+        _settings.value = current.copy(
+            isSequenceEnabled = isEnabled,
+            isAnnounceEnabled = newAnnounceEnabled,
+            isConfettiEnabled = newConfettiEnabled
+            // ... other logic ...
+        )
+    }
     fun updateDicePoolConfig(newConfigJson: String) {
         updateSettingsField { it.copy(dicePoolConfigJson = newConfigJson) }
     }

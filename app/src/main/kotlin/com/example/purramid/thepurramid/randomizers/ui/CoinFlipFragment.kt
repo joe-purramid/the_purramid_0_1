@@ -201,7 +201,7 @@ class CoinFlipFragment : Fragment() {
         coinAdapter.updateCoinAppearanceProperties(settings.coinColor, settings.isFlipAnimationEnabled)
 
         // Toggle visibility between RecyclerView (standard) and a dedicated FrameLayout (free-form)
-        // You'll need to add a FrameLayout to your fragment_coin_flip.xml, e.g., android:id="@+id/freeFormDisplayContainer"
+        // TODO add a FrameLayout to your fragment_coin_flip.xml, e.g., android:id="@+id/freeFormDisplayContainer"
         if (settings.isCoinFreeFormEnabled) {
             binding.coinDisplayAreaRecyclerView.visibility = View.GONE
             binding.freeFormDisplayContainer.visibility = View.VISIBLE // Make sure this ID exists in XML
@@ -229,6 +229,91 @@ class CoinFlipFragment : Fragment() {
         val isGridModeActive = (currentProbMode == CoinProbabilityMode.GRID_3X3 || currentProbMode == CoinProbabilityMode.GRID_6X6 || currentProbMode == CoinProbabilityMode.GRID_10X10)
         binding.probabilityGridLayout.isVisible = isGridModeActive && !settings.isCoinFreeFormEnabled && !settings.isCoinAnnouncementEnabled
         binding.probabilityGraphLayout.isVisible = currentProbMode == CoinProbabilityMode.GRAPH_DISTRIBUTION && !settings.isCoinFreeFormEnabled && !settings.isCoinAnnouncementEnabled
+
+        if (binding.probabilityGraphLayout.isVisible) {
+            binding.coinGraphProgressBar.isVisible = state.isGeneratingGraph
+            binding.buttonRefreshCoinGraph.setOnClickListener {
+                // No need to pass parameters, ViewModel will get them from its state.settings
+                coinFlipViewModel.generateCoinGraph()
+            }
+
+            val chartView = binding.coinFlipBarChart
+
+            when (val graphData = state.coinGraphData) {
+                is CoinGraphDisplayData.BarData -> {
+                    if (graphData.points.isEmpty() && !state.isGeneratingGraph) {
+                        chartView.clear()
+                        chartView.data = null
+                        chartView.setNoDataText("@string/graph_distribution_placeholder")
+                        chartView.invalidate()
+                    } else if (graphData.points.isNotEmpty()) {
+                        val entries = ArrayList<BarEntry>()
+                        val labels = ArrayList<String>()
+                        graphData.points.forEachIndexed { index, point ->
+                            // For BarChart, X is typically an index if labels are provided separately
+                            entries.add(BarEntry(index.toFloat(), point.frequency.toFloat()))
+                            labels.add(point.label)
+                        }
+                        val dataSet = BarDataSet(entries, "@string/graph_coin_flip_heads") // Use String Resource
+                        dataSet.colors = ColorTemplate.MATERIAL_COLORS.toList()
+                        dataSet.valueTextSize = 10f
+
+                        val barData = BarData(dataSet)
+                        chartView.data = barData
+                        chartView.xAxis.valueFormatter = IndexAxisValueFormatter(labels)
+                        chartView.xAxis.labelCount = labels.size.coerceAtLeast(1)
+                        chartView.axisLeft.axisMinimum = 0f
+                        chartView.axisRight.isEnabled = false
+                        chartView.animateY(1000)
+                        chartView.invalidate()
+                    }
+                }
+                is CoinGraphDisplayData.LineData -> {
+                    if (graphData.points.isEmpty() && !state.isGeneratingGraph) {
+                        chartView.clear()
+                        chartView.data = null
+                        chartView.setNoDataText("@string/graph_distribution_placeholder") // Use String Resource
+                        chartView.invalidate()
+                    } else if (graphData.points.isNotEmpty()) {
+                        val entries = ArrayList<com.github.mikephil.charting.data.Entry>()
+                        // For LineChart, X values are the actual number of heads
+                        graphData.points.forEach { point ->
+                            entries.add(com.github.mikephil.charting.data.Entry(point.value.toFloat(), point.frequency.toFloat()))
+                        }
+                        val dataSet = LineDataSet(entries, "@string/graph_coin_flip_heads")
+                        dataSet.color = ContextCompat.getColor(requireContext(), R.color.design_default_color_secondary)
+                        dataSet.valueTextColor = ContextCompat.getColor(requireContext(), R.color.design_default_color_on_surface)
+                        dataSet.lineWidth = 2f
+                        dataSet.setCircleColor(ContextCompat.getColor(requireContext(), R.color.design_default_color_secondary))
+                        dataSet.circleRadius = 4f
+                        dataSet.mode = LineDataSet.Mode.CUBIC_BEZIER
+
+                        val lineData = LineData(dataSet)
+                        chartView.data = lineData
+                        chartView.xAxis.valueFormatter = com.github.mikephil.charting.formatter.DefaultAxisValueFormatter(0) // Show numbers as is
+                        chartView.axisLeft.axisMinimum = 0f
+                        chartView.axisRight.isEnabled = false
+                        chartView.animateX(1000)
+                        chartView.invalidate()
+                    }
+                }
+                is CoinGraphDisplayData.Empty -> {
+                    if (!state.isGeneratingGraph) {
+                        chartView.clear()
+                        chartView.data = null
+                        chartView.setNoDataText("@string/graph_distribution_placeholder")
+                        chartView.invalidate()
+                    }
+                }
+            }
+        } else {
+            // Ensure chart is cleared if the graph section is not visible
+            if (binding.coinFlipBarChart.data != null) {
+                binding.coinFlipBarChart.clear()
+                binding.coinFlipBarChart.data = null
+                binding.coinFlipBarChart.invalidate()
+            }
+        }
 
         if (binding.probabilityGridLayout.isVisible) {
             if ((binding.probabilityGridLayout.layoutManager as? GridLayoutManager)?.spanCount != state.probabilityGridColumns && state.probabilityGridColumns > 0) {
@@ -261,13 +346,13 @@ class CoinFlipFragment : Fragment() {
         }
         val faceName = if (face == CoinFace.HEADS) "_heads" else "_tails"
         val resName = baseName + faceName
-        val currentContext = context ?: return R.drawable.ic_coin_flip_heads // Should not happen in fragment
+        val currentContext = context ?: return R.drawable.coin_flip_heads // Should not happen in fragment
         val resId = resources.getIdentifier(resName, "drawable", requireContext().packageName)
         return if (resId != 0) resId else {
             Log.w("CoinFlipFragment", "Drawable not found: $resName. Using generic placeholder.")
             // Fallback to generic placeholder from your assets (if you have them)
             // For now, using the ones you provided earlier as example fallbacks
-            if (face == CoinFace.HEADS) R.drawable.ic_coin_flip_heads else R.drawable.ic_coin_flip_tails
+            if (face == CoinFace.HEADS) R.drawable.coin_flip_heads else R.drawable.coin_flip_tails
         }
     }
 
