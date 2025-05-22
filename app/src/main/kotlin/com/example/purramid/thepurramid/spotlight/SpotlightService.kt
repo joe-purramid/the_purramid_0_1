@@ -315,7 +315,7 @@ class SpotlightService : LifecycleService(), ViewModelStoreOwner {
 
     // Params for the main SpotlightView window (usually fullscreen)
     private fun createDefaultLayoutParams(firstSpotlightData: SpotlightView.Spotlight?): WindowManager.LayoutParams {
-        // Spotlight overlay usually covers the entire screen to create the "shade" effect
+        // Spotlight overlay usually covers the entire screen to create the "mask" effect
         return WindowManager.LayoutParams(
             WindowManager.LayoutParams.MATCH_PARENT,
             WindowManager.LayoutParams.MATCH_PARENT,

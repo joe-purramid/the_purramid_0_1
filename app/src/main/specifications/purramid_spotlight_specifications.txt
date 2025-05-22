@@ -1,0 +1,33 @@
+On launch, the spotlight app applies a shade overlay to the screen. The color of the shade is charcoal (or some other light black) at 50% opacity. The "spotlight" is a circle where that shade is not applied.
+
+
+
+It can be dragged around the screen with a single finger. It can be resized with two fingers. A floating menu bar should include three icons, a "close" cross, an "add another" plus, and a "shape" square or circle.
+
+
+
+The shape of the spotlight can be changed as part of the resizing gesture. It can be made into an oval, with the foci forming a line with the user's fingers.
+
+
+
+Close ends the app activity.
+
+
+
+Add another creates a second circular spotlight that can be manipulated separately from the first. There can be no more than four spotlights active at a time.
+
+
+
+Shape changes the shape of the spotlight from circle to square. When that happens, the shape button changes from a square to a circle. This change applies to all spotlights on screen. If the user changes back to circle, the shape changes back to square.
+
+
+
+Squares can be reshaped into rectangles in the same way circles can be reshaped into ovals.
+
+
+
+Each icon has a tooltip, "Close Application", "Add Another Spotlight", and "Change Shape", respectively.
+
+
+
+After app close, when it starts, it opens only one spotlight. After app destroy, it will display however many spotlights open at the time of destroy.

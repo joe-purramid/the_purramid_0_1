@@ -6,23 +6,6 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
-import com.example.purramid.thepurramid.data.db.ClockStateEntity
-import com.example.purramid.thepurramid.data.db.CityEntity
-import com.example.purramid.thepurramid.data.db.CityDao
-import com.example.purramid.thepurramid.data.db.TimeZoneBoundaryEntity
-import com.example.purramid.thepurramid.data.db.TimeZoneDao
-import com.example.purramid.thepurramid.data.db.RandomizerInstanceEntity
-import com.example.purramid.thepurramid.data.db.RandomizerDao
-import com.example.purramid.thepurramid.data.db.SpinItemEntity
-import com.example.purramid.thepurramid.data.db.SpinListEntity
-import com.example.purramid.thepurramid.data.db.SpinSettingsEntity
-import com.example.purramid.thepurramid.data.db.ScreenShadeStateEntity
-import com.example.purramid.thepurramid.data.db.ScreenShadeDao
-import com.example.purramid.thepurramid.data.db.SpotlightStateEntity
-import com.example.purramid.thepurramid.data.db.SpotlightDao
-import com.example.purramid.thepurramid.data.db.TimerStateEntity
-import com.example.purramid.thepurramid.data.db.TimerDao
-import com.example.purramid.thepurramid.data.db.TrafficLightStateEntity
 
 
 /**
@@ -37,7 +20,7 @@ import com.example.purramid.thepurramid.data.db.TrafficLightStateEntity
         CityEntity::class,
         TimerStateEntity::class,
         RandomizerInstanceEntity::class,
-        ScreenShadeStateEntity::class,
+        ScreenMaskStateEntity::class,
         SpinItemEntity::class,
         SpinListEntity::class,
         SpinSettingsEntity::class,
@@ -59,7 +42,7 @@ abstract class PurramidDatabase : RoomDatabase() {
     abstract fun timeZoneDao(): TimeZoneDao
     abstract fun cityDao(): CityDao
     abstract fun randomizerDao(): RandomizerDao
-    abstract fun screenShadeDao(): ScreenShadeDao
+    abstract fun screenMaskDao(): ScreenMaskDao
     abstract fun spotlightDao(): SpotlightDao
     abstract fun timerDao(): TimerDao
     abstract fun trafficLightDao(): TrafficLightDao

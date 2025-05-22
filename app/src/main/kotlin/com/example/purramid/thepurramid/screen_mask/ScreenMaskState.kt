@@ -1,9 +1,7 @@
-// ScreenShadeState.kt
-package com.example.purramid.thepurramid.screen_shade
+// ScreenMaskState.kt
+package com.example.purramid.thepurramid.screen_mask
 
-import android.graphics.Color
-
-data class ScreenShadeState(
+data class ScreenMaskState(
     val instanceId: Int = 0,
     var x: Int = 0,
     var y: Int = 0,

@@ -93,9 +93,9 @@
                 android:gravity="center" />
         </activity>
 
-        <activity android:name=".screen_shade.ScreenShadeActivity"
+        <activity android:name=".screen_mask.ScreenMaskActivity"
             android:exported="true"
-            android:label="@string/screen_shade_title"
+            android:label="@string/screen_mask_title"
             android:parentActivityName=".MainActivity"
             android:theme="@style/Theme.ThePurramid"
             android:resizeableActivity="true"
@@ -105,7 +105,7 @@
                 android:defaultHeight="500dp" android:gravity="center" />
         </activity>
 
-        <service android:name=".screen_shade.ScreenShadeService"
+        <service android:name=".screen_mask.ScreenMaskService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="dataSync" />

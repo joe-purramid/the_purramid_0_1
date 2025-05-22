@@ -32,8 +32,8 @@ class SpotlightView(context: Context, attrs: AttributeSet?) : View(context, attr
     var interactionListener: SpotlightInteractionListener? = null
 
     // --- Paints ---
-    private val shadeColor = Color.argb(128, 0, 0, 0)
-    // private val shadePaint = Paint().apply { color = shadeColor }
+    private val maskColor = Color.argb(128, 0, 0, 0)
+    // private val maskPaint = Paint().apply { color = maskColor }
     private val spotlightPaint = Paint().apply {
         xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR)
         isAntiAlias = true
@@ -141,7 +141,7 @@ class SpotlightView(context: Context, attrs: AttributeSet?) : View(context, attr
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        canvas.drawColor(shadeColor)
+        canvas.drawColor(maskColor)
 
         // Determine which spotlights to draw (original or temporary feedback)
         val listToDraw = if (isDraggingSpotlight || isResizing) {
@@ -400,7 +400,7 @@ class SpotlightView(context: Context, attrs: AttributeSet?) : View(context, attr
                             if (tappedSpotlight != null) {
                                 interactionListener?.requestTapPassThrough()
                             } else {
-                                showControls = !showControls // Toggle controls on shade tap
+                                showControls = !showControls // Toggle controls on mask tap
                                 invalidate()
                             }
                         }

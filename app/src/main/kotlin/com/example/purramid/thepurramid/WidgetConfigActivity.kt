@@ -47,7 +47,7 @@ class WidgetConfigActivity : Activity() {
         val options = listOf(
             WidgetConfigData("Clock", R.mipmap.tp_clock_launcher, Intent(this, ClockActivity::class.java)),
             WidgetConfigData("Randomizers", R.mipmap.tp_randomizers_launcher, Intent(this, RandomizersActivity::class.java)),
-            WidgetConfigData("Screen Shade", R.mipmap.tp_screen_shade_launcher, Intent(this, ScreenShadeActivity::class.java)),
+            WidgetConfigData("Screen Mask", R.mipmap.tp_screen_mask_launcher, Intent(this, ScreenMaskActivity::class.java)),
             WidgetConfigData("Spotlight", R.mipmap.tp_spotlight_launcher, Intent(this, SpotlightActivity::class.java)),
             WidgetConfigData("Timers", R.mipmap.tp_timers_launcher, Intent(this, TimersActivity::class.java)),
             WidgetConfigData("Traffic Light", R.mipmap.tp_traffic_light_launcher, Intent(this, TrafficLightActivity::class.java))

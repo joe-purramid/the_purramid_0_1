@@ -10,49 +10,35 @@ import android.app.ActivityOptions
 import android.content.Context
 import android.content.Intent
 // import android.content.res.Configuration
-import android.graphics.drawable.Drawable
 import android.graphics.Rect
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
-import android.util.TypedValue
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
-import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
 // import androidx.activity.result.ActivityResultLauncher
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.lifecycleScope // For launching coroutines
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.window.layout.WindowMetricsCalculator
 import com.example.purramid.thepurramid.clock.ClockActivity
 import com.example.purramid.thepurramid.databinding.ActivityMainBinding // Import generated binding class
-import com.example.purramid.thepurramid.data.db.PurramidDatabase // Import Database
-import com.example.purramid.thepurramid.data.db.RandomizerDao // For Randomizer new instance default settings
-import com.example.purramid.thepurramid.data.db.DEFAULT_SETTINGS_ID // For Randomizer
-import com.example.purramid.thepurramid.data.db.RandomizerInstanceEntity // For Randomizer
-import com.example.purramid.thepurramid.data.db.SpinSettingsEntity // For Randomizer
 import com.example.purramid.thepurramid.randomizers.RandomizerInstanceManager // Import Manager
 import com.example.purramid.thepurramid.randomizers.RandomizersHostActivity
-import com.example.purramid.thepurramid.randomizers.viewmodel.RandomizerViewModel
-import com.example.purramid.thepurramid.screen_shade.ScreenShadeActivity
+import com.example.purramid.thepurramid.screen_mask.ScreenMaskActivity
 import com.example.purramid.thepurramid.spotlight.SpotlightActivity
 import com.example.purramid.thepurramid.timers.TimersActivity
 import com.example.purramid.thepurramid.traffic_light.TrafficLightActivity
 import com.example.purramid.thepurramid.util.dpToPx
 import dagger.hilt.android.AndroidEntryPoint
 import java.util.UUID
-import javax.inject.Inject
-import kotlinx.coroutines.Dispatchers // For DB Ops
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext // For switching context
 
 // --- Define simple Enums for Size Classes (for XML Views context) ---
 // Based on Material Design breakpoints: https://m3.material.io/foundations/layout/applying-layout/window-size-classes
@@ -196,7 +182,7 @@ class MainActivity : AppCompatActivity() {
             AppIntent("Timers", R.drawable.ic_timer, AppIntent.AppType.TIMERS),
             AppIntent("Randomizers", R.drawable.ic_random, AppIntent.AppType.RANDOMIZERS), // Ensure you have a launcher icon
             AppIntent("Traffic Light", R.drawable.ic_traffic_light, AppIntent.AppType.TRAFFIC_LIGHT),
-            AppIntent("Screen Shade", R.drawable.ic_shade, AppIntent.AppType.SCREEN_SHADE),
+            AppIntent("Screen Mask", R.drawable.ic_mask, AppIntent.AppType.SCREEN_MASK),
             AppIntent("Spotlight", R.drawable.ic_spotlight, AppIntent.AppType.SPOTLIGHT),
             AppIntent("About", R.drawable.ic_about, AppIntent.AppType.ABOUT)
         )
@@ -211,7 +197,7 @@ class MainActivity : AppCompatActivity() {
             AppIntent.AppType.CLOCK -> startActivity(Intent(this, ClockActivity::class.java))
             AppIntent.AppType.TIMERS -> startActivity(Intent(this, TimersActivity::class.java))
             AppIntent.AppType.TRAFFIC_LIGHT -> startActivity(Intent(this, TrafficLightActivity::class.java))
-            AppIntent.AppType.SCREEN_SHADE -> startActivity(Intent(this, ScreenShadeActivity::class.java))
+            AppIntent.AppType.SCREEN_MASK -> startActivity(Intent(this, ScreenMaskActivity::class.java))
             AppIntent.AppType.SPOTLIGHT -> startActivity(Intent(this, SpotlightActivity::class.java))
             AppIntent.AppType.RANDOMIZERS -> {
                 launchNewRandomizerInstanceWithBounds()
@@ -259,12 +245,12 @@ class MainActivity : AppCompatActivity() {
                 ),
 
                 AppIntent(
-                    title = getString(R.string.screen_shade_title),
-                    iconResId = R.drawable.ic_shade,
-                    id = "screen_shade",
+                    title = getString(R.string.screen_mask_title),
+                    iconResId = R.drawable.ic_mask,
+                    id = "screen_mask",
                     action = { context ->
-                        // ScreenShadeActivity handles logic for new vs settings
-                        val intent = Intent(context, ScreenShadeActivity::class.java)
+                        // ScreenMaskActivity handles logic for new vs settings
+                        val intent = Intent(context, ScreenMaskActivity::class.java)
                         context.startActivity(intent)
                     }
                 ),
@@ -558,7 +544,7 @@ class MainActivity : AppCompatActivity() {
 // the individual free form windows of Randomizers (which is an activity and not a service
 
 // TODO: [MULTI-INSTANCE RE-ARCHITECTURE] Revisit the multi-instance behavior for all app intents
-// (Clock, Spotlight, Timers, ScreenShade, TrafficLight). The current vision is to allow
+// (Clock, Spotlight, Timers, ScreenMask, TrafficLight). The current vision is to allow
 // up to four distinct, draggable, and individually configurable instances for each of these,
 // similar to how Randomizers are intended to work.
 // This will require:

@@ -1,5 +1,5 @@
 // MaskView.kt
-package com.example.purramid.thepurramid.screen_shade.ui
+package com.example.purramid.thepurramid.screen_mask.ui
 
 import android.animation.ObjectAnimator
 import android.annotation.SuppressLint
@@ -19,7 +19,7 @@ import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import com.example.purramid.thepurramid.R
-import com.example.purramid.thepurramid.screen_shade.ScreenShadeState
+import com.example.purramid.thepurramid.screen_mask.ScreenMaskState
 import com.example.purramid.thepurramid.util.dpToPx
 import kotlin.math.abs
 import kotlin.math.max
@@ -47,7 +47,7 @@ class MaskView @JvmOverloads constructor(
     }
 
     var interactionListener: InteractionListener? = null
-    private var currentState: ScreenShadeState
+    private var currentState: ScreenMaskState
 
     private var billboardImageView: ImageView
     private var closeButton: ImageView
@@ -133,7 +133,7 @@ class MaskView @JvmOverloads constructor(
         }
 
         // Initialize with a default state (will be overwritten)
-        this.currentState = ScreenShadeState(instanceId = instanceId)
+        this.currentState = ScreenMaskState(instanceId = instanceId)
 
         // Setup scale gesture detector
         scaleGestureDetector = ScaleGestureDetector(context, ScaleListener())
@@ -142,7 +142,7 @@ class MaskView @JvmOverloads constructor(
         setupMaskTouchListener()
     }
 
-    fun updateState(newState: ScreenShadeState) {
+    fun updateState(newState: ScreenMaskState) {
         this.currentState = newState
 
         // Update border visibility based on lock state

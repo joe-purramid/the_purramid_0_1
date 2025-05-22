@@ -1,14 +1,14 @@
-// ScreenShadeViewModel.kt
-package com.example.purramid.thepurramid.screen_shade.viewmodel
+// ScreenMaskViewModel.kt
+package com.example.purramid.thepurramid.screen_mask.viewmodel
 
 import android.graphics.Color
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.purramid.thepurramid.data.db.ScreenShadeDao
-import com.example.purramid.thepurramid.data.db.ScreenShadeStateEntity
-import com.example.purramid.thepurramid.screen_shade.ScreenShadeState
+import com.example.purramid.thepurramid.data.db.ScreenMaskDao
+import com.example.purramid.thepurramid.data.db.ScreenMaskStateEntity
+import com.example.purramid.thepurramid.screen_mask.ScreenMaskState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,20 +20,20 @@ import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @HiltViewModel
-class ScreenShadeViewModel @Inject constructor(
-    private val screenShadeDao: ScreenShadeDao,
+class ScreenMaskViewModel @Inject constructor(
+    private val screenMaskDao: ScreenMaskDao,
     private val savedStateHandle: SavedStateHandle // Hilt injects this
 ) : ViewModel() {
 
     companion object {
-        const val KEY_INSTANCE_ID = "screenShadeInstanceId"
-        private const val TAG = "ScreenShadeViewModel"
+        const val KEY_INSTANCE_ID = "screenMaskInstanceId"
+        private const val TAG = "ScreenMaskViewModel"
     }
 
     private val instanceId: Int = savedStateHandle[KEY_INSTANCE_ID] ?: 0
 
-    private val _uiState = MutableStateFlow(ScreenShadeState(instanceId = instanceId))
-    val uiState: StateFlow<ScreenShadeState> = _uiState.asStateFlow()
+    private val _uiState = MutableStateFlow(ScreenMaskState(instanceId = instanceId))
+    val uiState: StateFlow<ScreenMaskState> = _uiState.asStateFlow()
 
     init {
         Log.d(TAG, "Initializing ViewModel for instanceId: $instanceId")
@@ -48,7 +48,7 @@ class ScreenShadeViewModel @Inject constructor(
 
     private fun loadState() {
         viewModelScope.launch(Dispatchers.IO) {
-            val entity = screenShadeDao.getById(instanceId)
+            val entity = screenMaskDao.getById(instanceId)
             withContext(Dispatchers.Main) {
                 if (entity != null) {
                     _uiState.value = mapEntityToState(entity)
@@ -97,14 +97,14 @@ class ScreenShadeViewModel @Inject constructor(
         saveState(_uiState.value)
     }
 
-    private fun saveState(state: ScreenShadeState) {
+    private fun saveState(state: ScreenMaskState) {
         if (state.instanceId <= 0) {
             Log.w(TAG, "Attempted to save state with invalid instanceId: ${state.instanceId}")
             return
         }
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                screenShadeDao.insertOrUpdate(mapStateToEntity(state))
+                screenMaskDao.insertOrUpdate(mapStateToEntity(state))
                 Log.d(TAG, "Saved state for instance ${state.instanceId}")
             } catch (e: Exception) {
                 Log.e(TAG, "Error saving state for instance ${state.instanceId}", e)
@@ -117,7 +117,7 @@ class ScreenShadeViewModel @Inject constructor(
         if (instanceId <= 0) return
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                screenShadeDao.deleteById(instanceId)
+                screenMaskDao.deleteById(instanceId)
                 Log.d(TAG, "Deleted state for instance $instanceId")
             } catch (e: Exception) {
                 Log.e(TAG, "Error deleting state for instance $instanceId", e)
@@ -125,8 +125,8 @@ class ScreenShadeViewModel @Inject constructor(
         }
     }
 
-    private fun mapEntityToState(entity: ScreenShadeStateEntity): ScreenShadeState {
-        return ScreenShadeState(
+    private fun mapEntityToState(entity: ScreenMaskStateEntity): ScreenMaskState {
+        return ScreenMaskState(
             instanceId = entity.instanceId,
             x = entity.x,
             y = entity.y,
@@ -139,8 +139,8 @@ class ScreenShadeViewModel @Inject constructor(
         )
     }
 
-    private fun mapStateToEntity(state: ScreenShadeState): ScreenShadeStateEntity {
-        return ScreenShadeStateEntity(
+    private fun mapStateToEntity(state: ScreenMaskState): ScreenMaskStateEntity {
+        return ScreenMaskStateEntity(
             instanceId = state.instanceId,
             x = state.x,
             y = state.y,

@@ -13,7 +13,7 @@ annotation class ClockPrefs // For ClockService SharedPreferences
 
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
-annotation class ScreenShadePrefs
+annotation class ScreenMaskPrefs
 
 @Qualifier
 @Retention(AnnotationRetention.BINARY)

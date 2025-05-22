@@ -1,9 +1,9 @@
+// MainActivity.kt
+
 The Purramid is an application built in Kotlin for Android 13 or more current versions to be run on large-screen tablets (55" or larger). It is represented by an actionable button shown on the screen as an app icon. The app icon serves as the button itself, allowing users to interact directly with it to trigger specific actions. This icon should visually convey its purpose and fit seamlessly into the design. Include animations or visual cues to indicate interactivity, such as highlighting, pulsating, or transitioning effects when tapped.
 
 When the user interacts with the app icon button, initiate a smooth animation that gracefully unfolds the list of available intents. Each intent is displayed with its unique icon and title, arranged in an aesthetically pleasing layout. Include details like intuitive transitions, highlighting the selected intent as it's being launched, and ensuring the design feels modern and user-friendly.
 
 The intents are ordered from top to bottom as: Clock, Randomizers, Screen Mask, Spotlight, Timers, Traffic Light, and About.
 
-If the user touches anywhere on the screen that is not an intent (including the main app icon button), initiate a smooth animation that gracefully folds the list of available intents back into the app icon. If the user touches an intent, launch that intent. If the intent is already active, bring it into focus.
-
-App design should be consistent across intents. It should use up-to-date Kotlin best practices, and accommodate requirements for Android 13 or later, including the ability to run in freeform windows. This build uses build.gradle.kts, libs.versions.toml, Hilt data injection, Room database, and file fragments.
+If the user touches an intent icon, gracefully fold the list of available intents back into the app icon then launch that intent's activity or service. (About and Randomizers are activities; Clock, Screen Mask, Spotlight, Timers, and Traffic Light are services). If the user touches anywhere on the screen that is not an intent icon (including the main app icon button), initiate a smooth animation that gracefully folds the list of available intents back into the app icon. If the intent is already active, bring its window/overlay into focus.

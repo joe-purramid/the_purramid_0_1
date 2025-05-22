@@ -3,12 +3,7 @@ package com.example.purramid.thepurramid.di
 
 import android.content.Context
 import android.content.SharedPreferences
-import com.example.purramid.thepurramid.di.ClockPrefs
-import com.example.purramid.thepurramid.di.ScreenShadePrefs
-import com.example.purramid.thepurramid.di.SpotlightPrefs
-import com.example.purramid.thepurramid.di.TimersPrefs
-import com.example.purramid.thepurramid.di.TrafficLightPrefs
-import com.example.purramid.thepurramid.screen_shade.ScreenShadeService // For PREFS_NAME
+import com.example.purramid.thepurramid.screen_mask.ScreenMaskService // For PREFS_NAME
 // ... other imports for other features' services ...
 import dagger.Module
 import dagger.Provides
@@ -33,11 +28,11 @@ object AppModule {
 
     @Provides
     @Singleton
-    @ScreenShadePrefs // Use the qualifier
-    fun provideScreenShadePreferences(@ApplicationContext context: Context): SharedPreferences {
-        // Use the actual PREFS_NAME defined in your ScreenShadeService companion object
-        // For consistency, let's assume ScreenShadeService.PREFS_NAME_FOR_ACTIVITY is correct
-        return context.getSharedPreferences(ScreenShadeService.PREFS_NAME_FOR_ACTIVITY, Context.MODE_PRIVATE)
+    @ScreenMaskPrefs // Use the qualifier
+    fun provideScreenMaskPreferences(@ApplicationContext context: Context): SharedPreferences {
+        // Use the actual PREFS_NAME defined in your ScreenMaskService companion object
+        // For consistency, let's assume ScreenMaskService.PREFS_NAME_FOR_ACTIVITY is correct
+        return context.getSharedPreferences(ScreenMaskService.PREFS_NAME_FOR_ACTIVITY, Context.MODE_PRIVATE)
     }
 
     @Provides

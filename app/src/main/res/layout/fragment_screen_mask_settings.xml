@@ -5,14 +5,14 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:padding="16dp"
-    tools:context=".screen_shade.ui.ScreenShadeSettingsFragment">
+    tools:context=".screen_mask.ui.ScreenMaskSettingsFragment">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
         <ImageButton
-            android:id="@+id/buttonCloseScreenShadeSettings"
+            android:id="@+id/buttonCloseScreenMaskSettings"
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:src="@drawable/ic_close"
@@ -22,15 +22,15 @@
             app:layout_constraintEnd_toEndOf="parent" />
 
         <TextView
-            android:id="@+id/textViewScreenShadeSettingsTitle"
+            android:id="@+id/textViewScreenMaskSettingsTitle"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="@string/screen_shade_settings_title"
+            android:text="@string/screen_mask_settings_title"
             android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall"
-            app:layout_constraintTop_toTopOf="@+id/buttonCloseScreenShadeSettings"
-            app:layout_constraintBottom_toBottomOf="@+id/buttonCloseScreenShadeSettings"
+            app:layout_constraintTop_toTopOf="@+id/buttonCloseScreenMaskSettings"
+            app:layout_constraintBottom_toBottomOf="@+id/buttonCloseScreenMaskSettings"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toStartOf="@+id/buttonCloseScreenShadeSettings"
+            app:layout_constraintEnd_toStartOf="@+id/buttonCloseScreenMaskSettings"
             android:layout_marginEnd="8dp"/>
 
         <Button
@@ -40,7 +40,7 @@
             android:text="@string/add_another_screen"
             android:layout_marginTop="32dp"
             app:icon="@drawable/ic_add_circle"
-            app:layout_constraintTop_toBottomOf="@id/textViewScreenShadeSettingsTitle"
+            app:layout_constraintTop_toBottomOf="@id/textViewScreenMaskSettingsTitle"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"/>
 

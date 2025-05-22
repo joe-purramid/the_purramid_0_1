@@ -1,7 +1,6 @@
-// ScreenShadeActivity.kt
-package com.example.purramid.thepurramid.screen_shade
+// ScreenMaskActivity.kt
+package com.example.purramid.thepurramid.screen_mask
 
-import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -11,28 +10,28 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.example.purramid.thepurramid.R
-import com.example.purramid.thepurramid.databinding.ActivityScreenShadeBinding
-import com.example.purramid.thepurramid.screen_shade.ui.ScreenShadeSettingsFragment
+import com.example.purramid.thepurramid.databinding.ActivityScreenMaskBinding
+import com.example.purramid.thepurramid.screen_mask.ui.ScreenMaskSettingsFragment
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
-class ScreenShadeActivity : AppCompatActivity() {
+class ScreenMaskActivity : AppCompatActivity() {
 
-    private lateinit var binding: ActivityScreenShadeBinding
+    private lateinit var binding: ActivityScreenMaskBinding
     private lateinit var imagePickerLauncher: ActivityResultLauncher<String>
 
     companion object {
-        private const val TAG = "ScreenShadeActivity"
-        const val ACTION_LAUNCH_IMAGE_CHOOSER_FROM_SERVICE = "com.example.purramid.screen_shade.ACTION_LAUNCH_IMAGE_CHOOSER_FROM_SERVICE"
-        // Using the constants defined in ScreenShadeService for SharedPreferences
-        const val PREFS_NAME = ScreenShadeService.PREFS_NAME
-        const val KEY_ACTIVE_COUNT = ScreenShadeService.KEY_ACTIVE_COUNT
+        private const val TAG = "ScreenMaskActivity"
+        const val ACTION_LAUNCH_IMAGE_CHOOSER_FROM_SERVICE = "com.example.purramid.screen_mask.ACTION_LAUNCH_IMAGE_CHOOSER_FROM_SERVICE"
+        // Using the constants defined in ScreenMaskService for SharedPreferences
+        const val PREFS_NAME = ScreenMaskService.PREFS_NAME
+        const val KEY_ACTIVE_COUNT = ScreenMaskService.KEY_ACTIVE_COUNT
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityScreenShadeBinding.inflate(layoutInflater)
+        binding = ActivityScreenMaskBinding.inflate(layoutInflater)
         setContentView(binding.root)
         Log.d(TAG, "onCreate - Intent Action: ${intent.action}")
 
@@ -58,12 +57,12 @@ class ScreenShadeActivity : AppCompatActivity() {
             val activeCount = prefs.getInt(KEY_ACTIVE_COUNT, 0)
 
             if (activeCount > 0) {
-                Log.d(TAG, "Screen Shades active ($activeCount), launching settings fragment.")
+                Log.d(TAG, "Screen Masks active ($activeCount), launching settings fragment.")
                 showSettingsFragment()
                 // Activity remains open to host the fragment
             } else {
-                Log.d(TAG, "No active Screen Shades, requesting service to add a new one.")
-                val serviceIntent = Intent(this, ScreenShadeService::class.java).apply {
+                Log.d(TAG, "No active Screen Masks, requesting service to add a new one.")
+                val serviceIntent = Intent(this, ScreenMaskService::class.java).apply {
                     action = ACTION_ADD_NEW_MASK_INSTANCE
                 }
                 ContextCompat.startForegroundService(this, serviceIntent)
@@ -83,7 +82,7 @@ class ScreenShadeActivity : AppCompatActivity() {
     }
 
     private fun sendImageUriToService(uri: Uri?) {
-        val serviceIntent = Intent(this, ScreenShadeService::class.java).apply {
+        val serviceIntent = Intent(this, ScreenMaskService::class.java).apply {
             action = ACTION_BILLBOARD_IMAGE_SELECTED
             putExtra(EXTRA_IMAGE_URI, uri?.toString()) // Send URI as String
             // The service knows which instance requested it via imageChooserTargetInstanceId
@@ -93,10 +92,10 @@ class ScreenShadeActivity : AppCompatActivity() {
     }
 
     private fun showSettingsFragment() {
-        if (supportFragmentManager.findFragmentByTag(ScreenShadeSettingsFragment.TAG) == null) {
-            Log.d(TAG, "Showing Screen Shade settings fragment.")
+        if (supportFragmentManager.findFragmentByTag(ScreenMaskSettingsFragment.TAG) == null) {
+            Log.d(TAG, "Showing Screen Mask settings fragment.")
             supportFragmentManager.beginTransaction()
-                .replace(R.id.screen_shade_fragment_container, ScreenShadeSettingsFragment.newInstance())
+                .replace(R.id.screen_mask_fragment_container, ScreenMaskSettingsFragment.newInstance())
                 .commit()
         }
     }
@@ -120,12 +119,12 @@ class ScreenShadeActivity : AppCompatActivity() {
             val activeCount = prefs.getInt(KEY_ACTIVE_COUNT, 0)
 
             if (activeCount > 0) {
-                Log.d(TAG, "Screen Shades active ($activeCount), launching settings fragment.")
+                Log.d(TAG, "Screen Masks active ($activeCount), launching settings fragment.")
                 showSettingsFragment()
                 // Activity remains open to host the fragment
             } else {
-                Log.d(TAG, "No active Screen Shades, requesting service to add a new one.")
-                val serviceIntent = Intent(this, ScreenShadeService::class.java).apply {
+                Log.d(TAG, "No active Screen Masks, requesting service to add a new one.")
+                val serviceIntent = Intent(this, ScreenMaskService::class.java).apply {
                     action = ACTION_ADD_NEW_MASK_INSTANCE
                 }
                 ContextCompat.startForegroundService(this, serviceIntent)

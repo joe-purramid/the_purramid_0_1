@@ -44,8 +44,8 @@ object DatabaseModule {
 
     @Provides
     @Singleton
-    fun provideScreenShadeDao(database: PurramidDatabase): ScreenShadeDao { // Added
-        return database.screenShadeDao()
+    fun provideScreenMaskDao(database: PurramidDatabase): ScreenMaskDao { // Added
+        return database.screenMaskDao()
     }
 
     @Provides

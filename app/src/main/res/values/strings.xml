@@ -8,7 +8,7 @@
     <string name="overlay_permission_denied">Overlay permission denied</string>
     <string name="clock_title">Clock</string>
     <string name="randomizers_title">Randomizers</string>
-    <string name="screen_shade_title">Screen Shade</string>
+    <string name="screen_mask_title">Screen Mask</string>
     <string name="spotlight_title">Spotlight</string>
     <string name="timers_title">Timers</string>
     <string name="traffic_light_title">Traffic Light</string>
@@ -556,10 +556,10 @@
     <string name="error_max_coins_reached">Maximum of %1$d %2$s coins reached.</string> <string name="loading_settings">Loading Settings…</string>
 
 
-    <!-- `` SCREEN SHADE APP `` -->
-    <string name="screen_shade_settings_title">Screen Shade Settings</string>
-    <string name="add_another_screen">Add another Screen</string>
-    <string name="max_masks_reached_snackbar">Maximum number of screen shades reached.</string>
+    <!-- `` SCREEN MASK APP `` -->
+    <string name="screen_mask_settings_title">Screen Mask Settings</string>
+    <string name="add_another_screen">Add another Mask</string>
+    <string name="max_masks_reached_snackbar">Maximum number of screen masks reached.</string>
     <string name="lock_unlock">Lock/Unlock</string>
     <string name="lock_unlock_all">Lock/Unlock All</string>
     <string name="billboard">Billboard</string>
