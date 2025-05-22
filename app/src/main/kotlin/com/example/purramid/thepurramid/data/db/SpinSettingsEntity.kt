@@ -48,7 +48,7 @@ data class SpinSettingsEntity(
     var isDiceCritCelebrationEnabled: Boolean = false, // Default off
     var diceSumResultType: DiceSumResultType = DiceSumResultType.INDIVIDUAL, // Default
     var graphDistributionType: GraphDistributionType = GraphDistributionType.OFF, // Default off
-    var graphPlotType: GraphPlotType = GraphPlotType.HISTOGRAM, // Default solid
+    var diceGraphPlotType: String = GraphPlotType.HISTOGRAM.name, // Default solid
     var graphRollCount: Int = 1000, // Default for Normal/Uniform
 
     // --- Coin Flip Mode Specific ---

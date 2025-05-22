@@ -301,6 +301,80 @@
         </LinearLayout>
 
         <LinearLayout
+            android:id="@+id/diceSettingsGroup"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone" app:layout_constraintTop_toBottomOf="@+id/slotsSettingsGroup" app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            tools:visibility="visible">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/title_dice_settings"
+                style="@style/TextAppearance.MaterialComponents.Headline6"
+                android:layout_marginBottom="8dp"/>
+
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switchDiceGraphEnabled"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/setting_enable_dice_graph" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/diceGraphPlotTypeLayout"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:hint="@string/setting_dice_graph_plot_type"
+                android:visibility="gone" tools:visibility="visible">
+
+                <AutoCompleteTextView
+                    android:id="@+id/diceGraphPlotTypeDropDown"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="none"
+                    tools:text="Histogram (Bar)"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/diceGraphDistributionTypeLayout"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:hint="@string/setting_graph_distribution_type"
+                android:visibility="gone"
+                tools:visibility="visible">
+                <AutoCompleteTextView
+                    android:id="@+id/diceGraphDistributionTypeDropDown"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="none" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/diceGraphFlipCountLayout"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:hint="@string/setting_graph_flip_count"
+                android:visibility="gone"
+                tools:visibility="visible">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/textFieldDiceGraphFlipCount"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="number"
+                    android:maxLength="5"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+        </LinearLayout>
+
+        <LinearLayout
             android:id="@+id/coinFlipSettingsLayout"
             android:layout_width="0dp"
             android:layout_height="wrap_content"

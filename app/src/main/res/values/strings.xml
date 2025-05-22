@@ -519,6 +519,9 @@
     <string name="graph_distribution_placeholder">Graph will appear here</string>
     <string name="setting_graph_distribution_type">Graph Distribution Type</string>
     <string name="setting_graph_plot_type">Graph Plot Type</string>
+    <string name="plot_type_histogram">Histogram (Bar)</string>
+    <string name="plot_type_line_graph">Line Graph</string>
+    <string name="plot_type_qq_graph">Q-Q Scatter Plot</string>
     <string name="setting_graph_flip_count">Number of Flips for Graph</string> <string name="graph_dist_type_off">Off</string>
     <string name="graph_dist_type_manual">Manual</string>
     <string name="graph_dist_type_normal">Normal</string>
