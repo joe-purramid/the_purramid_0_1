@@ -1,33 +1,24 @@
-On launch, the spotlight app applies a shade overlay to the screen. The color of the shade is charcoal (or some other light black) at 50% opacity. The "spotlight" is a circle where that shade is not applied.
+// SpotlightService.kt
+Spotlight (1) applies a shade overlay to the screen. The color of the shade is charcoal (or some other light black) at 50% opacity. The "spotlight" is a (2) circle where that shade is not applied.
 
+(2) The circle is not a transparent color. It is a "hole" in the shade overlay. Events pass-through the spotlight area to interact with the screen below. This includes writing with a whiteboard pen or launching another application.
 
+Buttons appear outside but near the circle edge. (3) The top left and bottom right corners have resize brackets. (4) The top right corner includes a close button. (5) The bottom left corner includes a settings gear button. These four elements are positioned as a rectangle around the spotlight circle and move when the spotlight moves.
 
-It can be dragged around the screen with a single finger. It can be resized with two fingers. A floating menu bar should include three icons, a "close" cross, an "add another" plus, and a "shape" square or circle.
+The user can resize the spotlight circle by dragging (3) either (or both) corner brackets. When dragging one corner bracket, use the opposite corner an an anchor point. When dragging with both corners, use the center point of the spotlight as an anchor point. A circle can be reshaped into an oval. A square can be reshaped into a rectangle.
 
+(4) A rounded "Settings" menu button (ic_settings.xml) is attached to the bottom left corner. When tapped, it gracefully expands to show the following settings buttons: (6) "Move" (ic_spotlight_move.xml), (7) "Shape", (8) "Lock" (ic_lock.xml), (9) "Lock All" (ic_lock_all.xml), (10) "Add Another". If the Settings gear is tapped while the menu is open, it gracefully folds back to a single button.
 
+(6) "Move" closes the settings view and creates a rectangle around the spotlight circle (connecting the brackets, close button, and settings button. While this rectangle is visible, the spotlight cannot be resized and it does not allow pass-through events. It can still be closed and settings can still be opened. Touching anywhere within the rectangle allows the user to drag the spotlight anywhere on the screen. It cannot extend beyond the edge of the screen. If the user ends their touch, the rectangle remains. They are able to move it again by touching inside the rectangle. If the user touches outside of the rectangle, the rectangle disappears and the move action is complete. If the spotlight is closed or if settings is opened, the rectangle disappears.
 
-The shape of the spotlight can be changed as part of the resizing gesture. It can be made into an oval, with the foci forming a line with the user's fingers.
+(7) "Shape" toggles between Circle and Square shapes for the spotlight area within the shade. Changing shape does not change proportions, so if a user has resized a circle into an oval, selecting "shape" would create a rectangle and not a square, using the maximal height and maximal width of the oval for the dimensions of the rectangle). 
 
+(8) "Lock" freezes a spotlight in place. It cannot be moved, resized, or closed. Pass-through events are not allowed. When locked, the spotlight is highglighted with a red border. When locked, the "lock" icon changes to an "unlock" icon. Lock applies only to the spotlight from which the settings button was opened.
 
+(9) "Lock All" freezes all spotlights in place. None can be moved, resized, or closed. None allows pass-through events. All are highlighted with a red border. Lock all changes both lock and lock all icons to unlock and unlock all icons. The user can press the "unlock" button to unlock a single spotlight after all of them have been frozen. If "unlock all" is pressed after a single spotlight is unlocked, that spotlight is unaffected. The other spotlights unlock.
 
-Close ends the app activity.
+(10) "Add Another" creates a second spotlight. A user can have up to four spotlights active at a time. Once four are present, the "add another" button inactivates. A new spotlight adopts the height and width properties of the spotlight from which it was created. It appears at the center of the screen, offset from any other spotlights created. (11) TODO: Confirm my understanding that because Spotlight is a service, both spotlight circles appear in the same overlay, creating two "holes" in the same shaded screen.
 
+(2) "Close" closes that specific spotlight. If all spotlights are closed, the service ends.
 
-
-Add another creates a second circular spotlight that can be manipulated separately from the first. There can be no more than four spotlights active at a time.
-
-
-
-Shape changes the shape of the spotlight from circle to square. When that happens, the shape button changes from a square to a circle. This change applies to all spotlights on screen. If the user changes back to circle, the shape changes back to square.
-
-
-
-Squares can be reshaped into rectangles in the same way circles can be reshaped into ovals.
-
-
-
-Each icon has a tooltip, "Close Application", "Add Another Spotlight", and "Change Shape", respectively.
-
-
-
-After app close, when it starts, it opens only one spotlight. After app destroy, it will display however many spotlights open at the time of destroy.
+(12) TODO: Consider replacing the current move functionality with a drag indicator (double kebob) that allows movement directly from the settings menu.

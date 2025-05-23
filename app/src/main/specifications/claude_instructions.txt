@@ -1,0 +1,22 @@
+You are an expert software developer. You are taking over a project already in progress. "The Purramid" is a classroom management app built in Kotlin for Android 13. It is intended for interactive flat panels (large-form tablets) of 55" or larger in K-12 classrooms. It includes 7 app-intents: Clock, Randomizers, Screen Mask, Spotlight, Timers, Traffic Light, and About. Take the following steps to complete The Purramid app.
+
+(1) Review .../src/main/specifications/purramid_universal_requirements.txt. Compare the existing code for consistency, optimization, Kotlin best practices, and that everything meets the universal requirements.
+
+(2) Review the individual app-intent specification documents:
+
+MainActivity - .../specifications/purramid_main_specifications.txt
+Clock - .../specifications/purramid_clock_specifications.txt
+Randomizers - .../specifications/purramid_randomizers_specifications.txt
+Scree Mask - .../specifications/purramid_screen_mask_specifications.txt
+Spotlight - .../specifications/purramid_spotlight_specifications.txt
+Timers - .../specifications/purramid_timers_specifications.txt
+Traffic Light - .../specifications/purramid_traffic_light_specifications.txt
+About - .../specifications/purramid_about_specifications.txt
+
+(3) List any inconsistencies between implemented code, app intent specifications, and the main universal requirements. (Some features have changed in intents like Spotlight, so some intents may haver larger discrepancies than others.) Identify inconsistencies between intents. List any code that does not use Kotlin best practices and should be refactored.
+
+(4) List any assumptions you are making as questions to be discussed and answered before new code is implemented.
+
+(5) Propose an orderly plan to correct inconsistencies and complete any incomplete features.
+
+(6) Provide code changes for approval and implement approved changes.

@@ -5,16 +5,16 @@ Screen Mask (formerly named Screen Shade) creates a black, opaque mask that cove
 
 (5) When not full screen, a mask can be moved anywhere on the screen by a hold-and-drag motion when the user touches anywhere on the mask other than the corners. A mask may never move off the edge of the screen.
 
-(3) A rounded "Settings" menu button (ic_settings.xml) is attached to the bottom left corner of the mask. When tapped, it gracefully expands to show the following settings buttons: (6) Add another screen (ic_add_circle.xml), (7) lock in place (ic_lock.xml), (8) lock all in place (ic_lock_all.xml), and (9) billboard (ic_billboard.xml). If the Settings gear is tapped while the menu is open, it gracefully folds back to a single button.
+(3) A rounded "Settings" menu button (ic_settings.xml) is attached to the bottom left corner of the mask. When tapped, it gracefully expands to show the following settings buttons: (6) lock in place (ic_lock.xml), (7) lock all in place (ic_lock_all.xml), (8) billboard (ic_billboard.xml), and (9) Add another screen (ic_add_circle.xml). If the Settings gear is tapped while the menu is open, it gracefully folds back to a single button.
 
-(6) "Add Another" creates a second mask. A user can have up to four masks active at a time. Once four are present, the "add another" button inactivates. A new mask adopts the height and width properties of the mask from which it was created. It appears at the center of the screen, offset from any other masks created.
+(6) "Lock" freezes a mask in place. It cannot be moved, resized, or closed. When locked, the mask is highglighted with a red border. When locked, the "lock" icon changes to an "unlock" icon. Lock applies only to the mask from which the settings button was opened.
 
-(7) "Lock" freezes a mask in place. It cannot be moved, resized, or closed. When locked, the mask is highglighted with a red border. When locked, the "lock" icon changes to an "unlock" icon. Lock applies only to the mask from which the settings button was opened.
+(7) "Lock All" freezes all masks in place. None can be moved, resized, or closed. All are highlighted with a red border. Lock all changes both lock and lock all icons to unlock and unlock all icons. The user can press the "unlock" button to unlock a single mask after all of them have been frozen. If "unlock all" is pressed after a single mask is unlocked, that mask is unaffected. The other masks unlock.
 
-(8) "Lock All" freezes all masks in place. None can be moved, resized, or closed. All are highlighted with a red border. Lock all changes both lock and lock all icons to unlock and unlock all icons. The user can press the "unlock" button to unlock a single mask after all of them have been frozen. If "unlock all" is pressed after a single mask is unlocked, that mask is unaffected. The other masks would unlock.
-
-(9) "Billboard" allows the user to upload an image to display on top of the screen shade. Activating the Billboard button opens an image upload interface where they can select an image (jpg, png, bmp, gif, webp) to display. Other file types cannot be selected. GIF support includes animated gifs.
+(8) "Billboard" allows the user to upload an image to display on top of the screen shade. Activating the Billboard button opens an image upload interface where they can select an image (jpg, png, bmp, gif, webp) to display. Other file types cannot be selected. GIF support includes animated gifs.
 
 Once a file is uploaded, the image overlays the screen mask, leaving 5% of the mask as padding (creating a black border effect). It is important that the image not be distorted. If the image is portrait and reaches the top and bottom of the mask before the left and right edges, the left and right sides would have more black space. The image would not be stretched to fit. The same is true if the image reaches the left and right edges first. There would be more black space above and below.
+
+(9) "Add Another" creates a second mask. A user can have up to four masks active at a time. Once four are present, the "add another" button inactivates. A new mask adopts the height and width properties of the mask from which it was created. It appears at the center of the screen, offset from any other masks created.
 
 (2) "Close" closes that specific mask. If all masks are closed, the service ends.
