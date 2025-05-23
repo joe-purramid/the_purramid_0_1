@@ -90,7 +90,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="@string/setting_add_messages"
+            android:text="@string/setting_edit_messages"
             android:visibility="gone"
             app:layout_constraintTop_toBottomOf="@id/button_adjust_values"
             app:layout_constraintStart_toStartOf="parent"

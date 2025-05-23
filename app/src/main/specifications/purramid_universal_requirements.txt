@@ -16,4 +16,6 @@ All text (except for log text) should be implemented as strings to allow for tra
 
 Icons are typically displayed without text to keep the interface neat. Users may open tool tip windows by long-pressing on an icon. These tool tips include titles for the icon to meet accessibility standards.
 
+If a button is inactivated, it should be grayed out and its activation disabled.
+
 Wherever necessary, the design should meet WCAG 2.2 AA standards. This occurs most often with color contrast and icon identification. Except where noted, app intents use a predefined list of color options (PurramidPalette) that are designed to meet contrast standards.
