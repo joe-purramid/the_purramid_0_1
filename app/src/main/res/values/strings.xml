@@ -380,13 +380,13 @@
     <string name="randomizer_mode">Randomizer Type</string>
     <string name="list_editor">List Editor</string>
     <string name="setting_spin_animation">Spin Animation</string>
-    <string name="setting_announce">Announce Result</string>
     <string name="add_new_list">Add New List</string>
     <string name="list_title_hint">List Title</string>
     <string name="delete_list">Delete List</string>
     <string name="delete_list_title">Delete List?</string>
     <string name="delete_list_confirmation">Are you sure you want to delete \'%1$s\'? This cannot be undone.</string>
     <string name="add_item">Add New Item</string>
+    <string name="setting_announce">Announce Result</string>
     <string name="add_another_randomizer">Add another Randomizer</string>
 
     <!-- `` RANDOMIZER SPIN MODE `` -->
