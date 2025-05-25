@@ -1,20 +1,164 @@
+// the_purramid_0_1\app\src\main\specifications
 // ScreenMaskService.kt
-Screen Mask (formerly named Screen Shade) creates a black, opaque mask that covers some or all of the screen. It is meant to hide the content it covers. (1) The top left and bottom right corners have resize brackets. (2) The top right corner includes a close button. (3) The bottom left corner includes a settings gear button.
+Screen Mask (formerly named Screen Shade) creates a black, opaque mask that covers some or all of the screen. It is meant to hide the content it covers. 
 
-(4) On first app-intent launch, the mask covers the entire screen. The user can resize the mask to cover only a portion of the screen by dragging (1) either (or both) corner brackets. When dragging one corner bracket, use the opposite corner an an anchor point. When dragging with both corners, use the center point of the mask as an anchor point. Any area not covered by the mask allows pass-through to the visible content on screen.
+ --- RUNTIME EVENTS ---
+(1) On first app-intent launch, the mask covers the entire screen.
+(2) The most recent mask user preferences are saved. Save the following:
+	(2.1) Mask size
+	(2.2) Lock state
+		(2.2.1) The locked state of a mask (and the fact it cannot be closed while locked) must be saved and correctly restored if the app relaunches after a crash or an onDestroy event.
+	(2.3) Mask position on the screen if not full-screen
+(3) On future app-intent launches, the mask loads saved user preferences.
 
-(5) When not full screen, a mask can be moved anywhere on the screen by a hold-and-drag motion when the user touches anywhere on the mask other than the corners. A mask may never move off the edge of the screen.
 
-(3) A rounded "Settings" menu button (ic_settings.xml) is attached to the bottom left corner of the mask. When tapped, it gracefully expands to show the following settings buttons: (6) lock in place (ic_lock.xml), (7) lock all in place (ic_lock_all.xml), (8) billboard (ic_billboard.xml), and (9) Add another screen (ic_add_circle.xml). If the Settings gear is tapped while the menu is open, it gracefully folds back to a single button.
+ --- USER INTERFACE ---
+(4) A Resize Handle is positioned in the top left and bottom right corners.
+	(4.1) Default state:
+		(4.1.1) Top left resize handle uses ic_resize_left_handle.xml.
+		(4.1.2) Bottom right resize handle uses ic_resize_right_handle.xml.
+	(4.2) Active state: 
+		(4.2.1) Top left resize handle uses ic_resize_left_handle_active.xml.
+		(4.2.2) Bottom right resize handle uses ic_resize_right_handle_active.xml.
+(5) A Settings button is positioned in the bottom left corner.
+	(5.1) Default icon state uses ic_settings.xml.
+	(5.2) Active state: Programmatically change fill colors for default state icons to #808080.
+(6) A Close button is positioned in the top right corner.
+	(6.1) Default icon state uses ic_close.xml.
+	(6.2) Active state: Programmatically change fill colors for default state icons to #808080.
+(7) The center of the mask includes a mask stamp icon (ic_mask_stamp.xml).
+	(7.1) The mask stamp should be sized 0.5f of the mask size.
+		(7.1.1) If mask size is reduced, the mask stamp reduces proportionately.
+		(7.1.2) If mask size is enlarged, the mask stamp enlarges proportionately.
 
-(6) "Lock" freezes a mask in place. It cannot be moved, resized, or closed. When locked, the mask is highglighted with a red border. When locked, the "lock" icon changes to an "unlock" icon. Lock applies only to the mask from which the settings button was opened.
 
-(7) "Lock All" freezes all masks in place. None can be moved, resized, or closed. All are highlighted with a red border. Lock all changes both lock and lock all icons to unlock and unlock all icons. The user can press the "unlock" button to unlock a single mask after all of them have been frozen. If "unlock all" is pressed after a single mask is unlocked, that mask is unaffected. The other masks unlock.
+ --- USER EXPERIENCE ---
+(8) ``RESIZING and MOVING``
+	(8.1) When a user touches a resize handle, its icon changes from (4.1) Default to (4.2) Active.
+		(8.1.1) As an exception to the Universal Requirements, a tooltip does NOT pop up when a resize handle is pressed and held.
+	(8.2) A user my drag an active resize handle to change the size of the screen mask.
+		(8.2.1) When dragging the top left handle, use the bottom right handle as the anchor point.
+		(8.2.2) When dragging the bottom right handle, use the top left handle as an anchor point.
+		(8.2.3) If the user places one finger on a resize handle and uses a second finger to make a pinching motion, use the center of the screen as the anchor point.
+			(8.2.3.1) This may cause the resize handle to move from beneath the user's finger. This is acceptable. Continue resizing as long as the onTouch event continues.
+		(8.2.4) Mask width and height may be resized independently of one another.
+			(8.2.4.1) If a user drags the left resize handle straight down, mask height reduces, but mask width remains the same.
+			(8.2.4.2) If a user drags the left resize handle straight across, mask width reduces, but mask height remains the same.
+	(8.3) When a user releases an active resize handle, its icon returns to (4.1) Default.
+	(8.4) A user may press, hold, and drag anywhere on the screen mask that is not a resize handle or button to move the mask.
+		(8.4.1) A mask may not move off the screen.
+			(8.4.1.1) If a user attempts to move the mask beyond the edge of the screen, the mask's movement is constrained to the screen edge, preventing any part of the mask from becoming inaccessible.
+			(8.4.1.2) Attempting to move the mask off the edge of the screen does not cause resizing. Once constrained, the mask can not continue to move toward the edge.
+	(8.5) A mask may not be resized and moved at the same time.
+		(8.5.1) If a user is pressing a resize handle or a button, a press by a second finger elsewhere on the mask is ignored.
+		(8.5.2) If a user is pressing anywhere on the mask that is not a resize handle or a button, a press by a second finger on a resize handle or button is ignored.
 
-(8) "Billboard" allows the user to upload an image to display on top of the screen shade. Activating the Billboard button opens an image upload interface where they can select an image (jpg, png, bmp, gif, webp) to display. Other file types cannot be selected. GIF support includes animated gifs.
+(9) ``PASS-THROUGH EVENTS``
+	(9.1) Any area not covered by a mask allows pass-through events to the visible content on screen.
+		(9.1.1) This allows users to interact with visible content, such as launching an application or writing on a whiteboard.
+			(9.1.2) Because Screen Mask is a service, new app launches open beneath the mask layer. The mask service does not end.
 
-Once a file is uploaded, the image overlays the screen mask, leaving 5% of the mask as padding (creating a black border effect). It is important that the image not be distorted. If the image is portrait and reaches the top and bottom of the mask before the left and right edges, the left and right sides would have more black space. The image would not be stretched to fit. The same is true if the image reaches the left and right edges first. There would be more black space above and below.
+(10) ``SETTINGS``
+	(10.1) When a user touches the settings button, its icon changes from (5.1) Default to (5.2) Active.
+	(10.2) When activated, a settings menu extends with a smooth transition animation from the settings button.
+		(10.2.1) The settings button remains active while the settings window is open.
+		(10.2.2) The settings window is a collection of icons ordered from top down as follows:
+			(10.2.2.1) "Lock in place"
+				(10.2.2.1.1) The default icon state is ic_lock.xml.
+				(10.2.2.1.2) The active icon state is ic_lock_open.xml.
+			(10.2.2.2) "Lock all in place"
+				(10.2.2.2.1) The default icon state is ic_lock_all.xml.
+				(10.2.2.2.2) The active icon state is ic_lock_all_open.xml.
+			(10.2.2.3) "Billboard"
+				(10.2.2.3.1) The default icon state is ic_add_image.xml.
+				(10.2.2.3.2) The active state icon programatically changes the fill color of the default icon to #808080.
+			(10.2.2.4) "Add Another"
+				(10.2.2.4.1) The default icon state is ic_add_circle.xml.
+				(10.2.2.4.2) The active state icon programatically changes the fill color of the default icon to #808080.
+	(10.3) When deactivated, the settings menu folds back into the settings button with a smooth transition animation.
+		(10.3.1) A user choosing a setting (e.g., lock in place) deactivates the settings menu.
+		(10.3.2) A user touching outside of the settings window deactivates the settings menu.
+		(10.3.3) A user touching the settings button deactivates the settings menu.
+		(10.3.4) The settings button returns to default icon state
 
-(9) "Add Another" creates a second mask. A user can have up to four masks active at a time. Once four are present, the "add another" button inactivates. A new mask adopts the height and width properties of the mask from which it was created. It appears at the center of the screen, offset from any other masks created.
+(11) ``LOCK IN PLACE``
+	(11.1) When a user touches the Lock button, its icon changes from (10.2.2.1.1) Default to (10.2.2.1.2) Active.
+	(11.2) When Lock is activated, the following functionality is not allowed:
+		(11.2.1) The user cannot drag to move the mask.
+		(11.2.2) Resize handles are inactive. The user cannot resize the mask.
+		(11.2.3) The close button is inactive. The user cannot close the mask.
+	(11.3) While locked, the mask is highlighted with a red border.
+	(11.4) When a user touches the active Lock button, it deactivates Lock
+		(11.4.1) The icon returns to its default state.
+		(11.4.2) All functionality is permitted again.
+		(11.4.3) The red border is removed.
 
-(2) "Close" closes that specific mask. If all masks are closed, the service ends.
+(12) ``LOCK ALL IN PLACE``
+	(12.1) When a user touches the Lock All button, the Lock icons for ALL masks change from (10.2.2.1.1) Default to (10.2.2.1.2) Active.
+	(12.2) When a user touches the Lock All button, the Lock All icons for ALL masks change from (10.2.2.2.1) Default to (10.2.2.2.2) Active.
+	(12.3) When Lock All is activated, the following functionality is not allowed for any mask:
+		(12.3.1) The user cannot drag to move the mask.
+		(12.3.2) Resize handles are inactive. The user cannot resize the mask.
+		(12.3.3) The close button is inactive. The user cannot close the mask.
+	(12.4) While locked, all masks are highlighted with a red border.
+	(12.5) When a user touches a Lock button in any mask
+		(12.5.1) That mask only becomes unlocked as per (11.4)
+		(12.5.2) The Lock icon for that mask only returns to its default state. 
+			(12.5.2.1) If the user presses the Lock button of the unlocked mask, it locks, as per (11)
+		(12.5.3) The Lock All icon for that mask only returns to its default state.
+			(12.5.3.1) If the user presses the Lock All button of the unlocked mask, it locks, as per (11).
+				(12.5.2.2.1) All other masks are unaffected
+		(12.5.3) All other masks remain locked.
+	(12.6) When a user touches the any active Lock All button, it deactivates Lock for all masks
+		(12.6.1) Lock and Lock All icon return to their default states.
+		(12.6.2) All functionality is permitted again.
+		(12.6.3) Red borders are removed.
+		(12.6.4) Any masks that were already unlocked, as per (12.5), are unaffected.
+	(12.7) Summary table:
+	
+(13) ``BILLBOARD``
+	(13.1) When a user touches the Billboard button, its icon changes from (10.2.2.3.1) Default to (10.2.2.3.2) Active.
+	(13.2) When Billboard is activated, it opens the system file upload interface.
+		(13.2.1) Only images may be uploaded. Supported file types are:
+			(13.2.1.1) JPG
+			(13.2.1.2) PNG
+			(13.2.1.3) BMP
+			(13.2.1.4) GIF
+				(13.2.1.4.1) This includes animated gifs
+			(13.2.1.5) WEBP
+		(13.2.2) Images larger than 3 megabytes may not be uploaded. If a user attempts to upload an image larger than 3 megabytes, a snackbar message appears.
+			(13.2.2.1) String: "The image is too large to be uploaded. You may optimize it or select a different image."
+				(13.2.2.1.1) A cancel button returns the user to the system file upload interface to choose a different image.
+				(13.2.2.1.2) An optimize button compresses the image until its size is 3 megabytes or less.
+					(13.2.2.1.2.1) Compression of large images should attempt to keep image sizes as close to 3 megabytes to ensure image quality as best as possible.
+	(13.3) When an image is uploaded
+		(13.3.1) The Billboard icon returns to its default state.
+		(13.3.2) The image is displayed centered within the boundaries of its parent screen mask.
+		(13.3.3) The image maintains its aspect ratio.
+		(13.3.4) The image is scaled to fit within the mask, leaving a 5% padding of the mask's current dimension (5% of width for left/right, 5% of height for top/bottom) between the image and the edges of the mask. This creates a black border effect.
+			(13.3.4.1) If the dimensions of the image do not have the same ratio as the dimensions of the mask, image sizing stops when height or width reach the 5% buffer
+				(13.3.4.1.1) If the height of an image reaches 5% but the width buffer is greater than 5%, the left and right side of the image will have larger borders.
+				(13.3.4.1.2) If the width of an image reaches 5% but the height buffer is greater than 5%, the top and bottom side of the image will have larger borders.
+	(13.4) If the user cancels the system file upload, Billboard returns to its defaut state.
+			
+(14) ``ADD ANOTHER``
+	(14.1) When a user touches the Add Another button, its icon changes from (10.2.2.4.1) Default to (10.2.2.4.2) Active.
+	(14.2) When Add Another is activated:
+		(14.2.1) The Add Another button returns to its default state.
+		(14.2.2) A new mask appears at the geometric center of the screen.
+			(14.2.2.1) The new mask adopts the properties of the mask from which it was made.
+				(14.2.2.1.1) It has the same height and width.
+				(14.2.2.1.2) If the source mask had a billboard image, that image appears in the new mask as well.
+			(14.2.2.2) If another mask already exists at the geometric center of the display screen, the new mask should appear in an offset position (e.g., +25px down and +25px right) from the centered mask.
+	(14.3) If four masks are already present on the screen, 
+		(14.3.1) The Add Another button is inactivated. Nothing happens if a user touches it.
+		(14.3.2) The icon fill and outline colors change. (TODO: Define specific hex colors for an inactive icon.)
+
+(15) ``CLOSE``
+	(15.1) When a user touches the Close button, its icon changes from (6.1) Default to (6.2) Active.
+	(15.2) The mask to which the Close button is attached closes.
+		(15.2.1) When a mask is closed:
+			(15.2.1.1) If it is the only mask currently open, its size, lock state, and position (if not fullscreen) are saved as the most recent user preferences, as per (2).
+			(11.2.1.1) If it is one of multiple masks currently open, its preferences are cleared.
+		(15.2.2) If the mask is the only mask open, the screen mask service ends.
+	
