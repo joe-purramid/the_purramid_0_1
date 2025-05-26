@@ -155,16 +155,25 @@ Spotlight applies a semi-opaque overlay to the entire screen, with an opening in
 		(12.6.2) All functionality is permitted again.
 		(12.6.3) Red borders are removed.
 		(12.6.4) Any masks that were already unlocked, as per (12.5), are unaffected.
-	(12.7) Summary table:
-	
 
+(13) ``ADD ANOTHER``
+	(13.1) When a user touches the Add Another button, its icon changes from (15.2.2.4.1) Default to (15.2.2.4.2) Active.
+	(13.2) When Add Another is activated:
+		(13.2.1) The Add Another button returns to its default state.
+		(13.2.2) A new spotlight appears at the geometric center of the screen.
+			(13.2.2.1) The new spotlight adopts the properties of the spotlight from which it was made.
+				(13.2.2.1.1) It has the same height and width.
+                (13.2.2.1.2) It has the same shape.
+			(13.2.2.2) If another mask already exists at the geometric center of the display screen, the new mask should appear in an offset position (e.g., +25px down and +25px right) from the centered mask.
+	(13.3) If four masks are already present on the screen, 
+		(13.3.1) The Add Another button is inactivated. Nothing happens if a user touches it.
+		(13.3.2) The icon fill and outline colors change. (TODO: Define specific hex colors for an inactive icon.)
+    (13.4) TODO: Confirm my understanding that because Spotlight is a service, both spotlight circles appear in the same overlay, creating two openings in the same shaded screen.
 
-(8) "Lock" freezes a spotlight in place. It cannot be moved, resized, or closed. Pass-through events are not allowed. When locked, the spotlight is highglighted with a red border. When locked, the "lock" icon changes to an "unlock" icon. Lock applies only to the spotlight from which the settings button was opened.
-
-(9) "Lock All" freezes all spotlights in place. None can be moved, resized, or closed. None allows pass-through events. All are highlighted with a red border. Lock all changes both lock and lock all icons to unlock and unlock all icons. The user can press the "unlock" button to unlock a single spotlight after all of them have been frozen. If "unlock all" is pressed after a single spotlight is unlocked, that spotlight is unaffected. The other spotlights unlock.
-
-(10) "Add Another" creates a second spotlight. A user can have up to four spotlights active at a time. Once four are present, the "add another" button inactivates. A new spotlight adopts the height and width properties of the spotlight from which it was created. It appears at the center of the screen, offset from any other spotlights created. (11) TODO: Confirm my understanding that because Spotlight is a service, both spotlight circles appear in the same overlay, creating two openings in the same shaded screen.
-
-(2) "Close" closes that specific spotlight. If all spotlights are closed, the service ends.
-
-(12) TODO: Consider replacing the current move functionality with a drag indicator (double kebob) that allows movement directly from the settings menu.
+(14) ``CLOSE``
+	(14.1) When a user touches the Close button, its icon changes from (11.1) Default to (11.2) Active.
+	(14.2) The spotlight to which the Close button is attached closes.
+		(14.2.1) When a spotlight is closed:
+			(14.2.1.1) If it is the only spotlight currently open, its size, shape, lock state, and position are saved as the most recent user preferences, as per (3).
+			(14.2.1.2) If it is one of multiple spotlights currently open, its preferences are cleared.
+		(14.2.2) If the spotlight is the only spotlight open, the spotlight service ends.

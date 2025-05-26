@@ -1,5 +1,92 @@
+// the_purramid_0_1\app\src\main\specifications
 // RandomizersHostActivity.kt
-Ranodmizers is a collection of four different randomization tools (called modes): "Spin", "Slots", "Dice", and "Coin Flip". On first launch, Randomizers opens in Spin mode. Following that, (1) it opens in the last mode used. Each randomizer includes a (2) close button in the top right corner, a (3) Settings button in the bottom left corner, and (4) control buttons immediately below the randomization graphical interface. Controls differ between modes and are defined below for each.
+Ranodmizers is a collection of four different randomization tools: Spin, Slots, Dice, and Coin Flip. Spin and Slots display a random selection from a defined list of items. Dice displays random results of selected polyhedral dice. Coin Flip displays heads or tails results from selected coins.
+
+
+ --- RUNTIME EVENTS ---
+(1) On first app-intent launch, the randomizer opens in a windowed state.
+(2) The most recent randomizer user preferences are saved. Save the following:
+	(2.1) Randomizer mode
+        (2.1.1) If Spin mode, also save:
+            (2.1.1.1) Selected list
+            (2.1.1.2) Spin toggle on/off state
+            (2.1.1.3) Announce toggle on/off state
+            (2.1.1.4) Celebrate toggle on/off state
+            (2.1.1.5) Sequence toggle on/off state
+        (2.1.2) If Slots mode, also save:
+            (2.1.2.1) Selected lists
+            (2.1.2.2) Spin toggle on/off state
+            (2.1.2.3) Number of columns (3 or 5)
+            (2.1.2.4) Announce toggle on/off state            
+        (2.1.3) If Dice mode, also save:
+            (2.1.3.1) Quantities for each die type
+            (2.1.3.2) Color for each die type
+            (2.1.3.3) Modifier toggle on/off state
+                (2.1.3.3.1) If toggle state on, save the modifier values for each die type
+            (2.1.3.4) Use pips toggle on/off state
+            (2.1.3.5) Percentile toggle on/off state
+            (2.1.3.6) Roll animation toggle on/off state
+            (2.1.3.7) Critical success toggle on/off state
+            (2.1.3.8) Graph distribution toggle on/off state
+                (2.1.3.8.1) If toggle state on, save:
+                    (2.1.3.8.1.1) Distribution type (normal or uniform)
+                    (2.1.3.8.1.2) Graph type (histogram, line graph, or Q-Q scatter)
+        (2.1.4) If Coin Flip mode, also save:
+            (2.1.4.1) Quantities for each coin type
+            (2.1.4.2) Color for each coin type
+            (2.1.4.3) Flip animation toggle on/off state
+            (2.1.4.4) Free form toggle on/off state
+            (2.1.4.5) Announce toggle on/off state
+            (2.1.4.6) Probability toggle on/off state
+                (2.1.4.6.1) If toggle state on, save which type of probability (two column, 3x3, 6x6, or 10x10)
+            (2.1.4.7) Graph distribution toggle on/off state
+                (2.1.4.7.1) If toggle state on, save:
+                    (2.1.4.7.1.1) Distribution type (normal or uniform)
+                    (2.1.4.7.1.2) Graph type (histogram, line graph, or Q-Q scatter)          
+	(2.2) All lists
+		(2.2.1) Lists are saved regardless of randomizer mode. It is possible for a user to create a new list in Spin mode and then change to Dice.
+        (2.2.2) List deletion is at the discretion of the user.
+	(2.3) Randomizer position on the screen
+(3) On future app-intent launches, the mask loads saved user preferences.
+
+
+ --- USER INTERFACE ---
+(4) ``ALL RANDOMIZERS``
+    (4.1) A Settings button is positioned in the bottom left corner of the randomzier window.
+        (4.1.1) Default icon state uses ic_settings.xml.
+        (4.1.2) Active state: Programmatically change fill colors for default state icons to #808080.
+    (4.2) A Close button is positioned in the top right corner of the randomzier window.
+        (4.2.1) Default icon state uses ic_close.xml.
+        (4.2.2) Active state: Programmatically change fill colors for default state icons to #808080.
+(5) ``SPIN``
+    (5.1) 
+
+(6) ``SLOTS``
+    (6.1) 
+
+(7) ``DICE``
+    (7.1) 
+
+(8) ``COIN FLIP``
+    (8.1) 
+
+
+ --- USER EXPERIENCE ---
+(9) ``SPIN``
+    (9.1) 
+
+(10) ``SLOTS``
+    (10.1) 
+
+(11) ``DICE``
+    (11.1) 
+
+(12) ``COIN FLIP``
+    (12.1) 
+
+
+
+ (called modes): "Spin", "Slots", "Dice", and "Coin Flip". On first launch, Randomizers opens in Spin mode. Following that, (1) it opens in the last mode used. Each randomizer includes a (2) close button in the top right corner, a (3) Settings button in the bottom left corner, and (4) control buttons immediately below the randomization graphical interface. Controls differ between modes and are defined below for each.
 
 (2) "Close" closes that specific randomizer. If all randomizers are closed, the activity ends.
 
@@ -37,24 +124,24 @@ Atop the dial is (8) a "marquee", a rectangle with rounded corners. The marquee 
 
 (21) Pressing the delete button opens an "Are you sure you want to delete this?" warning snackbar with a "Cancel" button and a "Confirm" button. Cancel button has no fill. The confirm button has a blue fill. Adjust this to meet UI best practices if needed. It *is* possible for a user to delete a pregenerated list. This is most likely for users where English vowels and consonants are not useful to their instruction.
 
-(22) List Editor refers to the List view. List creator is the view where list details can be added, edited or deleted. When clicking on a list title or "Add New List", the list creator view opens above the List Editor view. It includes a back button that returns the user to the List Editor and a close button that closes the settings entirely. The list creator is a series of rectangles similar to the stacked lists from the list editor. Set above and apart from the others is a (29) title text field. It displays the string "Text Title" in dark gray text. When the user taps this box, the system keyboard opens and "text title" disappears. They should never need to delete this phrase. Hitting "enter" on the system keyboard confirms the text entry and closes the system keyboard.
+(22) List Editor refers to the List view. List creator is the view where list details can be added, edited or deleted. When clicking on a list title or "Add New List", the list creator view opens above the List Editor view. It includes a back button that returns the user to the List Editor and a close button that closes the settings entirely. The list creator is a series of rectangles similar to the stacked lists from the list editor. Set above and apart from the others is a (29) title text field. It displays the string "Text Title" in dark gray text. When the user taps this box, the system keyboard opens and "text title" disappears. They should never need to delete this phrase. Hitting "enter" on the system keyboard confirms the text entry and closes the system keyboard. (30) A list cannot be saved without a title. If list items are entered but no title, the list cannot be saved.
 
-Below the title rectangle is (30) a single, large text field (paragraph sized). Tapping in this field opens the system keyboard. The user can type text into the field. The return button creates a new row. (31) Tap-and-hold in this field will bring up a "Paste" prompt. If selected, any text on the clipboard is pasted into the field. (32) After 1.5 seconds, if no further input has been made, each row of text displays in its own rectangle. The text of the item followed immediately by a (33) pre-assigned color square with a black outline. This is the wedge color from (5). On the right side of the item rows are three icon buttons: (34) an image, (35) an emoji, and (36) a trash can. The trash can functions the same as the delete button from (21) List editor, but with language for an item rather than a list.
+Below the title rectangle is (31) a single, large text field (paragraph sized). Tapping in this field opens the system keyboard. The user can type text into the field. The return button creates a new row. (32) Tap-and-hold in this field will bring up a "Paste" prompt. If selected, any text on the clipboard is pasted into the field. (33) After 1.5 seconds, if no further input has been made, each row of text displays in its own rectangle. The text of the item followed immediately by a (34) pre-assigned color square with a black outline. This is the wedge color from (5). On the right side of the item rows are three icon buttons: (35) an image, (36) an emoji, and (37) a trash can. The trash can functions the same as the delete button from (21) List editor, but with language for an item rather than a list.
 
 Tapping on the item text opens the system keyboard in the same fashion as (30). A cursor appears at the point touched. It can be moved by touching elsewhere in the text field. Touch-and-hold selects the entire word and the standard Android cut/copy/paste options appear. (31) Text fields may not contain more than 27 characters. If a user pastes text in the large text field with more than 27 characters per row, the 27th character is replaced with an ellipsis. Characters 28 and beyond of that row are deleted.
 
-(33) Assigned colors are chosen from this list: xxx. If the user taps the color squre, (37) it acts like a button. QUERY: IS THIS PROGRAMATIC?
+(34) Assigned colors are  assigned programmatically with a color picker library, ensuring this new color meets WCAG 2.2 AA contrast requirements even if the color of the item above it is custom. If the user taps the color squre, (38) it acts like a button.
 
-(37) Tapping on the color square opens a color selector. it has the title "Background Color" atop a standard color wheel. Beside the wheel is a preview rectangle of the chosen color and the stanadrd RGB and Hex code text fields. It overrides any contrast requirements from auto-assigned colors. (38) Beneath the color wheel are six circles with black outlines that show the six most recent custom colors. These are called "color pots". Beneath the color pots is an (39) "Apply" button. This button closes the color selector and applies that color the the item. The color square beside the item text now shows the custom color.
+(38) Tapping on the color square opens a color selector. it has the title "Background Color" atop a standard color wheel. Beside the wheel is a preview rectangle of the chosen color and the stanadrd RGB and Hex code text fields. It overrides any contrast requirements from auto-assigned colors. (39) Beneath the color wheel are six circles with black outlines that show the six most recent custom colors. These are called "color pots". Beneath the color pots is an (40) "Apply" button. This button closes the color selector and applies that color the the item. The color square beside the item text now shows the custom color.
 
-(38) A newly applied color will fill the leftmost color pot the next time the color selector is opened. Older colors move down the row toward the right. If fewer than six custom colors have been chosen, the remaining color pots have a white fill. If more than six custom colors have been chosen, the oldest is forgotten. If a custom color is selected, a blue "selection circle" encircles the color pot and that color is shown in the color preview rectangle. If a custom color is applied from the row, it moves back to the leftmost circle the next time the color selector is opened.
+(39) A newly applied color will fill the leftmost color pot the next time the color selector is opened. Older colors move down the row toward the right. If fewer than six custom colors have been chosen, the remaining color pots have a white fill. If more than six custom colors have been chosen, the oldest is forgotten. If a custom color is selected, a blue "selection circle" encircles the color pot and that color is shown in the color preview rectangle. If a custom color is applied from the row, it moves back to the leftmost circle the next time the color selector is opened.
 
 
-(40) The last rectangle of the items list is empty. It says "Add another item" in the same gray text as was used in the (29) list title. The same beahvior applies that tapping this box opens the system keyboard and the "add another item" text disappears. The enter button on the keyboard confirms the text as a new item. A (33) color is automatically assigned. (41 QUERY IS THIS PROGRAMATIC?) This new color meets WCAG 2.2 AA contrast requirements even if the color of the item above it is custom. When the user reaches 44 items, the add another rectangle is hidden.
+(41) The last rectangle of the items list is empty. It says "Add another item" in the same gray text as was used in the (29) list title. The same beahvior applies that tapping this box opens the system keyboard and the "add another item" text disappears. The enter button on the keyboard confirms the text as a new item. When the user reaches 44 items, the add another rectangle is hidden.
 
-(34) If the user taps on the image button, this opens a file selector where the user can upload one jpg, png, gif, bmp, or webp file. (42) A list item can only include one image. (43) If the user taps the image button again, they receive a warning snackbar that says, "This action will replace your existing image. Would you like to continue?" It should have cancel and continue buttons in the same design style as (21). Uploaded images (44) maintain their aspect ratios. They are not stretched. They are reduced to fit on the dial, but they should not be shrunk so that they distort when shown as an announcement result. (45) If an image is 1 MB or larger, the user should receive a warning window that says "This image is too large. Would you like to optimize it?" This includes Cancel and Optimize buttons in the same design style as (21). If the user chooses Optimize, the image should be shrunk so that it's size is 900 kB or less.
+(35) If the user taps on the image button, this opens a file selector where the user can upload one jpg, png, gif, bmp, or webp file. (42) A list item can only include one image. (43) If the user taps the image button again, they receive a warning snackbar that says, "This action will replace your existing image. Would you like to continue?" It should have cancel and continue buttons in the same design style as (21). Uploaded images (44) maintain their aspect ratios. They are not stretched. They are reduced to fit on the dial, but they should not be shrunk so that they distort when shown as an announcement result. (45) If an image is 1 MB or larger, the user should receive a warning window that says "This image is too large. Would you like to optimize it?" This includes Cancel and Optimize buttons in the same design style as (21). If the user chooses Optimize, the image should be shrunk so that it's size is 900 kB or less.
 
-(35) If the user taps on the emoji button, it opens an emoji library that shows a list of emoji that are free to use without license. (46) The user can add ten or fewer emoji per item. (47) There will need to be some kind of "done" button when the user has selected the emoji they want.
+(36) If the user taps on the emoji button, it opens an emoji library that shows a list of emoji that are free to use without license. (46) The user can add ten or fewer emoji per item. (47) There will need to be some kind of "done" button when the user has selected the emoji they want.
 
 Text, images, and emoji can all be included in one item. If the amount of content per row is too large to fit onto an item wedge clearly, it is acceptable for it to disappear at the dial center and the wedge arc edge. The user will learn how best to create items through this inferior use experience.
 
@@ -68,17 +155,19 @@ Text, images, and emoji can all be included in one item. If the amount of conten
 (16) Celebrate: on/off toggle. The default is off. (49) This setting is only active if Announce is turned on. If Announce is toggled off, this setting is inactive and shown as gray. If this is turned on, a confetti (Konfetti) animation plays for 3.0 seconds above the announced selecxtion. (50) confetti_piece_*.xml files have been created for the different colors of confetti pieces.
 
 
-(17) Sequence: on/off toggle. The default is off. If this is turned on, (51) Announce and Celebrate cannot be on. If they were already on, they are turned off and become inactive and turn gray. (52) When this is on, the dial spins for 1 second for every ten items in the list (rounded up). When the spin animation is complete, the item from the wedge with the selection arrow on the dial is the first of a randomized results list (it does not follow the order of the items on the list). It appears beside the dial (similar to Announce). Beside it are up- and down-facing triangle buttons. Below this item are the next four items in the list. They appear smaller. If the user taps the down-facing arrow, the current term moves up and gets smaller. The next in the order moves up and gets larger. Nine total items can appear beside the dial, the active item, four before it, and four after it. When the user has navigated to the end of the list, terms only appear above it. The up arrow cannot be used if no items are above the current one. The down arrow cannot be used if no items are below the current one. Clicking the spin button creates an entirely new randomized list, beginning at the first term again. Changing the list from the marquee drop-down removes any sequence currently displayed.
+(17) Sequence: on/off toggle. The default is off. If this is turned on, (51) Announce and Celebrate cannot be on. If they were already on, they are turned off and become inactive and turn gray. (52) When this is on, the dial spins for 1 second for every ten items in the list (rounded up). When the spin animation is complete, the item from the wedge with the selection arrow on the dial is the first of a randomized results list (it does not follow the order of the items on the list). It appears beside the dial (similar to (15) Announce). (53) Beside it are up- and down-facing triangle buttons. (54) Below this item are the next four items in the list. They appear smaller. If the user taps the down-facing arrow, the current term moves up and gets smaller. The next in the order moves up and gets larger. Nine total items can appear beside the dial, the active item, four before it, and four after it. When the user has navigated to the end of the list, terms only appear above it. (53) The up arrow cannot be used if no items are above the current one. The down arrow cannot be used if no items are below the current one. (55) Clicking the spin button creates an entirely new randomized list, beginning at the first term again. Changing the list from the marquee drop-down removes any sequence currently displayed.
 
 
 
 ''SLOTS''
 
-The "slots" mode is similar in function to the spin dial. But instead of having a dial that shows all the items in the list, it has a rectangle that shows the current item with a rectangle above and below showing other items. These tiles fade away in a similar manner to the sequence setting.
+The "slots" mode is similar in function to the spin dial. But where a spin dial is a circle that shows all available items, a slots dial is like the outside of a wheel that shows only a few items at a time. The slots dial (56) has a rectangle that shows the current item with a rectangle above and below showing other items. These tiles fade away in a similar manner to the (17) sequence setting. The (57) spin animation rotates the wheel so that the items visible in the (56) view move in a downward motion.
 
+The default is to show (58) three slots dials beside one another, immitating a slot machine. Each column has a list (8) title marquee at its top (with the same functionality as in spin mode) and (59) a padlock button at the bottom. The padlock icon appears unlocked by default. If a user taps the unlocked padlock button, it changes from unlocked to locked. If they tap a locked padlock, it unlocks.
 
+(59) A locked slots dial does not spin when the spin button is pressed. Unlocked slots dials will spin normally.
 
-There are three columns (or five based on user settings) of lists, creating a type of slot machine view. Each column has a list title marquee at its top (with the same functionality as in spin mode) and a padlock button at the bottom. The padlock icon appears unlocked by default. If a user taps the unlocked padlock button, it changes from unlocked to locked. If they tap a locked padlock, it unlocks.
+Each slots dial (4) shows a list of items, with each item having (5) a defined color. It uses the same group of (19) pregenerated lists, with "Colors" being the default list for all three columns the first time this mode is used.
 
 
 
@@ -151,7 +240,7 @@ The settings for coin flip are as follows:
 
 
 
-- 3x3 Grid: A 3x3 matrix of empty boxes appears in the window. Each time the user flips a coin/coins, the result of H or T appears in a box, starting at the top left and filling horizontally. When one row is filled, results start on the next row until all boxes are full. 
+- 3x3 Grid: A 3x3 matrix of empty boxes appears in the window. Each time the user flips a coin/coins, the result of H or T appears in a box, starting at the top left and filling horizontally. When one row is filled, results start on the next row until all boxes are full.
 
 
 
