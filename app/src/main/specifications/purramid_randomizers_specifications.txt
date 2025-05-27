@@ -97,10 +97,10 @@ Ranodmizers is a collection of four different randomization tools: Spin, Slots, 
 
  --- USER EXPERIENCE ---
 (9) ``RESIZING AND MOVING IN ALL MODES``
-    (9.1) When a user touches two fingers anywhere on the randomizer window that is not a button with and performs a pinching motion
+    (9.1) When a user touches two fingers anywhere on the randomizer window that is not a button and performs a pinching motion
         (9.1.1) Pinching open enlarges the window's height and width equally.
         (9.1.2) Pinching closed reduces the window's height and width equally.
-    (9.2) When a user press-hold-drags anywhere on the randomizer window that isn't a button, they can move the randomizer window anywhere on the screen.
+    (9.2) When a user press-hold-drags anywhere on the randomizer window that is not a button, they can move the randomizer window anywhere on the screen.
 		(9.2.1) A randomizer window may not move off the screen.
 			(9.2.1.1) If a user attempts to move the randomizer beyond the edge of the screen, the randomizer's movement is constrained to the screen edge, preventing any part of the randomizer from becoming inaccessible.
 			(9.2.1.2) Attempting to move the randomizer off the edge of the screen does not cause resizing. Once constrained, the randomizer can not continue to move toward the edge.

@@ -1,11 +1,142 @@
+// the_purramid_0_1\app\src\main\specifications
 // TrafficLightService.kt
-The traffic light is a vector image of a common traffic light with three colored bulbs: red, yellow, and green. It's default orientation is vertical (with the red light on top and the green light on bottom, with the yellow light in the middle), but the user can change it to be horizontal in the settings (with the red light on the left and the green light on the right, with the yellow light in the middle). When a color is "lit", its color will change from dull to shining (for example, dull red vs shining red colors). There should not be any flashing that might trigger seizures. Each light will also include an image outline that only appears when that light is lit. This is to help color blind users understand which light is active.
+The traffic light is a vector image of a common traffic light with three colored "bulbs" or "llights": red, yellow, and green. One bulb can be lit at a time, used by the teacher to better manage the classroom.
 
-At launch, the app should check to see if the device has a mic array or other active mic input. This will be referred to as "mic array" going forward, regardless of what type of microphone is actually being used. The light chnages from red to yellow to green every 0.3 seconds. This sequence happens twice, then all thre elights flash in unison three times, flashing ever 0.3 seconds. Then all lights are unlit. If app initiation requires more than three seconds, the sequence should repeat.
 
-The traffic lights act as buttons in some cases. Users can tap a light to turn it on and off. Aside from the light bulbs, traffic light has two additional buttons, a settings gear button that appears at the bottom left and and a close button made from a unicode cross in a circle at the top right. 
+ --- RUNTIME EVENTS ---
+(1) On launch, the traffic light 
+	(1.1) checks if the system has a mic array or other active mic input
+		(1.1.1)This will be referred to as "mic array" going forward, regardless of what type of microphone is actually being used. 
+	(1.2) opens in a windowed state.
+		(1.2.1) Windowed desscribes the user experience. Traffic Light launches a service. 
+		(1.2.1) Whether it is using an overlay or an Android window, both will be referred to as "windowed" for the purposes of these specifications.
+	(1.3) activates red then yellow then green every 0.3 seconds. 
+		(1.3.1) When one light activates, the previous one returns to default. 
+		(1.3.2) Repeat the sequence once
+		(1.3.3) Following the second sequence, all thre elights flash default-active-default in unison three times, flashing every 0.3 seconds. 
+		(1.3.4) Following (1.3.3), all lights return to default. 
+		(1.3.5) If app initiation requires more than three seconds, the sequence should repeat.
+		(1.3.6) If "Blinking Lights" is toggled off in the user settings, this sequence is ignored. Lights remain in default during startup.
+(2) The most recent traffic light user preferences are saved. Save the following:
+	(2.1) Traffic light size
+	(2.2) Mode
+	(2.3) Orientation toggle, vertical or horizontal state
+	(2.4) Blinking lights toggle on/off state
+	(2.5) Adjusted values
+			(2.5.1) Adjusted values are saved regardless of whether the final mode is Responsive or not. It is possible for a user to modify values in Responsive mode and then change to Manual.
+	(2.6) Added messages
+			(2.6.1) Added messages are saved regardless of the final mode.
+	(2.7) Sequences
+			(2.7.1) Sequences are saved regardless of the final mode.
+	(2.8) Show time remaining toggle on/off state
+	(2.9) Show timeline toggle on/off state
+	(2.10) Traffic light position on the screen if not full-screen
+(3) On future app-intent launches, the traffic light loads saved user preferences.
 
-A rounded "Settings" menu button (ic_settings.xml) is attached to the bottom left corner of the mask. When tapped, it gracefully expands a settings menu that includes: (1) "Mode",  (2) "Orientation", (3) "Blinking Lights", (4) "Adjust Values", (5) "Add Messages", (6) "Edit Sequence", (7) "Show Time remaining", (8) "Show Timeline", and (9) "Add Another".
+
+ --- USER INTERFACE ---
+(4) The body of the traffic light is a yellow rectangle similar to this picture: https://www.insurancejournal.com/app/uploads/2012/09/traffic-lights.jpg
+	(4.1) It includes three "bulbs" or "lights": 
+		(4.1.1) Red
+			(4.1.1.1) Default state is #B81B0E
+			(4.1.1.2) Active state is #FF0000
+		(4.1.2) Yellow
+			(4.1.2.1) Default state is #B8BB0E
+			(4.1.2.2) Active state is #FFFF00
+		(4.1.3) Green
+			(4.1.3.1) Default state is #549C30
+			(4.1.3.2) Active state is #00FF00
+		(4.1.4) An active light also includes the image ic_mask_stamp.xml.
+			(4.1.4.1) The image appears 0.6f the size of the bulb's circle area.
+	(4.2) A traffic light can appear in one of two orientations based on user settings choices:
+		(4.2.1) Vertical (the default orientation)
+			(4.2.1.1) The red light is on top.
+			(4.2.1.2) The yellow light is in the middle.
+			(4.2.1.3) The green light is on the bottom.
+		(4.2.2) Horizontal
+			(4.2.2.1) The red light is on the left.
+			(4.2.2.2) The yellow light is in the middle.
+			(4.2.2.3) The green light is on the right.
+(5) A Settings button is positioned in the bottom left corner.
+	(5.1) Default icon state uses ic_settings.xml.
+	(5.2) Active state: Programmatically change fill colors for default state icons to #808080.
+(6) A Close button is positioned in the top right corner.
+	(6.1) Default icon state uses ic_close.xml.
+	(6.2) Active state: Programmatically change fill colors for default state icons to #808080.
+		
+
+ --- USER EXPERIENCE ---
+(7) ``RESIZING and MOVING``
+    (7.1) When a user touches two fingers anywhere on the traffic light window that is not a button and performs a pinching motion
+        (7.1.1) Pinching open enlarges the window's height and width equally.
+        (7.1.2) Pinching closed reduces the window's height and width equally.
+    (7.2) When a user press-hold-drags anywhere on the traffic light window that is not a button, they can move the traaffic light window anywhere on the screen.
+		(7.2.1) A traffic light window may not move off the screen.
+			(7.2.1.1) If a user attempts to move the traffic light beyond the edge of the screen, the traffic light's movement is constrained to the screen edge, preventing any part of the traffic light from becoming inaccessible.
+			(7.2.1.2) Attempting to move the traffic light off the edge of the screen does not cause resizing. Once constrained, the traffic light can not continue to move toward the edge.
+    (7.3) Resizing and moving are exclusionary actions.
+        (7.3.1) If a user is resizing the traffic light, they cannot move the traffic light.
+            (7.3.1.1) If a user removes one finger after resizing, they cannot move. They must remove both fingers and begin a new onTouch event to move the traffic light.
+            (7.3.1.2) If a user removes one finger after resizing and then places that finger down again, they may continue resizing.
+        (7.3.2) If the user is moving the traffic light, they cannot move the traffic light.
+            (7.3.2.1) If the user is moving the traffic light and adds a second finger to the screen, that finger is ignored.
+            (7.3.2.2) After moving the traffic light, the user must end the current onTouch event before using two fingers to resize.
+        (7.3.3) A movement buffer should be included to ignore minor movements during an onTouch event caused by natural human shakiness.
+(8) ``SETTINGS``
+	(8.1) When a user touches the settings button, its icon changes from (5.1) Default to (5.2) Active.
+	(8.2) When activated, a settings menu extends with a smooth transition animation from the settings button.
+		(8.2.1) The settings button remains active while the settings window is open.
+		(8.2.2) The settings window is rows of text and an icon:
+			(8.2.2.1) "Mode"
+				(8.2.2.1.1) Following the word "Mode" is a drop-down menu.
+					(8.2.2.1.1.1) The default mode is Manual
+					(8.2.2.1.1.2) Following the word "Manual" is a drop-down arrow
+						(8.2.2.1.1.2.1) The drop-down arrow's default state is ic_arrow_drop_down.xml
+						(8.2.2.1.1.2.2) The drop-down arrow's active state is ic_arrow_drop_up.xml
+				(8.2.2.1.1) When tapping anywhere in the drop-down menu (text or arrow)
+					(8.2.2.1.1.1) A drop-down menu smoothly opens overtop the settings menu
+					(8.2.2.1.1.2) A list of mods is displayed in this order from the top down:
+						(8.2.2.1.1.2.1) Manual
+						(8.2.2.1.1.2.2) Responsive
+						(8.2.2.1.1.2.3) Timed Change
+			(8.2.2.2) "Orientation"
+				(8.2.2.2.1) Following the word "Orientation" is a toggle.
+					(8.2.2.2.1.1) The toggle's default position is off.
+			(8.2.2.3) "Blinking Lights"
+				(8.2.2.3.1) Following the phrase "Blinking Lights is a toggle.
+					(8.2.2.3.1.1) The toggle's default position is on.
+			(8.2.2.4) "Adjust Values"
+				(8.2.2.4.1) Following the phrase "Adjust values" is an edit icon
+					(8.2.2.4.1) Default icon state uses ic_edit.xml.
+					(8.2.2.4.2) Active state: Programmatically change fill colors for default state icons to #808080.
+			(8.2.2.5) "Add Messages"
+				(8.2.2.5.1) Following the phrase "Add Messages" is an edit icon
+					(8.2.2.5.1) Default icon state uses ic_edit.xml.
+					(8.2.2.5.2) Active state: Programmatically change fill colors for default state icons to #808080.
+			(8.2.2.6) "Edit Sequence"
+				(8.2.2.4.1) Following the phrase "Adjust values" is an edit icon
+					(8.2.2.4.1) Default icon state uses ic_edit.xml.
+					(8.2.2.4.2) Active state: Programmatically change fill colors for default state icons to #808080.
+			(8.2.2.8) "Show Time Remaining"
+				(8.2.2.8.1) Following the phrase "Show Time Remaining" is a toggle.
+					(8.2.2.8.1.1) The toggle's default position is off.
+			(8.2.2.9) "Show Timelline"
+				(8.2.2.2.1) Following the phrase "Show Timeline" is a toggle.
+					(8.2.2.2.1.1) The toggle's default position is off.
+			(8.2.2.10) "Add Another"
+				(8.2.2.10.1) Following the phrase "Add Another" is an add icon.
+					(8.2.2.10.1.1) The default icon state is ic_add_circle.xml.
+					(8.2.2.10.1.2) The active state icon programatically changes the fill color of the default icon to #808080.
+	(8.3) When deactivated, the settings menu folds back into the settings button with a smooth transition animation.
+		(8.3.1) A user choosing a setting (e.g., orientation) deactivates the settings menu.
+		(8.3.2) A user touching outside of the settings window deactivates the settings menu.
+		(8.3.3) A user touching the settings button deactivates the settings menu.
+		(8.3.4) The settings button returns to default icon state
+        
+
+
+
+
 
 (1) Mode: Manual by default; the user can select between three use modes: (1a) Manual, (1b) Responsive Change, and  (1c) Timed Change. If the device does not have an active mic input, Responsive Change should be inactivated.
 
