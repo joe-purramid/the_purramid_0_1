@@ -159,6 +159,6 @@ Screen Mask (formerly named Screen Shade) creates a black, opaque mask that cove
 	(15.2) The mask to which the Close button is attached closes.
 		(15.2.1) When a mask is closed:
 			(15.2.1.1) If it is the only mask currently open, its size, lock state, and position (if not fullscreen) are saved as the most recent user preferences, as per (2).
-			(11.2.1.1) If it is one of multiple masks currently open, its preferences are cleared.
+			(15.2.1.2) If it is one of multiple masks currently open, its preferences are cleared.
 		(15.2.2) If the mask is the only mask open, the screen mask service ends.
 	
