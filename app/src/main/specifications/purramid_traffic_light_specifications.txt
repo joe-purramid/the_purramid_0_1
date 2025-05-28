@@ -23,7 +23,7 @@ The traffic light is a vector image of a common traffic light with three colored
 	(2.3) Orientation toggle, vertical or horizontal state
 	(2.4) Blinking lights toggle on/off state
 	(2.5) Adjusted values
-			(2.5.1) Adjusted values are saved regardless of whether the final mode is Responsive or not. It is possible for a user to modify values in Responsive mode and then change to Manual.
+			(2.5.1) Adjusted values are saved regardless of whether the final mode is Responsive Change or not. It is possible for a user to modify values in Responsive Change mode and then change to Manual mode or Timed Change mode.
 	(2.6) Added messages
 			(2.6.1) Added messages are saved regardless of the final mode.
 	(2.7) Sequences
@@ -36,7 +36,7 @@ The traffic light is a vector image of a common traffic light with three colored
 
  --- USER INTERFACE ---
 (4) The body of the traffic light is a yellow rectangle similar to this picture: https://www.insurancejournal.com/app/uploads/2012/09/traffic-lights.jpg
-	(4.1) It includes three "bulbs" or "lights": 
+	(4.1) It includes three "bulbs" or "lights". These are circle with a black outline and the following fill colors: 
 		(4.1.1) Red
 			(4.1.1.1) Default state is #B81B0E
 			(4.1.1.2) Active state is #FF0000
@@ -47,7 +47,8 @@ The traffic light is a vector image of a common traffic light with three colored
 			(4.1.3.1) Default state is #549C30
 			(4.1.3.2) Active state is #00FF00
 		(4.1.4) An active light also includes the image ic_mask_stamp.xml.
-			(4.1.4.1) The image appears 0.6f the size of the bulb's circle area.
+			(4.1.4.1) The image's width is equal to 0.6f of the bulb's circle diameter.
+                (4.1.4.1.1) The image's height should adjust proportionately to its width.
 	(4.2) A traffic light can appear in one of two orientations based on user settings choices:
 		(4.2.1) Vertical (the default orientation)
 			(4.2.1.1) The red light is on top.
@@ -97,7 +98,8 @@ The traffic light is a vector image of a common traffic light with three colored
 					(8.2.2.1.1.1) A drop-down menu smoothly opens overtop the settings menu
 					(8.2.2.1.1.2) A list of mods is displayed in this order from the top down:
 						(8.2.2.1.1.2.1) Manual
-						(8.2.2.1.1.2.2) Responsive
+						(8.2.2.1.1.2.2) Responsive Change
+                            (8.2.2.1.1.2.2.1) If no mic array is detected, Responsive Change is hidden.
 						(8.2.2.1.1.2.3) Timed Change
 			(8.2.2.2) "Orientation"
 				(8.2.2.2.1) Following the word "Orientation" is a toggle.
@@ -133,20 +135,176 @@ The traffic light is a vector image of a common traffic light with three colored
 		(8.3.3) A user touching the settings button deactivates the settings menu.
 		(8.3.4) The settings button returns to default icon state
         
+(9) ``ORIENTATION``
+    (9.1) When the orientation setting toggle state is left, the traffic light is oriented vertically.
+    (9.2) When the orientation setting toggle state is right, the traffic light is oriented horizontally.
+    
+(10) ``BLINKING LIGHTS``
+    (9.1) When the Blinking Lights setting toggle state is on, lights blink wherever defined in the specifications.
+    (9.2) When the Blinking Lights setting toggle state is off, lights do not blink regardless of specifications.
+    (9.3) The toggle should include the words "On" and "Off"
+        (9.4) These words should be strings so they can be translated.
+        
+(11) ``ADJUST VALUES``
+    (11.1) Adjust Values setting is only visible when the Traffic Light mode is set to Responsive Change.
+    (11.2) When the edit icon for Adjust Values is activated, a window expands with a smooth transition animation.
+        (11.2.1) This window includes:
+            (11.2.1.1) A back arrow in the top left corner of the window. 
+            	(11.2.1.1.1) Default icon state uses ic_back.xml.
+                (11.2.1.1.2) Active state: Programmatically change fill colors for default state icons to #808080.
+                (11.2.1.1.3) When activated the Adjust Values window closes.
+                    (11.2.1.1.3.1) The user returns to the main settings window.
+            (11.2.1.2) A close button in the top right corner of the window.
+            	(11.2.1.2.1) Default icon state uses ic_close.xml.
+                (11.2.1.2.2) Active state: Programmatically change fill colors for default state icons to #808080.
+                (11.2.1.2.3) When activated all settings related windows close.
+            (11.2.1.3) A decibel (dB) range table.
+                (11.2.1.3.1) The first column is three color circles.
+                    (11.2.1.3.1.1) The order of the lights matches the order of a vertical traffic light.
+                (11.2.1.3.2) The second column is three text fields. (These are the minimum decibel levels for the light colors.)
+                    (11.2.1.3.2.1) Each text field aligns with one of the three lights from (11.2.1.3.1).
+                    (11.2.1.3.2.2) The first row (red light) displays the number "80".
+                    (11.2.1.3.2.3) The second row (yellow light) displays the number "60".
+                    (11.2.1.3.2.4) The third row (green light) displays the number "0".
+                (11.2.1.3.3) The third column has three rows, each with the same string, "dB".
+                (11.2.1.3.4) The fourth column has three rows, each with a hyphen.
+                (11.2.1.3.5) The fifth column is three text fields. (These are the maximum decibel levels for the light colors.)
+                    (11.2.1.3.5.1) Each text field aligns with one of the three lights from (11.2.1.3.1).
+                    (11.2.1.3.5.2) The first row (red light) displays the number "120".
+                    (11.2.1.3.5.3) The second row (yellow light) displays the number "79".
+                    (11.2.1.3.5.4) The third row (green light) displays the number "59".
+                (11.2.1.3.6) The sixth column has three rows, each with the same string, "dB".
+            (11.2.1.4) If the user taps on a text field:
+                (11.2.1.4.1) A cursor appears following the number
+                    (11.2.1.4.1.1) If the user taps the text field with a cursor already present, the cursor moves to the position of the touch event (e.g., moving the cursor between numerals).
+                (11.2.1.4.2) The system number pad opens.
+                (11.2.1.4.3) The smallest value any text field can be set to is 0.
+                (11.2.1.4.4) The largest value any text field can be set to is 149.
+            (11.2.1.5) When the minimum value of a light is changed, the adjacent maximum value changes also.
+                (11.2.1.5.1) A minimum decibel level value is always 1 away from the next light's maximum decibel value.
+                (11.2.1.5.2) For example, if the minimum decibel level for yellow is changed from 60 to 65, the maximum decibel level for green changes from 59 to 64.
+            (11.2.1.6) When the maximum value of a light is changed, the adjacent minimum value changes also.
+                (11.2.1.6.1) A maximum decibel level value is always 1 away from the next light's minimum decibel value.
+                (11.2.1.6.2) For example, if the maximum decibel level for yellow is changed from 79 to 74, the minimum decibel level for red changes from 80 to 75.
+            (11.2.1.7) If a change to the green maximum or the red minimum is larger than the entirety of the yellow range, the yellow text fields change to the string N/A.
+                (11.2.1.7.1) For example, if the minimum value of red was cahnged from 80 to 60 and the green maximum value was still set to 59, yellow would display the string N/A.
+                (11.2.1.7.2) If the minimum value of red was changed from 80 to 55 and the green maximum value was still set to 59:
+                    (11.2.1.7.2.1) Yellow would display the string N/A.
+                    (11.2.1.7.2.2) The green maximum value would change to 54.
+            (11.2.1.8) Below the decibel table, there is:
+                (11.2.1.8.1) A checkbox
+                (11.2.1.8.2) A string that says "Dangerous Sound Alert"
+                (11.2.1.8.3) This string is followed by an information 
+					(11.2.1.8.3.1) The default icon state is ic_info.xml.
+					(11.2.1.8.3.2) The active state icon programatically changes the fill color of the default icon to #808080.
+            (11.2.1.9) If the user touches the checkbox, an X appears in the checkbox, marking it as active
+            (11.2.1.10) If the user touches the information button:
+                (11.2.1.10.1) A snackbar opens with the following string: "Check this box to display an alert that says "Warning: Notify your instructor immediately." should your hardware's microphone report a sound of 150 decibels or higher. The US Occupational Safety and Health Organization projects the loudest classroom noise would reach 95 dB. 120 db is the sound of a car backfire. 150 dB is the sound of a gunshot. The Purramid is a software application dependent on the readings provided by your microphone. Purramid Learning® makes no guarantee that the sound detected is 150 db or what made the sound is a firearm. But this is the reality that US students live in, and we are committed to providing teachers any tools possible to make their classrooms places of learning and not fear."
+                    (11.2.1.10.1.1) The word "Purramid" is never translated.
+                    (11.2.1.10.1.2) The phrase "Purramid Learning®" is never translated.
+            
+(12) ``DANGEROUS SOUND ALERT``
+    (12.1) If the traffic light app intent detects a sound at 150 dB or louder:
+        (12.1.1) It overrides any mode parameters currently in effect.
+        (12.1.2) The following message is displayed beside the traffic light.
+            (12.1.2.1) Aligned with the red light: "Warning"
+            (12.1.2.2) Aligned with the yellow light: "Notify your instructor immediately."
+            (12.1.2.3) Aligned with the green light: "Double-tap green to dismiss this alert."
+        (12.1.3) The red and yellow lights alternate blinking every 0.2 seconds.
+            (12.1.3.1) This blinking overrides the "Blinking Lights" setting.
+    (12.2) If multiple traffic lights have been opened (as per "Add Another"), all traffic lights implement (12.1).
+    (12.3) If the user double-taps the green light, the behavior of all traffic lights returns to its previous settings.
+        (12.3.1) As long as the Dangerous Sound Alert checkbox is active, future sounds of 150 dB or louder can trigger this event again.
+    (12.4) If all app windows are closed, the app is killed, or an onDestroy event occurs while the Dangerous Sound Alert is active, it is no longer active when the app reopens.
+
+(13) ``ADD MESSAGES``
+    (13.1) Add Messages setting is only available when the Traffic Light mode is set to Manual or Responsive Change.
+    (13.2) When the edit icon for Add Messages is activated, a window expands with a smooth transition animation.
+        (13.2.1) This window includes:
+            (13.2.1.1) A back arrow in the top left corner of the window. 
+            	(13.2.1.1.1) Default icon state uses ic_back.xml.
+                (13.2.1.1.2) Active state: Programmatically change fill colors for default state icons to #808080.
+                (13.2.1.1.3) When activated the Adjust Values window closes.
+                    (13.2.1.1.3.1) The user returns to the main settings window.
+            (13.2.1.2) A close button in the top right corner of the window.
+            	(13.2.1.2.1) Default icon state uses ic_close.xml.
+                (13.2.1.2.2) Active state: Programmatically change fill colors for default state icons to #808080.
+                (13.2.1.2.3) When activated all settings related windows close.
+            (13.2.1.3) A messages table.
+                (13.2.1.3.1) The first column is three color circles.
+                    (13.2.1.3.1.1) The order of the lights matches the order of a vertical traffic light.
+                (13.2.1.3.2) The second column is three text fields.
+                    (11.2.1.3.2.1) Each text field aligns with one of the three lights from (13.2.1.3.1).
+                    (11.2.1.3.2.2) Each text field includes 
+                        (11.2.1.3.2.2.1) The string "Add Message" in gray text
+                        (11.2.1.3.2.2.2) An add emoji button
+                        (11.2.1.3.2.2.3) An upload image button
+        (13.2.2) If a user touches a text field:
+            (13.2.2.1) The string "Add Message" disappears.
+            (13.2.2.2) A cursor appears in the text field.
+                (13.2.2.2.1) If user-generated text is already present in the text field, the cursor appears at the end of the text.
+                (13.2.2.2.2) If the user taps the text field with a cursor already present, the cursor moves to the position of the touch event (e.g., moving the cursor between letters).
+            (13.2.2.3) The system keyboard opens.
+                (13.2.2.3.1) If the user presses the enter key on the system keyboard:
+                    (13.2.2.3.1.1) The cursor is removed.
+                    (13.2.2.3.1.2) The system keyboard closes.
+        (13.2.3) A text field can include a maximum of:
+            (13.2.3.1) 27 characters
+            (13.2.3.2) 10 emoji
+            (13.2.3.3) One image
+                    
+
+
+For right-to-left languages, the message appears to the left of the lit color. The size of the text and emoji should equal 80% of the color circle. Images equal 150% of the color circle, with the center of the image aligning with the center of the color circle. Messages appear when a color is lit and disappear when it is not. If nothing is entered in a message box, nothing appears on the screen. Tapping anywhere other than the text fields ends this setting view.
 
 
 
 
+(14) ``EDIT SEQUENCE``
+    (14.1) Edit Sequence setting is only available when the Traffic Light mode is set to Timed Change.
+    (14.2) When the edit icon for Edit Sequence is activated, a window expands with a smooth transition animation.
 
-(1) Mode: Manual by default; the user can select between three use modes: (1a) Manual, (1b) Responsive Change, and  (1c) Timed Change. If the device does not have an active mic input, Responsive Change should be inactivated.
 
-(2) Orientation: Vertical by default; when changed to horizontal, the traffic lights appear horizontally with red then yellow then green from left to right.
+(15) ``SHOW TIME REMAINING``
 
-(3) Blinking lights: On by default; when turned off, color blinking is ignored whenever mentioned in app behavior. Colors are either lit or unlit based on defined usage and never blink.
 
-(4) Adjust values: Only visible when mode is set to Responsive Change; allows the user to change the decibel values that cause color changes.
+(16) ``SHOW TIMELINE``
 
-(5) Add Messages: Only visible when mode is set to Manual Change or Responsive Change; allows the user to add messages that appear beside the traffic light.
+
+(17) ``Add Another``
+	(14.1) When a user touches the Add Another button, its icon changes from (10.2.2.4.1) Default to (10.2.2.4.2) Active.
+	(14.2) When Add Another is activated:
+		(14.2.1) The Add Another button returns to its default state.
+		(14.2.2) A new mask appears at the geometric center of the screen.
+			(14.2.2.1) The new mask adopts the properties of the mask from which it was made.
+				(14.2.2.1.1) It has the same height and width.
+				(14.2.2.1.2) If the source mask had a billboard image, that image appears in the new mask as well.
+			(14.2.2.2) If another mask already exists at the geometric center of the display screen, the new mask should appear in an offset position (e.g., +25px down and +25px right) from the centered mask.
+	(14.3) If four masks are already present on the screen, 
+		(14.3.1) The Add Another button is inactivated. Nothing happens if a user touches it.
+		(14.3.2) The icon fill and outline colors change. (TODO: Define specific hex colors for an inactive icon.)
+
+
+(18) ``MANUAL MODE``
+
+
+(19) ``RESPONSIVE CHANGE MODE``
+
+
+(20) ``TIMED CHANGE MODE``
+
+
+(21) ``CLOSE``
+	(15.1) When a user touches the Close button, its icon changes from (6.1) Default to (6.2) Active.
+	(15.2) The mask to which the Close button is attached closes.
+		(15.2.1) When a mask is closed:
+			(15.2.1.1) If it is the only mask currently open, its size, lock state, and position (if not fullscreen) are saved as the most recent user preferences, as per (2).
+			(15.2.1.2) If it is one of multiple masks currently open, its preferences are cleared.
+		(15.2.2) If the mask is the only mask open, the screen mask service ends.
+
+
+
+
 
 (6)Edit Squence: Only visible when mode is set to Timed Change; allows the user to create/change the time duration and color change for the Timed Change mode
 
@@ -162,16 +320,14 @@ The traffic light is a vector image of a common traffic light with three colored
 
 (1b) Responsive mode behavior: When this mode is selected, ambient sound is measured using the mic array. Maxamplitude is measured every two seconds by using standard Google APIs. Based on the decibels (dB) of that sound, a specified color is lit. Green is lit with a measure of 59 dB or less. Yellow is lit with a measure of 60 dB to 79 dB. Red is lit with a measure of 80 dB or higher. If sound changes from one range to antoher, the previous color is unlit and the new color is lit. If a color is within 5 dB of the range above it, the color blinks (between its unlit and lit colors) every 0.5 seconds. This means green would blink from 55 dB to 59 dB and Yellow would blink from 75 dB to 79 dB. Colors do not blink when near a lower range. (For example, moving from 81 dB to 70 dB, red would be lit, but it would not blink.) Because maxamplitude is measured every two seconds, it is possible for decibels to increase or decrease enough to skip a range. In those cases, the color skipped is not shown. (For example,going from 81 dB to 50 dB would cause red to change green without yellow being lit.)
 
-(4) "Adjust Values" opens a window on top of settings. (10) Three color circles form a column on the left (for left-to-right languages) and on the right (for right-to-left languages). (11) Each color then has a minimum and a maximum value text field (following in the same order of left-to-right or right-to-left based on the selected language). The text fields show the default decibel ranges. The string "dB" beside the text field (to the left or right, accordingly). The minimum value for green is 0 and the maximum 59. Yellow is mininimum 60 and maximum 79. Red is minimum 80 and maximum 120. If the user taps on a text field, a cursor appears and the system number pad appears. If a change is made to a value that is adjacent to another value, both values are changed to remain adjacent to one another. (For example, if the maximum of green is changed from 59 to 69, the minimum of yellow would automatically adjust to 70.) If a change is made to a value that crosses the entire range of its adjacent color, the middle color's range is eliminated. The numbers in those fields are replaced with the string N/A. And the other color is one dB away from the modified range. (For example, if the minimum value of red was changed from 80 to 55, the maximum value of green would be set to 54 and both yellow values would be set to N/A.
 
 Any settings that open an additional view (like "Adjust Values) includes a (12) back arrow and a (13) close button. (12) The back arrow returns the user to previous settings view. (13) The close button closes settings and returns the user to the traffic light view.
 
-(14) Below the color ranges is an unchecked checkbox and a string that says "Dangerous Sound Alert". After the string is (15) an information icon (a lowercase i in a circle). If the box is checked and the mic array reports a Maxamplitude value of 150 dB or higher, the red and yellow lights alternate blinking ever 0.2 seconds. In the message field for the red color is the string "WARNING". In the message field for the yellow color is the string "Notify your instructor immediately." In the message field for the green color is the string "Double-tap green to dismiss this alert." If more than one traffic light window is open, all windows display the same alert. Dismissing the alert on one window dismisses it on all of them. The alert must be dismissed before use of the traffic light returns to normal. If all traffic light windows are closed or if the app is destroyed while the alert is active, the alert does not return when the app is reopened.
-
-(15) If the user taps the information icon, a dialog box opens with the following text: "Check this box to display an alert that says "Warning: Notify your instructor immediately." should your hardware's microphone report a sound of 150 decibels or higher. The US Occupational Safety and Health Organization projects the loudest classroom noise would reach 95 dB. 120 db is the sound of a car backfire. 150 dB is the sound of a gunshot. The Purramid is a software application dependent on the readings provided by your microphone. Purramid Learning® makes no guarantee that the sound detected is 150 db or what made the sound is a firearm. But this is the reality that US students live in, and we are committed to providing teachers any tools possible to make their classrooms places of learning and not fear." (The word "Purramid" and the phrase "Purramid Learning®" are never translated.) 
 
 
-(5) "Add Messages" allows the user to add text, an image, and/or emoji to appear beside a color when it is lit (far enough away that they do not overlap with the body of the traffic light). Once the user presses Add Messages, three dialog boxes appear beside their respective lights. For left-to-right languages, the text fields appear to the right of the color. Text fields include the string "Add Message" (string/setting_add_messages). When the user taps this field, the phrase "Add Message" disappears and a cursor appears. The sytsem keyboard opens. A line may include a maximum of 27 text characdters, 10 emoji, and one image. For right-to-left languages, the message appears to the left of the lit color. The size of the text and emoji should equal 80% of the color circle. Images equal 150% of the color circle, with the center of the image aligning with the center of the color circle. Messages appear when a color is lit and disappear when it is not. If nothing is entered in a message box, nothing appears on the screen. Tapping anywhere other than the text fields ends this setting view.
+(15) If the user taps the information icon, a dialog box opens with the following text: 
+
+
 
 
 (1c) Timed Change mode behavior: When switched to Timed Change mode, a play/pause button and a reset button are added to the layout of the traffic light below the body of the traffic light. The play button initiates the sequence. Until the sequence is initiated, no color is lit. Once the play button is pressed, the first color in the sequence is lit and its corresponding message is displayed. Its duration begins to countdown. This time is not shown unless the (7) "Show Time Remaining" setting is toggled on. When countdown for that sequence row elapses, the next row in the order begins, with that light lit, its message displayed, and its duration beginning to count down. This process continues until the sequence complets. At that point, all colors are unlit and all messages are removed. If two rows in a sequence use the same color, the color blinks twice at an interval of 0.3 seconds. 
