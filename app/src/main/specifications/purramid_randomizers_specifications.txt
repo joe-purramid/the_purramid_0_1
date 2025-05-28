@@ -256,6 +256,109 @@ Announce - This is the same functionality as spin, but the results of each colum
 
 ''DICE''
 
+Understand a common abbreviation for die type is to list the number of sides after the letter d. So a six-sided die would be a d6 and a 10-sided die would be a d10. Dice mode will include d4, d6, d8, d10, d12, and d20 dice. There will also be a "percentile" setting that creates a d10 pair, one with numbers 0 to 9 in increments of one and the other with numbers 00 to 90 in increments of ten. When rolled together the dice results form a percentage.
+
+When entering Dice mode, the initial view is 1d6. The mode should restore the last combination of dice used, in the same fashion as spin and slots functions. Dice appear in a window, in the same fashion as the other modes. The "spin" button is replaced with a "roll" button. There is also an adjacent "dice pool" button, that allows the users to modify how many dice and the type of dice they are rolling. Dice are represented by SVG polyhedrals with a number on each side. The d6 also includes a setting to replace the number with pips, to match the appearance of popular dice.
+
+
+
+When a die is rolled, there is an animation that lasts 1 second long. The randomized result is then shown on the polyhedral face shown outward to the user. A decision will have to be made whether the die at rest should appear two dimensional and only the animation looks three dimensional, or whether the die at rest should also appear three dimensional. Let's discuss the possibility of numbers being visible during the animation. If we opt for three-dimensional polyhedrals at rest, let's also discuss other numbers being visible (perhaps faded to show they are not the active number). Each die animates during rolling. Dice are grouped by type, so all d4s are near each other, all d6s are near each other, etc. They do not intermingle.
+
+
+
+Dice with opposite sides have a number-placement rule. If the number of sides of the polyhedral = n, then two opposites sides added together should = n+1. (On a six-sided die, the one is opposite the six, the 2 is opposite the five, and the 3 is opposite the four. The same holds true for a d20, where the one is opposite the 20.)
+
+
+
+When pressing the Dice Pool button, a window appears with a row of polyhedrals increasing from d4 to d20 based on the number of edges they have. Percentile dice only appear if they are turned on in settings. Below each polyhedral is a text field with a number in it showing the number of dice currently in the pool. (Thus, at first initialization, all dice are at zero except for the d6, which is at 1.) An up arrow button is above the polyhedral. A down arrow button is below the text field. These buttons increase or decrease the number of dice available, respectively. The user can also tap the text field to open a system number pad and change the quantity manually. A die type can have no fewer than 0 and no more than 10. When dice quantities are changed, they appear immediately on the screen even if the dice pool window is still open. To close the dice pool window, the user can tap the button again or touch anywhere outside the dice pool window area.
+
+
+
+Unlike spin mode that allows a maximum of four dials, the user can add up to seven total dice pools. When added, a new dice pool window clones the settings of the window from which it was made. Settings changes are applied to the dice pool window from which settings was opened. The window has a yellow highlight border to show which window is actively being modified. Dice mode has the following settings:
+
+
+
+MODE - This is the same setting as Spin and Slots
+
+
+
+COLOR - This opens a window with a column of polyhedrals ordered by their numbers of sides, with the d4 on top and the d20 on bottom. Percentile dice are listed below the d10 and above the d12. Percentiles can have a different color than the d10. Beside each polyhedral is a color square. This is the same as the color picker from spin and behaves the same. The square reflects the color assigned to the die type. By default, all dice are white with black numbering. Above the d4 row is a checkbox (unchecked by default) with the string "Apply to all". If this box is checked, a color picked applies to all dice and the color square in each row will display the selected color. (Apply all only applies to the dice of this window. If multiple dice windows are open, their dice colors are unchanged.)
+
+
+
+d6 Pips on/off toggle - off by default. If turned on, this replaces the numbers on the d6 with pips.
+
+
+
+Percentile Dice on/off toggle. Off by default.If turned on, the percentile dice become a choosable die type in the dice pool view.
+
+
+
+Roll Animation on/off toggle - on by default. When turned off, a "roll" button press yields an immediate result without animation.
+
+
+
+Announcement on/off toggle - off by default. This functions the same way as announcement in Spin mode (including placement in the window).
+
+
+
+Sum Results - This setting is available only if Announcement is toggled on. It is a drop-down menu that allows the user to choose between "Individual" (the default), "Sum Die Type", and "Sum Total". Individual announces the results of each die rolled as a series or array. Sum Die Type announces the summed results for each die type that has one or more dice of its type in the die pool (2d4 with the result of 1 and 3 would display as 4; 0d8 would not display a result). Sum Total announces the summed results of all dice rolled as a single number.
+
+
+
+Add Modifiers - This setting is available only if Announcement is toggled on. This functions similar to color, but instead of a color square, there is a text field to the right of the polyhedral. By default, all modifiers are set to 0. When tapping the text field, the system number pad opens and the user can enter a number between 0 and 100. When announcing a result, this number is added to the sum of its assigned die type. For example, if d4 had a modifier of 2, 2d4 with results of 1 and 3 would announce: 3 and 5 (for individual) or 8 (for sum die type/sum total).
+
+
+
+(It's important that directions are not hard coded. When I say "there is a text field to the right of the polyhedral", this field should appear to the left of the polyhedral in right-to-left languages like Arabic.)
+
+
+
+Critical Celebration on/off toggle - off by default. This setting is available only if Announcement is toggled on. When on, fireworks display when a d20 rolls a 20 (only the number on the die face applies, even if an added modifier would equal 20 or more). This functionality is the same as celebration in spin mode.
+
+
+
+Graph Distribution - This opens a window with radio buttons "Off" (default), "Manual", "Normal", "Uniform". Below the radio buttons are three line-style icon buttons "solid line" (default), "dashed line", and "dotted line". The graph line displayed after a roll result is the type selected here (solid line, dashed line, or dotted line).
+
+
+
+If "Normal" or "Uniform" are selected, there is also a number field and the string "number of rolls" below the line-style buttons. This value is set at 1000 by default. How large of a number of roll computations can we achieve in three seconds?
+
+
+
+If Manual, Normal, or Uniform radio buttons are selected, Announcement is automatically toggled off. If announcement is toggled on, Graph Distribution changes to off.
+
+
+
+When Graph Distribution is active and the roll button is pressed, the following behaviors occur:
+
+
+
+Manual: The roll animation (if active) lasts 0.5 seconds. The result becomes the first entry on an x-y line graph, where the x axis is the number rolls in 5-roll increments (rounded up). The y axis is increments of one to the maximum total possible result (based on sum results setting selection). The roll animation does not need to complete for the user to be able to press the roll button again. With rapid tapping, the animation continues through 0.5 seconds after the final tap (total roll time is not summed based on number of taps). Each tap yields a new result on the line graph. The x-axis grows as the number of rolls exceeds increments of five. A "reset" button should appear beside the Dice Pool button. If pressed, the manual graph is eliminated. Pressing the roll button would then begin a new graph. (Consider whether a reset button should be included for Normal and Uniform as well.)
+
+
+
+If Sum Results is set to "individual", each die within a die type is considered a separate roll. 5d10 would yield 5 dots along the x-axis even if the roll button was only pressed once. If the dice pool contains more than one die type, each die type gets its own line on the graph. Lines should be different colors (using the color sequence we created for spin dial wedges to ensure proper contrast).
+
+
+
+If Sum Results is set to "Sum Die Type", the functionality is the same as "individual" except multiple dice of the same die type are summed together and entered as a single point on the x-axis. This means the number of points on the x-axis would equal the number of times the roll button is pressed. 
+
+
+
+If Sum results is set to "Sum Total", the functionality is the same as "Sum Results" except there is only a single line on the graph rather than a line for each die type. The Y-axis uses increments of 10% of the total possible value (rounded to the closest whole number) after the total sum surpasses the number 20.
+
+
+
+Normal: This functionality matches "Manual" with the following variations. The roll animation (if active) lasts for 3.0 seconds. During that time, a number of roles equal to the number listed in settings (default 1000) are computed and a graph with a Normal distribution is plotted. The behaviors for Sum Results settings are the same as in Manual. If the user presses the roll button, the current graph is removed, and a new graph is created.
+
+
+
+Uniform: This functionality matches "Manual" with the following variations. The roll animation (if active) lasts for 3.0 seconds. During that time, a number of roles equal to the number listed in settings (default 1000) are computed and a graph with a Uniform distribution is plotted. The behaviors for Sum Results settings are the same as in Manual. If the user presses the roll button, the current graph is removed, and a new graph is created.
+
+
+
+The last setting is "Add Another Dice Pool". A total of seven pools can be created. Each window should have a close button and a settings button.
 
 
 ''COIN FLIP''

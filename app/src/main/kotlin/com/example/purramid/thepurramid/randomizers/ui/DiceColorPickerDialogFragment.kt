@@ -18,7 +18,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.example.purramid.thepurramid.R
-import com.example.purramid.thepurramid.common.PurramidPalette // Import the shared palette
+import com.example.purramid.thepurramid.ui.PurramidPalette // Import the shared palette
 import com.example.purramid.thepurramid.data.db.DEFAULT_EMPTY_JSON_MAP
 import com.example.purramid.thepurramid.databinding.DialogDiceColorPickerBinding
 import com.example.purramid.thepurramid.databinding.IncludeDiceColorRowBinding

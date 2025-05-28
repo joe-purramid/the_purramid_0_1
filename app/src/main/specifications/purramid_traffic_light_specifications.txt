@@ -67,22 +67,6 @@ The traffic light is a vector image of a common traffic light with three colored
 		
 
  --- USER EXPERIENCE ---
-(7) ``RESIZING and MOVING``
-    (7.1) When a user touches two fingers anywhere on the traffic light window that is not a button and performs a pinching motion
-        (7.1.1) Pinching open enlarges the window's height and width equally.
-        (7.1.2) Pinching closed reduces the window's height and width equally.
-    (7.2) When a user press-hold-drags anywhere on the traffic light window that is not a button, they can move the traaffic light window anywhere on the screen.
-		(7.2.1) A traffic light window may not move off the screen.
-			(7.2.1.1) If a user attempts to move the traffic light beyond the edge of the screen, the traffic light's movement is constrained to the screen edge, preventing any part of the traffic light from becoming inaccessible.
-			(7.2.1.2) Attempting to move the traffic light off the edge of the screen does not cause resizing. Once constrained, the traffic light can not continue to move toward the edge.
-    (7.3) Resizing and moving are exclusionary actions.
-        (7.3.1) If a user is resizing the traffic light, they cannot move the traffic light.
-            (7.3.1.1) If a user removes one finger after resizing, they cannot move. They must remove both fingers and begin a new onTouch event to move the traffic light.
-            (7.3.1.2) If a user removes one finger after resizing and then places that finger down again, they may continue resizing.
-        (7.3.2) If the user is moving the traffic light, they cannot move the traffic light.
-            (7.3.2.1) If the user is moving the traffic light and adds a second finger to the screen, that finger is ignored.
-            (7.3.2.2) After moving the traffic light, the user must end the current onTouch event before using two fingers to resize.
-        (7.3.3) A movement buffer should be included to ignore minor movements during an onTouch event caused by natural human shakiness.
 (8) ``SETTINGS``
 	(8.1) When a user touches the settings button, its icon changes from (5.1) Default to (5.2) Active.
 	(8.2) When activated, a settings menu extends with a smooth transition animation from the settings button.
@@ -175,11 +159,9 @@ The traffic light is a vector image of a common traffic light with three colored
                     (11.2.1.3.5.4) The third row (green light) displays the number "59".
                 (11.2.1.3.6) The sixth column has three rows, each with the same string, "dB".
             (11.2.1.4) If the user taps on a text field:
-                (11.2.1.4.1) A cursor appears following the number
-                    (11.2.1.4.1.1) If the user taps the text field with a cursor already present, the cursor moves to the position of the touch event (e.g., moving the cursor between numerals).
-                (11.2.1.4.2) The system number pad opens.
-                (11.2.1.4.3) The smallest value any text field can be set to is 0.
-                (11.2.1.4.4) The largest value any text field can be set to is 149.
+                (11.2.1.4.1) The system number pad opens.
+                (11.2.1.4.2) The smallest value any text field can be set to is 0.
+                (11.2.1.4.3) The largest value any text field can be set to is 149.
             (11.2.1.5) When the minimum value of a light is changed, the adjacent maximum value changes also.
                 (11.2.1.5.1) A minimum decibel level value is always 1 away from the next light's maximum decibel value.
                 (11.2.1.5.2) For example, if the minimum decibel level for yellow is changed from 60 to 65, the maximum decibel level for green changes from 59 to 64.
@@ -241,28 +223,102 @@ The traffic light is a vector image of a common traffic light with three colored
                         (11.2.1.3.2.2.3) An upload image button
         (13.2.2) If a user touches a text field:
             (13.2.2.1) The string "Add Message" disappears.
-            (13.2.2.2) A cursor appears in the text field.
-                (13.2.2.2.1) If user-generated text is already present in the text field, the cursor appears at the end of the text.
-                (13.2.2.2.2) If the user taps the text field with a cursor already present, the cursor moves to the position of the touch event (e.g., moving the cursor between letters).
-            (13.2.2.3) The system keyboard opens.
-                (13.2.2.3.1) If the user presses the enter key on the system keyboard:
-                    (13.2.2.3.1.1) The cursor is removed.
-                    (13.2.2.3.1.2) The system keyboard closes.
+            (13.2.2.2) The system keyboard opens.
         (13.2.3) A text field can include a maximum of:
             (13.2.3.1) 27 characters
             (13.2.3.2) 10 emoji
             (13.2.3.3) One image
+	(13.3) Messages:
+		(13.3.1) Appear when their assigned colors are active.
+		(13.3.2) Disappear when their assigned colors are default.
+		(13.3.3) Situated outside the body of the traffic light vector image, aligned with their assigned light.
+		(13.3.4) Text and emoji are 0.8f the size of the bulb.
+		(13.3.5) Images are 1.5f the size of the bulb
+			(13.3.5.1) Images are centered with the bulb, so their excess height  is equally distributed above and below the light.
+	(13.4) If nothing is entered in message fields, no screen space is dedicated to messages.
                     
-
-
-For right-to-left languages, the message appears to the left of the lit color. The size of the text and emoji should equal 80% of the color circle. Images equal 150% of the color circle, with the center of the image aligning with the center of the color circle. Messages appear when a color is lit and disappear when it is not. If nothing is entered in a message box, nothing appears on the screen. Tapping anywhere other than the text fields ends this setting view.
-
-
-
-
 (14) ``EDIT SEQUENCE``
     (14.1) Edit Sequence setting is only available when the Traffic Light mode is set to Timed Change.
     (14.2) When the edit icon for Edit Sequence is activated, a window expands with a smooth transition animation.
+	(14.3) The layout of this window is similar to the layout of the system alarm clock
+		(14.3.1) Up to ten sequences can be created.
+			(14.3.1.1) If there are fewer than ten sequences, the first row shown is always "Create New Sequence"
+			(14.3.1.2) If there are ten sequences, "Create New Sequence" is not visible.
+		(14.3.2) Existing sequences are ordered alphanumerically by title.
+	(14.4) A sequence row includes the following:
+		(14.4.1) The sequence title
+		(14.4.2) A circle for each step of the sequence.
+			(14.4.2.1) Each circle has a black outline.
+			(14.4.2.2) Each cirle fill matches the color assigned for that step of the sequence.
+			(14.4.2.3) Circles are ordered to match their order in the sequence.
+				(14.4.2.3.1) For example, if a sequence has three steps, with steps 1 and 2 assigning a red light and step 3 assigning a green light, three circles would appear in order of red-red-green.
+		(14.4.3) The sum total of all the steps.
+			(14.4.3.1) For example, if a sequence has three steps, each 30 minutes long, time displayed would be 1:30:00
+	(14.5) If a user taps a sequence, it opens a sequence editor view
+		(14.5.1) The top of this view is a title text field.
+			(14.5.1.1) If no title has been previously entered, there is a string "Sequence Title"
+			(14.5.1.2) If a title has been previously entered, it appears here.
+			(14.5.1.3) If the user taps the text field
+				(14.5.1.3.1) the "Sequence Title" string disappears (if it was present).
+				(14.5.1.3.2) the system keyboard opens.
+					(14.5.1.3.2.1) A title may not be longer than 27 characters.
+		(14.5.2) Below the title are 
+
+
+
+
+		(14.4.1) A reorder handle (ic_drag_handle.xml)
+			(14.4.1.1) If the user pres-hold-drag the handle, the row moves with a smooth animation and can be placed elsewhere in the order.
+			(14.4.1.2) When the user lifts their finger, the animation ends and the sequence row fits back in with the larger list.
+		(14.4.2) A numerical value of the row's order.
+			(14.4.2.1) Rows are numbered sequentially, beginning at 1, from top of the order to the bottom.
+			(14.4.2.2) If the row changes order, per (14.4.1), this number updates accordingly.
+		(14.4.3) A circle with
+			(14.4.3.1) A black outline
+			(14.4.3.2) A fill that shows the assigned color
+		(14.4.4) The duration
+
+
+				(14.4.3.2.1) When the user touches this button, a menu opens with a smooth animation.
+					(14.4.3.2.1.1) It displays three circles, one for each color of the traffic light.
+					(14.4.3.2.1.2) When the user touches one of those colors
+						(14.4.3.2.1.2.1) That color is assigned to the sequence.
+						(14.4.3.2.1.2.2) The circle fill in the sequence row changes to the assigned color.
+						(14.4.3.2.1.2.3) The color selection menu folds closed with a smooth animation.
+					(14.4.3.2.1.2) If a user taps on the Edit Sequence window (and not on one of the three colored circles), the color seelction menu folds closed with a smooth animation.
+				(14.4.3.2.1) If no color has been assigned yet, the fill is divided into 1/3 red, 1/3 yellow, and 1/3 green
+					(14.4.3.2.1.1) If a user attempts to create a sequence without assigning a color, a snackbar appears that says, "Please assign a color to continue."
+				(14.4.3.2.2) A circle may never be assigned more than one color.
+		(14.4.4) A text field for time duration
+			(14.4.4.1) If no time has been entered, the text field includes the string "H:MM:SS"
+				(14.4.4.1.1) If a user attempts to create a sequence without assigning a color, a snackbar appears that says, "Please set a time duration to continue."
+			(14.4.4.2) If the user taps into the text field
+				(14.4.4.2.1) The string "H:MM:SS" disappears
+				(14.4.4.2.2) The system numberpad opens.
+					(14.4.4.2.2.1) Numbers entered populate seconds, then minutes, then hours.
+						(14.4.4.2.2.1.1) For example, if a user enters 30, that is 30 seconds.
+						(14.4.4.2.2.1.2) If a user enters 53030, that is 5 hours, 30 minutes, and 30 seconds.
+					(14.4.4.2.2.2) Time cannot be set at a value larger than 9:59:59
+			(14.4.4.3) If time has been entered, that time is displayed in a similar format.
+				(14.4.4.3.1) For example, if the user entered 30 minutes, it would display as "0:30:00".
+		(14.4.5) A text field for a message XXX
+			(14.4.5.1) This matches the functionality of (13) Add Messages, but for Timed Change mode. 
+
+
+
+
+They can enter a title for this sequence up to 27 characters long. Below the title is a row with the following elements ordered left to right: (16) two parallel lines used as a reordering drag handle (ic_drag_handle.xml); (17) the numerical value of the row's position in the order, descending sequentially (starting at number 1); (18) a circle with fill 1/3 red, 1/3 yellow, and 1/3 green;  (19) a text field with "H:MM:SS: shown in it; and (20) a message field. If changes are made to the first row of a sequence, a second row appears with all the same default values as the first row except that the sequence order number increases by 1. A user can create a sequence with no more than ten rows. When they reach their tenth row, no new row is populated.
+
+(16) A dragging motion on the reordering handle handle allows the user to change the row's order in the stack. Gracefully animate the row's movement above and insertion back into the sequence order.
+
+(17) This number shows the order value of the row. When a row is moved in the order, the numbers change to match the new sequence order. Numbers should always be in sequence.
+
+(18) when tapped, this circle opens a column view similar to (10) that shows three circles one with red fill, one with yellow, and one with green. When the user taps a specific color, the (18) circle fills entirely with that color. This is the color that is lit during this sequence step.
+
+(19) This is the length of time a sequence lasts. When the user taps into the text field, the text disappears and the system number pad opens. The maximum amount of time per sequence step is 9 hours, 59 minutes, and 59 seconds (displayed H:MM:SS). Colons are added automatically. If a user enters 30, this is 30 seconds and displays as 0:00:30. If the user enters 300, this is 3 minutes, and displays as 0:03:00.
+
+(20) This message field behaves the same as message fields in (5). Any message entered displays while this sequence step is active. If no message is netered, nothing displays.
+
 
 
 (15) ``SHOW TIME REMAINING``
@@ -306,7 +362,6 @@ For right-to-left languages, the message appears to the left of the lit color. T
 
 
 
-(6)Edit Squence: Only visible when mode is set to Timed Change; allows the user to create/change the time duration and color change for the Timed Change mode
 
 (7) Show Time Remaining: Off by default, only visible when mode is set to Timed Change; shows a countdown timer of the current sequence step.
 
@@ -321,31 +376,11 @@ For right-to-left languages, the message appears to the left of the lit color. T
 (1b) Responsive mode behavior: When this mode is selected, ambient sound is measured using the mic array. Maxamplitude is measured every two seconds by using standard Google APIs. Based on the decibels (dB) of that sound, a specified color is lit. Green is lit with a measure of 59 dB or less. Yellow is lit with a measure of 60 dB to 79 dB. Red is lit with a measure of 80 dB or higher. If sound changes from one range to antoher, the previous color is unlit and the new color is lit. If a color is within 5 dB of the range above it, the color blinks (between its unlit and lit colors) every 0.5 seconds. This means green would blink from 55 dB to 59 dB and Yellow would blink from 75 dB to 79 dB. Colors do not blink when near a lower range. (For example, moving from 81 dB to 70 dB, red would be lit, but it would not blink.) Because maxamplitude is measured every two seconds, it is possible for decibels to increase or decrease enough to skip a range. In those cases, the color skipped is not shown. (For example,going from 81 dB to 50 dB would cause red to change green without yellow being lit.)
 
 
-Any settings that open an additional view (like "Adjust Values) includes a (12) back arrow and a (13) close button. (12) The back arrow returns the user to previous settings view. (13) The close button closes settings and returns the user to the traffic light view.
-
-
-
-(15) If the user taps the information icon, a dialog box opens with the following text: 
-
-
 
 
 (1c) Timed Change mode behavior: When switched to Timed Change mode, a play/pause button and a reset button are added to the layout of the traffic light below the body of the traffic light. The play button initiates the sequence. Until the sequence is initiated, no color is lit. Once the play button is pressed, the first color in the sequence is lit and its corresponding message is displayed. Its duration begins to countdown. This time is not shown unless the (7) "Show Time Remaining" setting is toggled on. When countdown for that sequence row elapses, the next row in the order begins, with that light lit, its message displayed, and its duration beginning to count down. This process continues until the sequence complets. At that point, all colors are unlit and all messages are removed. If two rows in a sequence use the same color, the color blinks twice at an interval of 0.3 seconds. 
 
 
-(6) To create a sequence, the user must press the "Edit Sequence" button. This opens a window similar in design to an Android clock alarm interface. If a user has created sequences, they are organized alphabetically in a column. The last item in a column is the string "Create New Sequence". There can be a maximum of ten sequences saved. With the creation of the tenth sequence, the "Create New Sequence" option is hidden. If no sequences have been created, only the row "Create New Sequence" is shown.
-
-When the user taps into an existing sequence or creates a new sequence, a list editing interface opens up. At the top is a text field with the string "Title" (string/setting_add_title) in it. When the user taps this field, the word "Title" disappears and a cursor appears. The sytsem keyboard opens. They can enter a title for this sequence up to 27 characters long. Below the title is a row with the following elements ordered left to right: (16) two parallel lines used as a reordering drag handle (ic_drag_handle.xml); (17) the numerical value of the row's position in the order, descending sequentially (starting at number 1); (18) a circle with fill 1/3 red, 1/3 yellow, and 1/3 green;  (19) a text field with "H:MM:SS: shown in it; and (20) a message field. If changes are made to the first row of a sequence, a second row appears with all the same default values as the first row except that the sequence order number increases by 1. A user can create a sequence with no more than ten rows. When they reach their tenth row, no new row is populated.
-
-(16) A dragging motion on the reordering handle handle allows the user to change the row's order in the stack. Gracefully animate the row's movement above and insertion back into the sequence order.
-
-(17) This number shows the order value of the row. When a row is moved in the order, the numbers change to match the new sequence order. Numbers should always be in sequence.
-
-(18) when tapped, this circle opens a column view similar to (10) that shows three circles one with red fill, one with yellow, and one with green. When the user taps a specific color, the (18) circle fills entirely with that color. This is the color that is lit during this sequence step.
-
-(19) This is the length of time a sequence lasts. When the user taps into the text field, the text disappears and the system number pad opens. The maximum amount of time per sequence step is 9 hours, 59 minutes, and 59 seconds (displayed H:MM:SS). Colons are added automatically. If a user enters 30, this is 30 seconds and displays as 0:00:30. If the user enters 300, this is 3 minutes, and displays as 0:03:00.
-
-(20) This message field behaves the same as message fields in (5). Any message entered displays while this sequence step is active. If no message is netered, nothing displays.
 
 
 When the user presses the play button, the sequence starts. The play icon changes to a pause icon. If the pause button is pressed, sequence time countdown is paused and the button changes to a play icon. Pressing play resumes the time countdown. If the user presses the reset button while time is running, the current row sequence starts back over at its starting value with time counting down. The lit color blinks once to show the change. If the user presses the reset button while time is paused, the current row of the sequence resets but timing does not resume until the play button is pressed. The lit color blinks once to show the change. If the user presses reset when time is paused and the sequence is at its starting value, the traffic light resets to the first row of the sequence. The color that was active blinks twice at an interval of 0.3 seconds and then the color of the first row of the sequence blinks once more. (For example, if the colors were changing from green to red, green would blink twice and red would blink once.) If both colors are the same, the light would blink three times at an interval of 0.3 seconds. The sequence does not resume timing until the play button is pressed. If the entire sequence has elapsed, behavior remains the same. Pressing reset restores the last step of the sequence and timing is paused. If the user presses reset again, the sequence entirely resets.
