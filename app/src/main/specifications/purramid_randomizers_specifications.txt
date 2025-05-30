@@ -70,7 +70,8 @@ Ranodmizers is a collection of four different randomization tools: Spin, Slots, 
             (5.2.1) User-defined colors can override the contrast requirements.
     (5.3) Above the spin dial is a "marquee", a rectangle with rounded corners.
         (5.3.1) The marquee displays the active list title.
-    (5.4) Following the title (but within the marquee) is a downward facing arrow button
+		(5.3.2) The list title is bold font.
+    (5.4) Following the title (but within the marquee rectangle) is a downward facing arrow button
         (5.4.1) The marquee arrow default state is ic_arrow_drop_down.xml.
         (5.4.2) The marquee arrow active state is ic_arrow_drop_up.xml
     (5.5) A selection arrow appears on the side of the spin dial
@@ -86,7 +87,9 @@ Ranodmizers is a collection of four different randomization tools: Spin, Slots, 
         (5.7.2) Active state: Programmatically change fill colors for default state icons to #808080.
    
 (6) ``SLOTS UI``
-    (6.1) 
+    (6.1) "Slots" is three adjacent rectangles contained within one larger container rectangle.
+		(6.1.1) This is meant to mirror the design of a slot machine, as seen in this image: https://media.istockphoto.com/id/1408111718/vector/%C3%B0%C3%B0%C3%B1-%C3%B0%C3%B0%C3%B1%C3%B0%C2%B5%C3%B1%C3%B0%C3%B0%C2%B5%C3%B1%C3%B0.jpg?s=612x612&w=0&k=20&c=Je7yR0NLeB_befulI4C354Z6WMRRQZhX8209TzZL6qc=
+		(6.1.2) 
 
 (7) ``DICE UI``
     (7.1) 
@@ -96,60 +99,199 @@ Ranodmizers is a collection of four different randomization tools: Spin, Slots, 
 
 
  --- USER EXPERIENCE ---
-(9) ``RESIZING AND MOVING IN ALL MODES``
-    (9.1) When a user touches two fingers anywhere on the randomizer window that is not a button and performs a pinching motion
-        (9.1.1) Pinching open enlarges the window's height and width equally.
-        (9.1.2) Pinching closed reduces the window's height and width equally.
-    (9.2) When a user press-hold-drags anywhere on the randomizer window that is not a button, they can move the randomizer window anywhere on the screen.
-		(9.2.1) A randomizer window may not move off the screen.
-			(9.2.1.1) If a user attempts to move the randomizer beyond the edge of the screen, the randomizer's movement is constrained to the screen edge, preventing any part of the randomizer from becoming inaccessible.
-			(9.2.1.2) Attempting to move the randomizer off the edge of the screen does not cause resizing. Once constrained, the randomizer can not continue to move toward the edge.
-    (9.3) Resizing and moving are exclusionary actions.
-        (9.3.1) If a user is resizing the randomizer, they cannot move the randomizer.
-            (9.3.1.1) If a user removes one finger after resizing, they cannot move. They must remove both fingers and begin a new onTouch event to move the randomizer.
-            (9.3.1.2) If a user removes one finger after resizing and then places that finger down again, they may continue resizing.
-        (9.3.2) If the user is moving the randomizer, they cannot move the randomizer.
-            (9.3.2.1) If the user is moving the randomizer and adds a second finger to the screen, that finger is ignored.
-            (9.3.2.2) After moving the randomizer, the user must end the current onTouch event before using two fingers to resize.
-        (9.3.3) A movement buffer should be included to ignore minor movements during an onTouch event caused by natural human shakiness.
-        
-(10) ``SPIN UX``
-    (10.1) 
+(9) ``SETTINGS BUTTON FOR ALL MODES``
+	(9.3) If a user taps the (4.1) settings button:
+		(9.1) its icon changes from (5.1) Default to (5.2) Active.
+		(9.2) When activated, a settings menu extends with a smooth transition animation from the settings button.
+			(9.2.1) The settings button remains active while the settings window is open.
+			(9.2.2) The settings window is rows with text.
+				(9.2.2.1) Some settings also include an icon after the text, such as a toggle or an edit icon.
+		(9.3) The settings menu includes the following settings ordered from top down:
+
+(10) ``MODE SETTING FOR ALL MODES``
+	(10.3.1) "Mode" appears first in order of settings for all four modes
+		(10.3.1.1) Following the word "Mode" is a drop-down arrow.
+			(10.3.1.1.1) The drop-down arrow's default state is ic_arrow_drop_down.xml
+			(10.3.1.1.2) The drop-down arrow's active state is ic_arrow_drop_up.xml
+		(10.3.1.2) If the user taps the word "Mode" or the drop-down arrow
+			(10.3.1.2.1) A drop-down menu opens that displays all the available lists.
+				(10.3.1.2.1.1) The drop-down menu opens with a smooth animation. 
+				(10.3.1.2.1.2) The menu is a horizontal rectangle containing four icons.
+					(10.3.1.2.1.2.1) From left to right, the icons are:
+						(10.3.1.2.1.2.1.1) ic_spin.xml
+						(10.3.1.2.1.2.1.2) ic_slots.xml
+						(10.3.1.2.1.2.1.3) ic_dice.xml
+						(10.3.1.2.1.2.1.4) ic_coin_flip.xml
+					(10.3.1.2.1.2.2) Active state: 
+						(10.3.1.2.1.2.2.1) Programmatically change fill colors for default state icons to #808080
+						(10.3.1.2.1.2.2.2) A thick blue line appears beneath the icon.
+			(10.3.1.2.2) The randomizer changes to the newly selected.
+				(10.3.1.2.2.1) Only that randomizer changes modes. Any other randomizers that are also open remain unchanged.
+				(10.3.1.2.2.2) Any settings that appear in both modes remain the same.
+					(10.3.1.2.2.2.1) For example, if the user changes from SPIN to SLOTS:
+						(10.3.1.2.2.2.1.1) The list of items remains the same.
+						(10.3.1.2.2.2.1.2) The Announce toggle state remains the same. 
+
+(11) ``ADD ANOTHER SETTING FOR ALL MODES``
+	(11.1) "Add Another" appears last in order of settings for all four modes.
+		(11.1.1) Following the phrase "Add Another" is an add icon.
+			(11.1.1.1) The default icon state is ic_add_circle.xml.
+			(11.1.1.2) The active state icon programatically changes the fill color of the default icon to #808080.
+	(11.2) When a user touches the Add Another button, 
+		(11.2.1) Its icon becomes Active.
+			(11.2.1.1) Its icon returns to default when the onTouch event ends.
+		(11.2.2) A new randomizer appears at the geometric center of the screen.
+			(11.2.2.1) The new randomizer adopts the properties of the randomizer from which it was made.
+				(11.2.2.1.1) It is set to the same mode.
+				(11.2.2.1.2) It has the same height and width.
+				(11.2.2.1.3) If the source traffic light had a billboard image, that image appears in the new traffic light as well.
+			(11.2.2.2) If another randomizer already exists at the geometric center of the display screen, the new randomizer should appear in an offset position (e.g., +25px down and +25px right) from the centered randomizer.
+	(11.3) If four randomizers are already present on the screen, 
+		(11.3.1) The Add Another button is inactivated. Nothing happens if a user touches it.
+		(11.3.2) The icon fill and outline colors change. (TODO: Define specific hex colors for an inactive icon.)
+
+(12) ``SPIN MODE SPECIFIC UX``
+    (12.1) If a user taps the marquee (the (5.4) title or the (5.5) arrow):
+		(12.1.1) The marquee arrow changes to its active state with a smooth animation
+		(12.1.2) A drop-down menu opens that displays all the available lists.
+			(12.1.2.1) The drop-down menu opens with a smooth animation. 
+			(12.1.2.2) The active list appears first in the order.
+			(12.1.2.3) All other lists are ordered alphanumerically.
+		(12.1.3) The user can tap any list title to apply that list
+			(12.1.3.1) The new list title replaces the existing list title in the marquee.
+				(12.1.3.1.1) The new title is bold font.
+			(12.1.3.2) The list items replace the existing list items on the spin dial.
+			(12.1.3.3) The drop-down menu closes with a smooth animation.
+			(12.1.3.4) The drop-down arrow returns to a default state with a smooth animation.
+	(12.2) If a user taps the (5.7) spin button:
+		(12.2.1) The spin button changes to its active state.
+		(12.2.2) The spin dial rotates with a smooth animation for 2.0 seconds.
+			(12.2.2.1) The spin dial rotates clockwise for left-to-right languages.
+			(12.2.2.2) The spin dial rotates counter-clockwise for right-to-left languages.
+			(12.2.2.3) Use a pseudo-random number generator to select an item from the list.
+				(12.2.2.3.1) An item's number is determined by its order in the list.
+				(12.2.2.3.2) Only one number result is generated per spin.
+				(12.2.2.3.3) Each spin is a unique event, generating a new number result.
+			(12.2.2.4) When the animation complets, the randomly selected list item should align with the (5.5) selection arrow.
+			(12.2.2.5) If spinning is turned off in the settings, the dial immediately displays the result.
+
+``SPIN MODE SETTINGS``
+	(12.3) The settings window for Spin mode includes these additional settings:
+		(12.3.1) Each setting includes text and an icon.
+
+``SPIN: LIST EDITOR``
+		(12.3.2) "List Editor"
+			(12.3.2.1) This settings title is followed by an edit icon.
+				(12.3.2.1.1) Default icon state uses ic_edit.xml.
+				(12.3.2.1.2) Active state: Programmatically change fill colors for default state icons to #808080.
+			(12.3.2.2) Tapping the phrase "List Editor" or the edit icon, opens the list collection editor:
+				(12.3.2.2.1) The list collection editor window opens overtop the settings window.
+				(12.3.2.2.2) This window includes:
+					(12.3.2.2.2.1) A back arrow in the top left corner of the window. 
+						(12.3.2.2.2.1.1) Default icon state uses ic_back.xml.
+						(12.3.2.2.2.1.2) Active state: Programmatically change fill colors for default state icons to #808080.
+						(12.3.2.2.2.1.3) When activated the Adjust Values window closes.
+							(12.3.2.2.2.1.3.1) The user returns to the main settings window.
+					(12.3.2.2.2.2) A close button in the top right corner of the window.
+						(12.3.2.2.2.2.1) Default icon state uses ic_close.xml.
+						(12.3.2.2.2.2.2) Active state: Programmatically change fill colors for default state icons to #808080.
+						(12.3.2.2.2.2.3) When activated all settings related windows close.
+					(12.3.2.2.2.3) A list of each list title, ordered alphanumerically.
+						(12.3.2.2.2.3.1) There re six pregenerated lists:
+							(12.3.2.2.3.1.1) "Colors"
+								(12.3.2.2.3.1.1.1) List items are strings to be translated.
+								(12.3.2.2.3.1.1.2) List items are: "Red", "Orange", "Yellow", "Green", "Blue", and "Purple"
+								(12.3.2.2.3.1.1.3) Colors is the default list displayed if no list is saved in preferences.
+							(12.3.2.2.3.1.2) "Consonants (English)"
+								(12.3.2.2.3.1.2.1) List items are not strings.
+								(12.3.2.2.3.1.2.2) "B", "C", "D", "F", "G", "H", "J", "K", "L", "M", "N", "P", "Q", "R", "S", "T", "V", "W", "X", "Y*", "Z"
+							(12.3.2.2.3.1.3) "Continents"
+								(12.3.2.2.3.1.3.1) List items are strings to be translated.
+								(12.3.2.2.3.1.3.2) "Africa", "Antarctica", "Asia", "Australia", "Europe", "North America", and "South America"
+							(12.3.2.2.3.1.4) "Numbers"
+								(12.3.2.2.3.1.4.1) List items are not strings.
+								(12.3.2.2.3.1.4.2) "0", "1", "2", "3", "4", "5", "6", "7", "8", and "9"
+							(12.3.2.2.3.1.5) "Oceans"
+								(12.3.2.2.3.1.5.1) List items are strings to be translated.
+								(12.3.2.2.3.1.5.2) "Oceans" are "Arctic", "Atlantic", "Indian", "Pacific", and "Southern"
+							(12.3.2.2.3.1.6) "Vowels (English)"
+								(12.3.2.2.3.1.6.1) List items are not strings.
+								(12.3.2.2.3.1.6.2) "A", "E", "I", "O", "U", and "Y*"
+						(12.3.2.2.2.3.2) There is a maximum limit of 20 lists.
+						(12.3.2.2.2.3.3) "Add New List" appears as the first row in the list
+							(12.3.2.2.2.3.3.1) If there are already 20 lists, "Add New List" is not displayed.
+							(12.3.2.2.2.3.3.2) Clicking on "Add New List" opens an empty list item editor with empty fields.
+					(12.3.2.2.2.4) Each title is followed by a number in parentheses.
+						(12.3.2.2.2.4.1) This number is the quantity of items in that list.
+						(12.3.2.2.2.4.2) For example, Colors has six items, so "(6)" would appear after its title.
+					(12.3.2.2.2.5) Aligned to the right of each list row is a delete button.
+						(12.3.2.2.2.5.1) Default state: ic_delete.xmlm
+						(12.3.2.2.2.5.2) Active state: Programmatically change fill colors for default state icons to #808080.
+						(12.3.2.2.2.5.3) Tapping the Delete button
+							(12.3.2.2.2.5.3.1) Causes the icon to become active
+							(12.3.2.2.2.5.3.2) Opens the snackbar, "Are you sure you want to delete this list? It cannot be undone."
+								(12.3.2.2.5.3.2.1) There is an oval with the string "Cancel"
+									(12.3.2.2.5.3.2.1.1) This oval has no fill.
+								(12.3.2.2.5.3.2.2) There is an oval with the string "Delete".
+									(12.3.2.2.5.3.2.2.1) This oval has a colored fill that matches development standards (blue?)
+							(12.3.2.2.2.5.3.3) If the user chooses Cancel:
+								(12.3.2.2.2.5.3.3.1) The snackbar closes.
+								(12.3.2.2.2.5.3.3.2) The delete icon returns to its default state.
+								(13.2.3.3.3.5.3.3.3) The list of lists remains unchanged.
+							(12.3.3.3.3.5.3.4) If the user chooses Delete:
+								(12.3.2.2.2.5.3.4.1) The snackbar closes.
+								(12.3.2.2.2.5.3.4.2) The delete icon returns to its default state.
+								(13.2.3.3.3.5.3.4.3) The list is:
+									(13.2.3.3.5.3.4.3) Remoeve from the list of lists
+									(13.2.3.3.5.3.4.3) Deleted from preferences.
+										(13.2.3.3.5.3.4.3.1) This deletion applies across all randomizer windows.
+											(13.2.3.3.5.3.4.3.1.1) If another randomizer displayed the list that was deleted, that randomizer defaults to the first list available in the updated order of lists.
+										(13.2.3.3.5.3.4.3.2) This list will not be loaded again on future launches.
+						(12.3.2.2.2.5.4) Pregenerated lists can be deleted.
+							(12.3.2.2.2.5.4.1) This is most likely to happen for non-English speakers who will choose to replace consonants and vowels from their own languages.
+			(12.3.2.3) Tapping the phrase "List Editor" or the edit icon, opens the list item editor:
+				(12.3.2.3.1) The list item editor window opens overtop the settings window.
+				(12.3.2.3.2) This window includes:
+					(12.3.2.3.2.1) A back arrow in the top left corner of the window. 
+						(12.3.2.3.2.1.1) Default icon state uses ic_back.xml.
+						(12.3.2.3.2.1.2) Active state: Programmatically change fill colors for default state icons to #808080.
+						(12.3.2.3.2.1.3) When activated the Adjust Values window closes.
+							(12.3.2.3.2.1.3.1) The user returns to the main settings window.
+					(12.3.2.3.2.2) A close button in the top right corner of the window.
+						(12.3.2.3.2.2.1) Default icon state uses ic_close.xml.
+						(12.3.2.3.2.2.2) Active state: Programmatically change fill colors for default state icons to #808080.
+						(12.3.2.3.2.2.3) When activated all settings related windows close.
+					(12.3.2.3.2.3) A text field with the list title.
+						(12.3.2.3.2.3.1) If this is a new list, the string "Text Title" appears
+						(12.3.2.3.2.3.2) Tapping on this text field opens the system keyboard.
+					(12.3.2.3.2.4) Below the title text field is 
+						(12.3.2.3.2.4.1) a discrete row for each item if the list has already been populated with one or more items.
+							(12.3.2.3.2.4.1.1) Each item is displayed in its own text field
+								(12.3.2.3.2.4.1.1.1) At the end of each text field is:
+									(12.3.2.3.2.4.1.2.1) An emoji icon button
+										(12.3.2.3.2.4.1.2.1.1) Default state ic_emoji.xml
+										(12.3.2.3.2.4.1.2.1.2) Active state: Programmatically change fill colors for default state icons to #808080.
+										(12.3.2.3.2.4.1.2.1.3) If emoji is activated, open an emoji library
+											(12.3.2.3.2.4.1.2.1.3.1) The library closes after one emoji is selected.
+											(12.3.2.3.2.4.1.2.1.3.2) No more than 10 emoji can be added per line.
+									(12.3.2.3.2.4.1.2.2) An image icon button
+										(12.3.2.3.2.4.1.2.2.1) Default state ic_image.xml
+										(12.3.2.3.2.4.1.2.2.2) Active state: Programmatically change fill colors for default state icons to #808080.
+										(12.3.2.3.2.4.1.2.2.3) If image upload is activated, open system window to upload an image
+											(12.3.2.3.2.4.1.2.2.3.1) Supported images are png, jpg, gif, bmp, and webp.
+											(12.3.2.3.2.4.1.2.2.3.2) No more than 1 emoji can be added per line.
+											(12.3.2.3.2.4.1.2.2.3.3) An image cannot be larger than 1 MB in size
+												(12.3.2.3.2.4.1.2.2.3.3.1) 
+							(12.3.2.3.2.4.1.2) Items are ordered alphanumerically 
+						(12.3.2.3.2.4.2) a large rectangular text field if list items do not already exist.
+							(12.3.2.3.2.4.2.1)This would be the size of five list title rows in the list collection edtior view.
+							(12.3.2.3.2.4.2.2) In the top right corner of this text field is:
+								(12.3.2.3.2.4.2.2.1) An emoji icon button
+									(12.3.2.3.2.4.2.2.1.1) This follows the same rules as (12.3.2.3.2.4.1.2.1)
+								(12.3.2.3.2.4.2.2.2) An image icon button
+									(12.3.2.3.2.4.2.2.2.1) This follows the same rules as (12.3.2.3.2.4.1.2.2)
 
 
-
-
-
-
-Atop the dial is (8) a "marquee", a rectangle with rounded corners. The marquee displays the list title. Following the title is (9) an inverted caret (ic_arrow_drop_down.xml). If any part of the marquee is tapped, a drop-down list opens with a graceful animation. The inverted caret turns right-side-up (ic_arrow_drop_up.xml). Selecting a list, tapping the marquee title, tapping the caret, or tapping outside of the drop-down view closes the drop-down in a graceful animation. If a list is selected, that title populates the marquee, and its items are displayed in the wedges of the dial.
-
-(10) A selection arrow (ic_arrow_left.xml) appears on the right side of the dial (for left-to-right languages and on the left side of the dial for right-to-left languages [ic_arrow_right.xml]). It does not move and the spin animation will always end with the center point of a wedge aligned with this arrow. This ensures the selected item is always horizontal and easily read.
-
-(11) Below the dial is a spin button (ic_spin.xml). This initiates a spin animation, turning the dial clockwise (for left-to-right languages or counter-clockwise for right-to-left languages) for 2.0 seconds.
-
-(3a) The Settings button opens a settings window with the following options: (12) "Mode", (13) "List Editor", (14), "Spin" on/off toggle, (15) "Announce" on/off toggle, (16) "Celebrate on/off toggle, and (17) "Sequence" on/off toggle.
-
-(12) Mode is a series of four icons: "Spin", "Slots", "Dice, and "Coin Flip". Spin is selected, with a gray square behind it and a thick blue line beneath it. If a user touches any of the other icons, the randomizer changes to that mode. (18) When changing from Spin to Slots, the active spin list will be the first list in the slots view.
-
-
-(13) List Editor opens a window atop the settings view. The title of each list is shown in its own rectangular bar, ordered alphabetically in a column in descending order. (19) There are six pregenerated lists, and there may be a total of 20 lists. (20) The name of each list is followed by a number in parentheses. This number is the quantity of items in that list. (For example, a Vowels list that includes A, E, I, O, U, and Y would read "Vowels (6)". (21) Aligned to the right side of each list is a delete button (ic_delete.xml). The first row in the list column is always (22) "Add New List". If a total of 20 lists already exist, this row is hidden. Tapping a list title or tapping "Add New List" opens the list creator.
-
-(19) Pregenerated lists are (23) "Colors", (24) "Consonants (English)", (25) "Continents", (26) "Numbers", (27) "Oceans", and (28) "Vowels (English)". On first launch, Colors is the default list that appears in the marquee and on the dial. Later launches will display the last list used.
-
-(23) The items for "Colors" are "Red", "Orange", "Yellow", "Green", "Blue", and "Purple"
-
-(24) The items for "Consonants" are "B", "C", "D", "F", "G", "H", "J", "K", "L", "M", "N", "P", "Q", "R", "S", "T", "V", "W", "X", "Y*", "Z"
-
-(25) The items for "Continents" are "Africa", "Antarctica", "Asia", "Australia", "Europe", "North America", and "South America"
-
-(26) The items for "Numbers" are "0", "1", "2", "3", "4", "5", "6", "7", "8", and "9"
-
-(27) The items for "Oceans" are "Arctic", "Atlantic", "Indian", "Pacific", and "Southern"
-
-(28) The items for "Vowels" are "A", "E", "I", "O", "U", and "Y*"
-
-
-(21) Pressing the delete button opens an "Are you sure you want to delete this?" warning snackbar with a "Cancel" button and a "Confirm" button. Cancel button has no fill. The confirm button has a blue fill. Adjust this to meet UI best practices if needed. It *is* possible for a user to delete a pregenerated list. This is most likely for users where English vowels and consonants are not useful to their instruction.
 
 (22) List Editor refers to the List view. List creator is the view where list details can be added, edited or deleted. When clicking on a list title or "Add New List", the list creator view opens above the List Editor view. It includes a back button that returns the user to the List Editor and a close button that closes the settings entirely. The list creator is a series of rectangles similar to the stacked lists from the list editor. Set above and apart from the others is a (29) title text field. It displays the string "Text Title" in dark gray text. When the user taps this box, the system keyboard opens and "text title" disappears. They should never need to delete this phrase. Hitting "enter" on the system keyboard confirms the text entry and closes the system keyboard. (30) A list cannot be saved without a title. If list items are entered but no title, the list cannot be saved.
 
@@ -171,9 +313,51 @@ Tapping on the item text opens the system keyboard in the same fashion as (30). 
 (36) If the user taps on the emoji button, it opens an emoji library that shows a list of emoji that are free to use without license. (46) The user can add ten or fewer emoji per item. (47) There will need to be some kind of "done" button when the user has selected the emoji they want.
 
 Text, images, and emoji can all be included in one item. If the amount of content per row is too large to fit onto an item wedge clearly, it is acceptable for it to disappear at the dial center and the wedge arc edge. The user will learn how best to create items through this inferior use experience.
+					
+
+``SPIN: SPIN``
+		(12.3.3) "Spin"
+			(12.3.3.1) Following the phrase "Spin" is a toggle.
+				(12.3.3.1.1) The toggle's default position is on.
+					(12.3.3.1.1.1) The toggle should include the words "On" and "Off"
+					(12.3.3.1.1.2) These words should be strings so they can be translated.
+			(12.3.3.2) If the setting is toggled on, activating the Spin button will cause a spin animation.
+			(12.3.3.3) If the setting is toggled off, activating the Spin button does not cause a spin animation.
+				(12.3.3.3.1) The result of that spin is immediately displayed.
+
+``SPIN: ANNOUNCE``
+		(12.3.4) "Announce"
+			(12.3.4.1) Following the phrase "Announce" is a toggle.
+				(12.3.4.1.1) The toggle's default position is off.
+					(12.3.4.1.1.1) The toggle should include the words "On" and "Off"
+					(12.3.4.1.1.2) These words should be strings so they can be translated.
+			(12.3.4.2) If the setting is toggled on:
+				(13.3.4.2.1) A smooth animation enlarges the randomized item selection to be displayed to the side of the spin dial.
+					(13.3.4.2.1.1) The item is displayed at 10f its size on the spin dial.
+					(13.3.4.2.1.2) Enlargement should not pixelate text, emoji, or images.
+					(13.3.4.2.1.3) This enlargement is an estimate and will need to be revised following trial and error.
+				(13.3.4.2.2) The announcement remains on the screen until the user taps the screen.
+			(12.3.4.3) If the setting is toggled off, no enlargement occurs after a spin.
+
+``SPIN: CELEBRATE``
+		(12.3.5) "Celebrate"
+			(12.3.5.1) This setting is only active when Announce is active.
+				(12.3.5.1.1)
+			(12.3.5.2) Following the phrase "Celebrate" is a toggle.
+				(12.3.5.2.1) The toggle's default position is off.
+					(12.3.5.2.1.1) The toggle should include the words "On" and "Off"
+					(12.3.5.2.1.2) These words should be strings so they can be translated.
+			(12.3.5.3) If the setting is toggled on.
+
+``SPIN: SEQUENCE``
+		(12.3.6) "Sequence"
+			(12.3.6.1) Following the phrase "Sequence" is a toggle.
+				(12.3.6.1.1) The toggle's default position is off.
+					(12.3.6.1.1.1) The toggle should include the words "On" and "Off"
+					(12.3.6.1.1.2) These words should be strings so they can be translated.
 
 
-(14) Spin: on/off toggle. The default is on. If this is turned off, the selection happens immediately without animating the dial spin. The order of items changes so that the selected item is in the wedge with the selection arrow.
+
 
 
 (15) Announce: on/off toggle. The default is off. If this is turned on, the text/image/emoji selected is displayed beside the spin dial. (48) A graceful animation takes it from the size it appears on the dial to a much bigger display (a specific size will require some trial and error).
