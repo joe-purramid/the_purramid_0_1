@@ -75,7 +75,7 @@ Ranodmizers is a collection of four different randomization tools: Spin, Slots, 
         (5.4.1) The marquee arrow default state is ic_arrow_drop_down.xml.
         (5.4.2) The marquee arrow active state is ic_arrow_drop_up.xml
     (5.5) A selection arrow appears on the side of the spin dial
-        (5.5.1) It appears on the right side of the dial for left-to-right languages, using ic_arrow_left.xml
+        (5.5.1) It appears on the right side of the dial for left-to-right languages, using using ic_arrow_right.xml
         (5.5.2) It appears on the left side of the dial for right-to-left languages, using ic_arrow_right.xml
         (5.5.3) The selection arrow points at the randomized item selection.
     (5.6) An item can be text, an emoji, an image, or a combination of the three.
@@ -89,10 +89,45 @@ Ranodmizers is a collection of four different randomization tools: Spin, Slots, 
 (6) ``SLOTS UI``
     (6.1) "Slots" is three adjacent rectangles contained within one larger container rectangle.
 		(6.1.1) This is meant to mirror the design of a slot machine, as seen in this image: https://media.istockphoto.com/id/1408111718/vector/%C3%B0%C3%B0%C3%B1-%C3%B0%C3%B0%C3%B1%C3%B0%C2%B5%C3%B1%C3%B0%C3%B0%C2%B5%C3%B1%C3%B0.jpg?s=612x612&w=0&k=20&c=Je7yR0NLeB_befulI4C354Z6WMRRQZhX8209TzZL6qc=
-		(6.1.2) 
+		(6.1.2) Minimum and maximum values are the same as (5.1)
+		(6.1.3) There is one rectangle for every item on a list.
+	(6.2) Each rectangle has a diferent color.
+		(6.2) The rules for these colors are the same as (5.2).
+	(6.3) Above each rectangle is a marquee.
+		(6.3.1) Each marquee is placed on top of the containing rectangle.
+		(6.3.2) These marquees are the same as (5.3) and (5.4).
+	(6.4) A right-facing selectcion arrow appears on the left side of the containing rectangle, using ic_arrow_right.xml.
+		(6.4.1) This arrow aligns with the randomized selections.
+		(6.4.2) This arrow aligns with the left-facing selection arrow.
+	(6.5) A left-facing selection arrow appears on the right side of the containing angle, using ic_arrow_right.xml.
+		(6.5.1) This arrow aligns with the randomized selections.
+		(6.5.2) This arrow aligns with the right-facing selection arrow.
+    (6.6) An item can be text, an emoji, an image, or a combination of the three.
+    (6.7) A spin button appears below the slots container rectangle.
+        (5.7.1) Default icon state uses ic_spin.xml.
+        (5.7.2) Active state: Programmatically change fill colors for default state icons to #808080.
 
 (7) ``DICE UI``
-    (7.1) 
+    (7.1) "Dice" is a collection of polyhedrals called a "dice pool"
+		(7.1.1) A die type is colloqually abbreviated as d*
+			(7.1.1.1) For example a six-died die would be called a d6.
+		(7.1.2) Available dice are:
+			(7.1.2.1) d4
+			(7.1.2.2) d6
+			(7.1.2.3) d8
+			(7.1.2.4) d10
+			(7.1.2.5) d%
+				(7.1.2.5.1) This refers to percentile dice.
+					(7.1.2.5.2) Percentile dice are two d10 dice.
+						(7.1.2.5.2.1) The "ones" die uses numbers from 0 to 9
+						(7.1.2.5.2.2) The "tens" die adds a 0 following the 0-9 numbers
+							(7.1.2.5.2.2.1) For example, a 1 on a "ones" d10 is 10 on a "tens" d10.
+						(7.1.2.5.2.3) A percentile role displays as a sum of the two dice.
+							(7.1.2.5.2.3.1) For example, a roll of a 10 and a 1 is a roll of an 11.
+							(7.1.2.5.2.3.2) 00+0 equals 100 and not 0.
+				(7.1.2.5.2) Percentile dice are only included in the dice pool if they are turned on in the settings.
+			(7.1.2.6) d20
+	
 
 (8) ``COIN FLIP UI``
     (8.1) 
@@ -190,14 +225,14 @@ Ranodmizers is a collection of four different randomization tools: Spin, Slots, 
 					(12.3.2.2.2.1) A back arrow in the top left corner of the window. 
 						(12.3.2.2.2.1.1) Default icon state uses ic_back.xml.
 						(12.3.2.2.2.1.2) Active state: Programmatically change fill colors for default state icons to #808080.
-						(12.3.2.2.2.1.3) When activated the Adjust Values window closes.
+						(12.3.2.2.2.1.3) When activated the list collection editor window closes.
 							(12.3.2.2.2.1.3.1) The user returns to the main settings window.
 					(12.3.2.2.2.2) A close button in the top right corner of the window.
 						(12.3.2.2.2.2.1) Default icon state uses ic_close.xml.
 						(12.3.2.2.2.2.2) Active state: Programmatically change fill colors for default state icons to #808080.
 						(12.3.2.2.2.2.3) When activated all settings related windows close.
 					(12.3.2.2.2.3) A list of each list title, ordered alphanumerically.
-						(12.3.2.2.2.3.1) There re six pregenerated lists:
+						(12.3.2.2.2.3.1) There are six pregenerated lists:
 							(12.3.2.2.3.1.1) "Colors"
 								(12.3.2.2.3.1.1.1) List items are strings to be translated.
 								(12.3.2.2.3.1.1.2) List items are: "Red", "Orange", "Yellow", "Green", "Blue", and "Purple"
@@ -229,7 +264,7 @@ Ranodmizers is a collection of four different randomization tools: Spin, Slots, 
 						(12.3.2.2.2.5.2) Active state: Programmatically change fill colors for default state icons to #808080.
 						(12.3.2.2.2.5.3) Tapping the Delete button
 							(12.3.2.2.2.5.3.1) Causes the icon to become active
-							(12.3.2.2.2.5.3.2) Opens the snackbar, "Are you sure you want to delete this list? It cannot be undone."
+							(12.3.2.2.2.5.3.2) Opens the snackbar, "Are you sure you want to delete this? It cannot be undone."
 								(12.3.2.2.5.3.2.1) There is an oval with the string "Cancel"
 									(12.3.2.2.5.3.2.1.1) This oval has no fill.
 								(12.3.2.2.5.3.2.2) There is an oval with the string "Delete".
@@ -249,14 +284,18 @@ Ranodmizers is a collection of four different randomization tools: Spin, Slots, 
 										(13.2.3.3.5.3.4.3.2) This list will not be loaded again on future launches.
 						(12.3.2.2.2.5.4) Pregenerated lists can be deleted.
 							(12.3.2.2.2.5.4.1) This is most likely to happen for non-English speakers who will choose to replace consonants and vowels from their own languages.
-			(12.3.2.3) Tapping the phrase "List Editor" or the edit icon, opens the list item editor:
-				(12.3.2.3.1) The list item editor window opens overtop the settings window.
+			(12.3.2.3) Tapping the list title opens the list item editor:
+				(12.3.2.3.1) The list item editor window opens overtop the previous window.
 				(12.3.2.3.2) This window includes:
 					(12.3.2.3.2.1) A back arrow in the top left corner of the window. 
 						(12.3.2.3.2.1.1) Default icon state uses ic_back.xml.
 						(12.3.2.3.2.1.2) Active state: Programmatically change fill colors for default state icons to #808080.
-						(12.3.2.3.2.1.3) When activated the Adjust Values window closes.
+						(12.3.2.3.2.1.3) When activated the list item editor window closes.
 							(12.3.2.3.2.1.3.1) The user returns to the main settings window.
+							(12.3.2.3.2.1.3.2) If the user attempts to move back with an incomplete list:
+								(12.3.2.3.2.1.3.2.1) If there is a title but no items, a snackbar opens with the message, "A list must have at least two items to be created. Please add items or cancel this list creation."
+								(12.3.2.3.2.1.3.2.2) If there are items but not title, a snackbar opens with the message, "Please add a title to save this list."
+								(12.3.2.3.2.1.3.2.1) If there is a title and one item, the same snackbar from (12.3.2.3.2.1.3.2.1) opens.
 					(12.3.2.3.2.2) A close button in the top right corner of the window.
 						(12.3.2.3.2.2.1) Default icon state uses ic_close.xml.
 						(12.3.2.3.2.2.2) Active state: Programmatically change fill colors for default state icons to #808080.
@@ -267,53 +306,89 @@ Ranodmizers is a collection of four different randomization tools: Spin, Slots, 
 					(12.3.2.3.2.4) Below the title text field is 
 						(12.3.2.3.2.4.1) a discrete row for each item if the list has already been populated with one or more items.
 							(12.3.2.3.2.4.1.1) Each item is displayed in its own text field
-								(12.3.2.3.2.4.1.1.1) At the end of each text field is:
-									(12.3.2.3.2.4.1.2.1) An emoji icon button
-										(12.3.2.3.2.4.1.2.1.1) Default state ic_emoji.xml
-										(12.3.2.3.2.4.1.2.1.2) Active state: Programmatically change fill colors for default state icons to #808080.
-										(12.3.2.3.2.4.1.2.1.3) If emoji is activated, open an emoji library
-											(12.3.2.3.2.4.1.2.1.3.1) The library closes after one emoji is selected.
-											(12.3.2.3.2.4.1.2.1.3.2) No more than 10 emoji can be added per line.
-									(12.3.2.3.2.4.1.2.2) An image icon button
-										(12.3.2.3.2.4.1.2.2.1) Default state ic_image.xml
-										(12.3.2.3.2.4.1.2.2.2) Active state: Programmatically change fill colors for default state icons to #808080.
-										(12.3.2.3.2.4.1.2.2.3) If image upload is activated, open system window to upload an image
-											(12.3.2.3.2.4.1.2.2.3.1) Supported images are png, jpg, gif, bmp, and webp.
-											(12.3.2.3.2.4.1.2.2.3.2) No more than 1 emoji can be added per line.
-											(12.3.2.3.2.4.1.2.2.3.3) An image cannot be larger than 1 MB in size
-												(12.3.2.3.2.4.1.2.2.3.3.1) 
+								(12.3.2.3.2.4.1.1.1) Tapping an item opens the system keyboard.
 							(12.3.2.3.2.4.1.2) Items are ordered alphanumerically 
-						(12.3.2.3.2.4.2) a large rectangular text field if list items do not already exist.
-							(12.3.2.3.2.4.2.1)This would be the size of five list title rows in the list collection edtior view.
-							(12.3.2.3.2.4.2.2) In the top right corner of this text field is:
-								(12.3.2.3.2.4.2.2.1) An emoji icon button
-									(12.3.2.3.2.4.2.2.1.1) This follows the same rules as (12.3.2.3.2.4.1.2.1)
-								(12.3.2.3.2.4.2.2.2) An image icon button
-									(12.3.2.3.2.4.2.2.2.1) This follows the same rules as (12.3.2.3.2.4.1.2.2)
-
-
-
-(22) List Editor refers to the List view. List creator is the view where list details can be added, edited or deleted. When clicking on a list title or "Add New List", the list creator view opens above the List Editor view. It includes a back button that returns the user to the List Editor and a close button that closes the settings entirely. The list creator is a series of rectangles similar to the stacked lists from the list editor. Set above and apart from the others is a (29) title text field. It displays the string "Text Title" in dark gray text. When the user taps this box, the system keyboard opens and "text title" disappears. They should never need to delete this phrase. Hitting "enter" on the system keyboard confirms the text entry and closes the system keyboard. (30) A list cannot be saved without a title. If list items are entered but no title, the list cannot be saved.
-
-Below the title rectangle is (31) a single, large text field (paragraph sized). Tapping in this field opens the system keyboard. The user can type text into the field. The return button creates a new row. (32) Tap-and-hold in this field will bring up a "Paste" prompt. If selected, any text on the clipboard is pasted into the field. (33) After 1.5 seconds, if no further input has been made, each row of text displays in its own rectangle. The text of the item followed immediately by a (34) pre-assigned color square with a black outline. This is the wedge color from (5). On the right side of the item rows are three icon buttons: (35) an image, (36) an emoji, and (37) a trash can. The trash can functions the same as the delete button from (21) List editor, but with language for an item rather than a list.
-
-Tapping on the item text opens the system keyboard in the same fashion as (30). A cursor appears at the point touched. It can be moved by touching elsewhere in the text field. Touch-and-hold selects the entire word and the standard Android cut/copy/paste options appear. (31) Text fields may not contain more than 27 characters. If a user pastes text in the large text field with more than 27 characters per row, the 27th character is replaced with an ellipsis. Characters 28 and beyond of that row are deleted.
-
-(34) Assigned colors are  assigned programmatically with a color picker library, ensuring this new color meets WCAG 2.2 AA contrast requirements even if the color of the item above it is custom. If the user taps the color squre, (38) it acts like a button.
-
-(38) Tapping on the color square opens a color selector. it has the title "Background Color" atop a standard color wheel. Beside the wheel is a preview rectangle of the chosen color and the stanadrd RGB and Hex code text fields. It overrides any contrast requirements from auto-assigned colors. (39) Beneath the color wheel are six circles with black outlines that show the six most recent custom colors. These are called "color pots". Beneath the color pots is an (40) "Apply" button. This button closes the color selector and applies that color the the item. The color square beside the item text now shows the custom color.
-
-(39) A newly applied color will fill the leftmost color pot the next time the color selector is opened. Older colors move down the row toward the right. If fewer than six custom colors have been chosen, the remaining color pots have a white fill. If more than six custom colors have been chosen, the oldest is forgotten. If a custom color is selected, a blue "selection circle" encircles the color pot and that color is shown in the color preview rectangle. If a custom color is applied from the row, it moves back to the leftmost circle the next time the color selector is opened.
-
-
-(41) The last rectangle of the items list is empty. It says "Add another item" in the same gray text as was used in the (29) list title. The same beahvior applies that tapping this box opens the system keyboard and the "add another item" text disappears. The enter button on the keyboard confirms the text as a new item. When the user reaches 44 items, the add another rectangle is hidden.
-
-(35) If the user taps on the image button, this opens a file selector where the user can upload one jpg, png, gif, bmp, or webp file. (42) A list item can only include one image. (43) If the user taps the image button again, they receive a warning snackbar that says, "This action will replace your existing image. Would you like to continue?" It should have cancel and continue buttons in the same design style as (21). Uploaded images (44) maintain their aspect ratios. They are not stretched. They are reduced to fit on the dial, but they should not be shrunk so that they distort when shown as an announcement result. (45) If an image is 1 MB or larger, the user should receive a warning window that says "This image is too large. Would you like to optimize it?" This includes Cancel and Optimize buttons in the same design style as (21). If the user chooses Optimize, the image should be shrunk so that it's size is 900 kB or less.
-
-(36) If the user taps on the emoji button, it opens an emoji library that shows a list of emoji that are free to use without license. (46) The user can add ten or fewer emoji per item. (47) There will need to be some kind of "done" button when the user has selected the emoji they want.
-
-Text, images, and emoji can all be included in one item. If the amount of content per row is too large to fit onto an item wedge clearly, it is acceptable for it to disappear at the dial center and the wedge arc edge. The user will learn how best to create items through this inferior use experience.
-					
+						(12.3.2.3.2.4.2) Each item row also includes
+							(12.3.2.3.2.4.2.1) a color square
+								(12.3.2.3.2.4.2.1.1) it immediately follows the text/emoji/image of an item
+								(12.3.2.3.2.4.2.1.2) its outline is black
+								(12.3.2.3.2.4.2.1.3) its fill is programmatically generated from a color picker library to ensure WCAG 2.2 AA contrast standards are met.
+								(12.3.2.3.2.4.2.1.4) If a user taps the color square, it opens a color selector.
+									(12.3.2.3.2.4.2.1.4.1) The color selector displays:
+										(12.3.2.3.2.4.2.1.4.1.1) The title "Background Color" at the top of the selector view.
+										(12.3.2.3.2.4.2.1.4.1.2) A color wheel
+											(12.3.2.3.2.4.2.1.4.1.2.1) Tapping anywhere on this wheel changes to the color to the one tapped.
+										(12.3.2.3.2.4.2.1.4.1.3) Text fields that show:
+											(12.3.2.3.2.4.2.1.4.1.3.1) RGB values of the current color
+											(12.3.2.3.2.4.2.1.4.1.3.2) Hex code values of the current color
+											(12.3.2.3.2.4.2.1.4.1.3.3) These values change when the color change in (12.3.2.3.2.4.2.1.4.1.2.1)
+											(12.3.2.3.2.4.2.1.4.1.3.4) Changing these values changes the color selected in (12.3.2.3.2.4.2.1.4.1.2.1)
+										(12.3.2.3.2.4.2.1.4.1.4) HSL sliders
+											(12.3.2.3.2.4.2.1.4.1.4.1) Dragging the value on the hue, saturation, or lightness slider applies that change to the color.
+										(12.3.2.3.2.4.2.1.4.1.5) Color "Pots"
+											(12.3.2.3.2.4.2.1.4.1.5.1) Below the sliders are six circles.
+												(12.3.2.3.2.4.2.1.4.1.5.1.1) Each circle has a black outline.
+												(12.3.2.3.2.4.2.1.4.1.5.1.2) A circle's fill matches a previous color used.
+													(12.3.2.3.2.4.2.1.4.1.5.1.2.1) The left-most circle fill is the most recently color used.
+													(12.3.2.3.2.4.2.1.4.1.5.1.2.2) Moving left-to-right, fills are colors that were used one time previous to the one to its left.
+														(12.3.2.3.2.4.2.1.4.1.5.1.2.2.1) Pots fill right-to-left rather than left-to-right for right-to-left languages.
+													(12.3.2.3.2.4.2.1.4.1.5.1.2.3) A color does not appear twice in the color pots. Anytime it is used, it moves to the left-most position.
+													(12.3.2.2.2.4.2.1.4.1.5.1.2.4) If not enough colors have been assigned to fill all six pots, empty pots have no fill.
+										(12.3.2.3.2.4.2.1.4.1.6) The bottom of the color includes two buttons.
+											(12.3.2.3.2.4.2.1.4.1.6.1) Cancel
+											(12.3.2.3.2.4.2.1.4.1.6.2) Continue
+											(12.3.2.3.2.4.2.1.4.1.6.3) These use the same design style as (12.3.2.2.2.5.3.2).
+											(12.3.2.3.2.4.2.1.4.1.6.4) If the user chooses Continue
+												(12.3.2.3.2.4.2.1.4.1.6.4.1) The chosen color populates the left-most color pot.
+												(12.3.2.3.2.4.2.1.4.1.6.4.2) The color picker window closes
+												(12.3.2.3.2.4.2.1.4.1.6.4.3) The color square on the item row matches the color selected.
+								(12.3.2.3.2.4.2.1.5) User selected colors do not have to conform to WCAG color constrast standards.
+									(12.3.2.3.2.4.2.1.5.1) Automatically generated colors following this list item will use it to determine contrast.
+							(12.3.2.3.2.4.2.2) a delete button, at the very end of the row
+								(12.3.2.3.2.4.2.2.1) This has the same behavior as (12.3.2.2.2.5).
+							(12.3.2.3.2.4.2.3) an image button adjacent to the delete button
+								(12.3.2.3.2.4.2.3.1) Default state ic_image.xml
+								(12.3.2.3.2.4.2.3.2) Active state: Programmatically change fill colors for default state icons to #808080.
+								(12.3.2.3.2.4.2.3.3) If image upload is activated, open system window to upload an image
+									(12.3.2.3.2.4.2.3.3.1) Supported images are png, jpg, gif, bmp, and webp.
+									(12.3.2.3.2.4.2.3.3.2) No more than 1 emoji can be added per line.
+									(12.3.2.3.2.4.2.3.3.3) An image cannot be larger than 1 MB in size
+										(12.3.2.3.2.4.2.3.3.3.1) If a user attempts to upload an image larger than 1MB, a snackbar opens with the warning "This image is too large. Would you like to optimize it?"
+											(12.3.2.3.2.4.2.3.3.3.1.1) The snackbar includes a Cancel button
+											(12.3.2.3.2.4.2.3.3.3.1.2) The snackbar includes an Optimize button
+											(12.3.2.3.2.4.2.3.3.3.1.3) These use the same design style as (12.3.2.2.2.5.3.2).
+											(12.3.2.3.2.4.2.3.3.3.1.4) If the user chooses Optimize, the image is compressed so that it's size is 900 kB or less.
+										(12.3.2.3.2.4.2.3.3.3.2) If the user taps the image button again, they receive a warning snackbar that says, "This action will replace your existing image. Would you like to continue?" 
+											(12.3.2.3.2.4.2.3.3.3.2.1) The snackbar includes a Cancel button
+											(12.3.2.3.2.4.2.3.3.3.2.2) The snackbar includes a Continue
+											(12.3.2.3.2.4.2.3.3.3.2.3) These use the same design style as (12.3.2.2.2.5.3.2).
+											(12.3.2.3.2.4.2.3.3.3.2.4) If the user chooses Continue, the previous image is replaced with the new upload.
+							(12.3.2.3.2.4.2.4) an emoji button adjacent to the image button
+								(12.3.2.3.2.4.2.4.1) Default state ic_emoji.xml
+								(12.3.2.3.2.4.2.4.2) Active state: Programmatically change fill colors for default state icons to #808080.
+								(12.3.2.3.2.4.1.2.1.3) If emoji is activated, open an emoji library
+									(12.3.2.3.2.4.1.2.1.3.1) The library is license free.
+									(12.3.2.3.2.4.1.2.1.3.2) The library closes after one emoji is selected.
+										(12.3.2.3.2.4.1.2.1.3.2.1) TODO: Confirm this is standard behavior.
+									(12.3.2.3.2.4.1.2.1.3.3) No more than 10 emoji can be added per line.
+						(12.3.2.3.2.4.3) A row with the string "Add an Item"
+							(12.3.2.3.2.4.3.1) This row always appears last.
+							(12.3.2.3.2.4.3.2) This row does not appear if there are 44 list items.
+							(12.3.2.3.2.4.3.3) Tapping on this row opens a large rectangular text field if list items do not already exist.
+								(12.3.2.3.2.4.3.3.1)This would be the size of five list title rows in the list collection edtior view.
+								(12.3.2.3.2.4.3.3.2) In the top right corner of this text field is:
+									(12.3.2.3.2.4.3.3.2.1) An emoji icon button
+										(12.3.2.3.2.4.3.3.2.1.1) This follows the same rules as (12.3.2.3.2.4.1.2.1)
+									(12.3.2.3.2.4.3.3.2.2) An image icon button
+										(12.3.2.3.2.4.3.3.2.2.1) This follows the same rules as (12.3.2.3.2.4.1.2.2)
+								(12.3.2.3.2.4.3.3.3) Tapping the text field opens the system keyboard
+									(12.3.2.3.2.4.3.3.3.1) The return key creates a new row. It does not close the system keyboard.
+								(12.3.2.3.2.4.3.3.4) If the user press-hold until a paste prompt appears, they can post their entire list if it is already on the Android clipboard.
+								(12.3.2.3.2.4.3.3.5) Each line of the text field is considered its own item.
+									(12.3.2.3.2.4.3.3.5.1) Text, emoji, and an image can all appear on the same line.
+								(12.3.2.3.2.4.3.3.6) 1.5 seconds content is added to the text field, if no new input is made:
+									(12.3.2.3.2.4.3.3.6.1) the text field closes.
+									(12.3.2.3.2.4.3.3.6.2) Text/emoji/images in the text field are distributed into individual lists.
 
 ``SPIN: SPIN``
 		(12.3.3) "Spin"
@@ -342,47 +417,62 @@ Text, images, and emoji can all be included in one item. If the amount of conten
 ``SPIN: CELEBRATE``
 		(12.3.5) "Celebrate"
 			(12.3.5.1) This setting is only active when Announce is active.
-				(12.3.5.1.1)
 			(12.3.5.2) Following the phrase "Celebrate" is a toggle.
 				(12.3.5.2.1) The toggle's default position is off.
 					(12.3.5.2.1.1) The toggle should include the words "On" and "Off"
 					(12.3.5.2.1.2) These words should be strings so they can be translated.
-			(12.3.5.3) If the setting is toggled on.
+			(12.3.5.3) If Celebrate is toggled on:
+				(12.3.5.3.1) when Announce is toggled off, Announce is also toggled on.
+					(12.3.5.3.1.1) If Celebrate is then toggled off, Announce remains toggled on.
+				(12.3.5.3.2) A confetti animation displays above the announced result for 3.0 seconds
+					(12.5.3.2.1) Use the Konfetti animation
+					(12.5.3.2.2) Use the following colored confetti:
+						(12.5.3.2.2.1) confetti_piece_blue.xml
+						(12.5.3.2.2.3) confetti_piece_green.xml
+						(12.5.3.2.2.3) confetti_piece_red.xml
+						(12.5.3.2.2.4) confetti_piece_violet.xml
+						(12.5.3.2.2.5) confetti_piece_yellow.xml
 
 ``SPIN: SEQUENCE``
 		(12.3.6) "Sequence"
-			(12.3.6.1) Following the phrase "Sequence" is a toggle.
-				(12.3.6.1.1) The toggle's default position is off.
-					(12.3.6.1.1.1) The toggle should include the words "On" and "Off"
-					(12.3.6.1.1.2) These words should be strings so they can be translated.
-
-
-
-
-
-(15) Announce: on/off toggle. The default is off. If this is turned on, the text/image/emoji selected is displayed beside the spin dial. (48) A graceful animation takes it from the size it appears on the dial to a much bigger display (a specific size will require some trial and error).
-
-
-(16) Celebrate: on/off toggle. The default is off. (49) This setting is only active if Announce is turned on. If Announce is toggled off, this setting is inactive and shown as gray. If this is turned on, a confetti (Konfetti) animation plays for 3.0 seconds above the announced selecxtion. (50) confetti_piece_*.xml files have been created for the different colors of confetti pieces.
-
-
-(17) Sequence: on/off toggle. The default is off. If this is turned on, (51) Announce and Celebrate cannot be on. If they were already on, they are turned off and become inactive and turn gray. (52) When this is on, the dial spins for 1 second for every ten items in the list (rounded up). When the spin animation is complete, the item from the wedge with the selection arrow on the dial is the first of a randomized results list (it does not follow the order of the items on the list). It appears beside the dial (similar to (15) Announce). (53) Beside it are up- and down-facing triangle buttons. (54) Below this item are the next four items in the list. They appear smaller. If the user taps the down-facing arrow, the current term moves up and gets smaller. The next in the order moves up and gets larger. Nine total items can appear beside the dial, the active item, four before it, and four after it. When the user has navigated to the end of the list, terms only appear above it. (53) The up arrow cannot be used if no items are above the current one. The down arrow cannot be used if no items are below the current one. (55) Clicking the spin button creates an entirely new randomized list, beginning at the first term again. Changing the list from the marquee drop-down removes any sequence currently displayed.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+			(12.3.6.1) This setting is only active when Announce is toggled off.
+			(12.3.6.2) Following the phrase "Sequence" is a toggle.
+				(12.3.6.2.1) The toggle's default position is off.
+					(12.3.6.2.1.1) The toggle should include the words "On" and "Off"
+					(12.3.6.2.1.2) These words should be strings so they can be translated.
+			(12.3.6.3) If Sequence is toggled on:
+				(12.3.6.1) when Announce is on, Announce is toggled off
+				(12.3.6.2) when Celebrate is on, Celebrate is toggled off
+				(12.3.6.3) a spin animation lasts for 1 second for every 10 items on a list (rounded up to the next second)
+				(12.3.6.4) a randomized order is created for each item on the list 
+				(12.3.6.5) the first result in the sequence is displayed where one result is displayed for Announce.
+					(12.3.6.4.1) This is referred to as "the displayed result"
+					(12.3.6.4.2) Below the displayed result are the next three results in the sequence
+						(12.3.6.4.2.1) They appear smaller than the first result displayed.
+				(12.3.6.6) Beside the sequenced results are
+					(12.3.6.6.1) An up arrow.
+						(12.3.6.6.1.1) Default state: ic_arrow_drop_up.xml
+						(12.3.6.6.1.2) Active state: Programmatically change fill colors for default state icons to #808080
+					(12.3.6.6.2) A down arrow.
+						(12.3.6.6.2.1) Default state: ic_arrow_drop_down.xml
+						(12.3.6.6.2.2) Active state: Programmatically change fill colors for default state icons to #808080
+				(12.3.6.7) If the user taps the down arrow:
+					(12.3.6.7.1) The down arrow is activated for the duration of the onTouch event
+					(12.3.6.7.2) The displayed result moves up with a smooth animation.
+						(12.3.6.7.2.1) It appears smaller like the items below the displayed result.
+					(12.3.6.7.3) The next item in the sequence moves up with a smooth animation. It is now the displayed result.
+					(12.3.6.7.4) If the list has more than four items, the next item in the sequence that had not been visible now becomes the last item shown below the displayed result.
+						(12.3.6.7.4.1) No more than three items appear below the displayed result.
+						(12.3.6.7.4.2) No more than three items appear above the displayed result.
+					(12.3.6.7.5) If the displayed result is the last item in the sequence, tapping the down button yields no result 
+				(12.3.6.8) If the user taps the up arrow:
+					(12.3.6.8.1) The up arrow is activated for the duration of the onTouch event.
+					(12.3.6.8.2) The displayed result moves down with a smooth animation.
+					(12.3.6.8.3) The previous item in the sequence moves down with a smooth animation. It is now the displayed result.
+					(12.3.6.8.4) If the displayed result is the first item in the sequence, tapping the up button yields no result.
+				(12.3.6.9) Pressing the spin button creates an entirely new sequence.
+				(12.3.6.10) Changing the list that is displayed on the spin dial clears the displayed sequence
+					(12.3.6.10.1) A new sequence is not created until the user presses the spin button.
 
 
 (10) ``SLOTS``
