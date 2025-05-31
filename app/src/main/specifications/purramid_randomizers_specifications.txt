@@ -89,8 +89,9 @@ Ranodmizers is a collection of four different randomization tools: Spin, Slots, 
 (6) ``SLOTS UI``
     (6.1) "Slots" is three adjacent rectangles contained within one larger container rectangle.
 		(6.1.1) This is meant to mirror the design of a slot machine, as seen in this image: https://media.istockphoto.com/id/1408111718/vector/%C3%B0%C3%B0%C3%B1-%C3%B0%C3%B0%C3%B1%C3%B0%C2%B5%C3%B1%C3%B0%C3%B0%C2%B5%C3%B1%C3%B0.jpg?s=612x612&w=0&k=20&c=Je7yR0NLeB_befulI4C354Z6WMRRQZhX8209TzZL6qc=
-		(6.1.2) Minimum and maximum values are the same as (5.1)
-		(6.1.3) There is one rectangle for every item on a list.
+		(6.1.2) Each item rectangle may be called a "column", as the three rectangles act like three columnar lists.
+		(6.1.3) Minimum and maximum values are the same as (5.1)
+		(6.1.4) There is one rectangle for every item on a list.
 	(6.2) Each rectangle has a diferent color.
 		(6.2) The rules for these colors are the same as (5.2).
 	(6.3) Above each rectangle is a marquee.
@@ -108,29 +109,82 @@ Ranodmizers is a collection of four different randomization tools: Spin, Slots, 
         (5.7.2) Active state: Programmatically change fill colors for default state icons to #808080.
 
 (7) ``DICE UI``
-    (7.1) "Dice" is a collection of polyhedrals called a "dice pool"
+    (7.1) "Dice" is a collection of polyhedrals called a "dice pool" that are randomized
 		(7.1.1) A die type is colloqually abbreviated as d*
 			(7.1.1.1) For example a six-died die would be called a d6.
 		(7.1.2) Available dice are:
-			(7.1.2.1) d4
-			(7.1.2.2) d6
-			(7.1.2.3) d8
-			(7.1.2.4) d10
-			(7.1.2.5) d%
+			(7.1.2.1) d4 (d4_result_blank.xml)
+			(7.1.2.2) d6 (d6_result_blank.xml)
+			(7.1.2.3) d8 (d8_result_blank.xml)
+			(7.1.2.4) d10 (d10_result_blank.xml)
+			(7.1.2.5) d% (dp_result_blank.xml)
 				(7.1.2.5.1) This refers to percentile dice.
 					(7.1.2.5.2) Percentile dice are two d10 dice.
-						(7.1.2.5.2.1) The "ones" die uses numbers from 0 to 9
-						(7.1.2.5.2.2) The "tens" die adds a 0 following the 0-9 numbers
+						(7.1.2.5.2.1) The "ones" die uses numbers from 0 - 9
+						(7.1.2.5.2.2) The "tens" die adds a 0 following the 0 - 9 numbers (00 - 90)
 							(7.1.2.5.2.2.1) For example, a 1 on a "ones" d10 is 10 on a "tens" d10.
 						(7.1.2.5.2.3) A percentile role displays as a sum of the two dice.
 							(7.1.2.5.2.3.1) For example, a roll of a 10 and a 1 is a roll of an 11.
 							(7.1.2.5.2.3.2) 00+0 equals 100 and not 0.
 				(7.1.2.5.2) Percentile dice are only included in the dice pool if they are turned on in the settings.
-			(7.1.2.6) d20
-	
+			(7.1.2.6) d20 (d20_result_blank.xml)
+		(7.1.3) Each die type can have a maximum of 10 dice.
+	(7.2) Dice are displayed in the window 
+		(7.2.1) grouped by die type.
+			(7.2.1.1) All d4s are together, all d6s are together, and so on.
+			(7.2.1.2) Percentile dice are not mixed with d10s.
+		(7.2.2) spaced so that each group is distinct from the others.
+			(7.2.2.1) Two die types would appear horizontally in the center of the window with a large amount of space between them.
+			(7.2.2.2) Three die types would loosely form a triangle.
+			(7.2.2.3) Four die types would loosely form a rectangle
+			(7.2.2.4) Five die types would loosely form a pentagon
+			(7.2.2.5) Six die types woudl loosely form a hexagon.
+			(7.2.2.6) This shapes do not need to be exact, but offer a simple model for how to ensure space is availabe between each group of dice.
+	(7.3) Below the display area are three buttons
+		(7.3.1) Roll
+			(7.3.1.1) Default icon state uses ic_spin.xml.
+			(7.3.1.2) Active state: Programmatically change fill colors for default state icons to #808080.
+		(7.3.2) Reset
+			(7.3.2.1) Default icon state uses ic_reset.xml.
+			(7.3.2.2) Active state: Programmatically change fill colors for default state icons to #808080.
+		(7.3.3) Dice Pool
+	        (7.3.3.1) Default icon state uses ic_dice_pool.xml.
+			(7.3.3.2) Active state: Programmatically change fill colors for default state icons to #808080.
+
 
 (8) ``COIN FLIP UI``
-    (8.1) 
+    (8.1) "Coin Flip" is a collection of coins called a "coin pool" that are randomized.
+		(8.1.1) Coins use imaginary currency
+			(8.1.1.1) "Bits" are the equivalent of cents.
+			(8.1.1.2) "Meatballs" are the equivalent of dollars.
+		(7.1.2) Available coins are:
+			(7.1.2.1) b1 (b1_coin_flip_heads.xml and b1_coin_flip_tails.xml)
+			(7.1.2.2) b5 (b5_coin_flip_heads.xml and b5_coin_flip_tails.xml)
+			(7.1.2.3) b10 (b10_coin_flip_heads.xml and b10_coin_flip_tails.xml)
+			(7.1.2.4) b25 (b25_coin_flip_heads.xml and b25_coin_flip_tails.xml)
+			(7.1.2.5) mb1 (mb1_coin_flip_heads.xml and mb1_coin_flip_tails.xml)
+			(7.1.2.6) mb2 (mb2_coin_flip_heads.xml and mb2_coin_flip_tails.xml)
+		(7.1.3) Each coin type can have a maximum of 10 coins.
+	(7.2) Coins are displayed in the window 
+		(7.2.1) grouped by coin type.
+			(7.2.1.1) All b1s are together, all b5s are together, and so on.
+		(7.2.2) spaced so that each group is distinct from the others.
+			(7.2.2.1) Two coin types would appear horizontally in the center of the window with a large amount of space between them.
+			(7.2.2.2) Three coin types would loosely form a triangle.
+			(7.2.2.3) Four coin types would loosely form a rectangle
+			(7.2.2.4) Five coin types would loosely form a pentagon
+			(7.2.2.5) Six coin types woudl loosely form a hexagon.
+			(7.2.2.6) This shapes do not need to be exact, but offer a simple model for how to ensure space is availabe between each group of coins.
+	(7.3) Below the display area are three buttons
+		(7.3.1) Flip
+			(7.3.1.1) Default icon state uses ic_spin.xml.
+			(7.3.1.2) Active state: Programmatically change fill colors for default state icons to #808080.
+		(7.3.2) Reset
+			(7.3.2.1) Default icon state uses ic_reset.xml.
+			(7.3.2.2) Active state: Programmatically change fill colors for default state icons to #808080.
+		(7.3.3) Coin Pool
+	        (7.3.3.1) Default icon state uses ic_coin_pool.xml.
+			(7.3.3.2) Active state: Programmatically change fill colors for default state icons to #808080.
 
 
  --- USER EXPERIENCE ---
@@ -183,7 +237,8 @@ Ranodmizers is a collection of four different randomization tools: Spin, Slots, 
 			(11.2.2.2) If another randomizer already exists at the geometric center of the display screen, the new randomizer should appear in an offset position (e.g., +25px down and +25px right) from the centered randomizer.
 	(11.3) If four randomizers are already present on the screen, 
 		(11.3.1) The Add Another button is inactivated. Nothing happens if a user touches it.
-		(11.3.2) The icon fill and outline colors change. (TODO: Define specific hex colors for an inactive icon.)
+		(11.3.2) Dice mode allows seven instances to be created before Add Another is inactivated.
+		(11.3.3) The icon fill and outline colors change. (TODO: Define specific hex colors for an inactive icon.)
 
 (12) ``SPIN MODE SPECIFIC UX``
     (12.1) If a user taps the marquee (the (5.4) title or the (5.5) arrow):
@@ -207,7 +262,7 @@ Ranodmizers is a collection of four different randomization tools: Spin, Slots, 
 				(12.2.2.3.1) An item's number is determined by its order in the list.
 				(12.2.2.3.2) Only one number result is generated per spin.
 				(12.2.2.3.3) Each spin is a unique event, generating a new number result.
-			(12.2.2.4) When the animation complets, the randomly selected list item should align with the (5.5) selection arrow.
+			(12.2.2.4) When the animation completes, the randomly selected list item should align with the (5.5) selection arrow.
 			(12.2.2.5) If spinning is turned off in the settings, the dial immediately displays the result.
 
 ``SPIN MODE SETTINGS``
@@ -475,19 +530,37 @@ Ranodmizers is a collection of four different randomization tools: Spin, Slots, 
 					(12.3.6.10.1) A new sequence is not created until the user presses the spin button.
 
 
-(10) ``SLOTS``
-    (10.1) 
+(13) ``SLOTS MODE SPECIFIC UX``
+    (13.1) If a user taps any marquee (the (5.4) title or the (5.5) arrow):
+		(13.1.1) That marquee arrow changes to its active state with a smooth animation
+		(13.1.2) A drop-down menu opens that displays all the available lists.
+			(13.1.2.1) The drop-down menu opens with a smooth animation. 
+			(13.1.2.2) The active list appears first in the order.
+			(13.1.2.3) All other lists are ordered alphanumerically.
+		(13.1.3) The user can tap any list title to apply that list to that column
+			(13.1.3.1) The new list title replaces the existing list title in the marquee.
+				(13.1.3.1.1) The new title is bold font.
+			(13.1.3.2) The list items replace the existing list items on the spin dial.
+			(13.1.3.3) The drop-down menu closes with a smooth animation.
+			(13.1.3.4) The drop-down arrow returns to a default state with a smooth animation.
+			(13.1.3.5) The same list can be assigned to more than one column.
+	(13.2) If a user taps the (5.7) spin button:
+		(13.2.1) The spin button changes to its active state.
+		(13.2.2) The itemXXXXX rotates with a smooth animation for 2.0 seconds.
+			(13.2.2.1) The spin dial rotates clockwise for left-to-right languages.
+			(13.2.2.2) The spin dial rotates counter-clockwise for right-to-left languages.
+			(13.2.2.3) Use a pseudo-random number generator to select an item from the list.
+				(13.2.2.3.1) An item's number is determined by its order in the list.
+				(13.2.2.3.2) Only one number result is generated per spin.
+				(13.2.2.3.3) Each spin is a unique event, generating a new number result.
+			(13.2.2.4) When the animation completes, the randomly selected list item should align with the (5.5) selection arrow.
+			(13.2.2.5) If spinning is turned off in the settings, the dial immediately displays the result.
 
-(11) ``DICE``
-    (11.1) 
+(14) ``DICE SPECIFIC UX``
+    (14.1) 
 
-(12) ``COIN FLIP``
-    (12.1) 
-
-
-
- control buttons immediately below the randomization graphical interface. Controls differ between modes and are defined below for each.
-
+(15) ``COIN FLIP SPECIFIC UX``
+    (15.1) 
 
 
 
