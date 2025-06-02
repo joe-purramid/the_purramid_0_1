@@ -661,7 +661,7 @@ Ranodmizers is a collection of four different randomization tools: Spin, Slots, 
 				(14.5.2.1.1) If all die types have the same color, the color square fill matches that color.
 				(14.5.2.1.2) If different die types have different colors, the color square fill is rainbow swirl.
 			(14.5.2.2) If the user taps the word "Color" or the color square, a color picker opens.
-			(14.5.2.3) The color picker 0pens a window with
+			(14.5.2.3) The color picker layout includes:
 				(14.5.2.2.1) A checkbox followed by the string "Apply to all"
 					(14.5.2.2.1.1) The checkbox is unchecked by default.
 					(14.5.2.2.1.2) If the checkbox is checked, a color selectin for one die type applies to all dice.
@@ -713,41 +713,66 @@ Ranodmizers is a collection of four different randomization tools: Spin, Slots, 
 						(14.5.6.2.3.1.2) Rows are in descending order from smallest die type to largest die type.
 					(14.5.6.2.3.2) If a die type rolls more than one die, the numbers of its row are separated by a comma.
 				(14.5.6.2.3) If (14.5.7) Sum Results is toggled on:
-					(14.5.6.2.3.1) and (14.5.7.2.1) Sum by Type is also toggled on:
-						(14.5.6.2.3.1.1) the results of each die of a die type are summed
-						(14.5.6.2.3.1.2) those results are displayed in rows in the same fashion as (14.5.6.2.3).
-					(14.5.6.2.3.2) and Sum by Type is not toggled on:
-						(14.5.6.2.3.2.1) the results of all dice rolled are summed
-						(14.5.6.2.3.2.2) that result is displayed in the same fashion as (14.5.6.2.2)
+					(14.5.6.2.3.1) and (14.5.7.2.1) Sum by Type is also toggled on, those results are displayed in rows in the same fashion as (14.5.6.2.3).
+					(14.5.6.2.3.2) and Sum by Type is not toggled on, that result is displayed in the same fashion as (14.5.6.2.2)
 
 ``SUM RESULTS``
 		(14.5.7) "Sum Results"
-			(14.5.7.1) Following the phrase "Sum Results is an on/off toggle.
-				(14.5.7.1.1) The toggle includes the strings "On" and "Off"
-				(14.5.7.1.2) The default state is Off.
-			(14.5.7.2) If the setting is toggled on
-				(14.5.7.2.1) A new setting option becomes available: "Sum by type"
-					(14.5.7.2.1.1) Following the phrase "Sum by Type" is an on/off toggle
-						(14.5.7.2.1.1.1) The toggle includes the strings "On" and "Off"
-						(14.5.7.2.1.1.2) The default state is On.
+			(14.5.7.1) This setting requires Announce to be toggled on.
+                (14.5.7.1.1) If this setting is toggled on when Announce is toggled off, Announce is also toggled on.
+                (14.5.7.1.2) If this setting is toggled off after toggling on Announce, Announce remains toggled on.
+            (14.5.7.2) Following the phrase "Sum Results is an on/off toggle.
+				(14.5.7.2.1) The toggle includes the strings "On" and "Off"
+				(14.5.7.2.2) The default state is Off.
+			(14.5.7.3) If the setting is toggled on
+				(14.5.7.3.1) A new setting option becomes available: "Sum by type"
+					(14.5.7.3.1.1) Following the phrase "Sum by Type" is an on/off toggle
+						(14.5.7.3.1.1.1) The toggle includes the strings "On" and "Off"
+						(14.5.7.3.1.1.2) The default state is On.
+                    (14.5.7.3.1.2) This new setting option appears beneath Sum Results
+            (14.5.7.4) If Sum by Type is toggled on, the results of each die of a die type are summed
+                (14.5.7.4.1) For example, 2d6 and 3d10 are rolled. The results are 3, 6 and 4, 4, 7. Two sums are displayed, 9 and 15.
+            (14.5.7.5) If Sum by Type is toggled off, the results of all dice rolled are summed
+                (14.5.7.5.1) For example, 2d6 and 3d10 are rolled. The results are 3, 6 and 4, 4, 7. The sum displayed is 24.
+            (14.5.7.6) If modifiers have been applied in the "Add Modifiers" setting, that modifier is added to a sum for each instance of a die type included in the dice pool.
+                (14.5.7.6.1) For example, if d6 has a modifier value of +2, the sums displayed in (14.5.7.4.1) would be 13 and 15.
+                (14.5.7.6.2) For example, if d6 has a modifier value of +2, the sum displayed in (14.5.7.5.1) would be 28.
 
-Sum Results - This setting is available only if Announcement is toggled on. It is a drop-down menu that allows the user to choose between "Individual" (the default), "Sum Die Type", and "Sum Total". Individual announces the results of each die rolled as a series or array. Sum Die Type announces the summed results for each die type that has one or more dice of its type in the die pool (2d4 with the result of 1 and 3 would display as 4; 0d8 would not display a result). Sum Total announces the summed results of all dice rolled as a single number.
-
-				
 		
 ``ADD MODIFIERS``
 		(14.5.8) "Add Modifiers"
-
-
-Add Modifiers - This setting is available only if Announcement is toggled on. This functions similar to color, but instead of a color square, there is a text field to the right of the polyhedral. By default, all modifiers are set to 0. When tapping the text field, the system number pad opens and the user can enter a number between 0 and 100. When announcing a result, this number is added to the sum of its assigned die type. For example, if d4 had a modifier of 2, 2d4 with results of 1 and 3 would announce: 3 and 5 (for individual) or 8 (for sum die type/sum total).
-
+			(14.5.8.1) This setting requires Announce to be toggled on.
+                (14.5.8.1.1) If this setting is toggled on when Announce is toggled off, Announce is also toggled on.
+                (14.5.8.1.2) If this setting is toggled off after toggling on Announce, Announce remains toggled on.
+            (14.5.8.2) Following the phrase "Add Modifiers" is an edit icon.
+                (14.5.8.2.1) Default state: ic_edit.xml
+                (14.5.8.2.2) Active state: Programmatically change fill colors for default state icons to #808080
+			(14.5.8.3) If the user taps the phrase "Add Modifiers" or the edit button, a modifier window opens.
+ 			(14.5.8.4) The modifier window layout includes:              
+				(14.5.8.4.1) A checkbox followed by the string "Apply to all"
+					(14.5.8.4.1.1) The checkbox is unchecked by default.
+					(14.5.8.4.1.2) If the checkbox is checked, a modifier value added to one die type is applied to all dice types.
+				(14.5.8.4.2) two columns
+					(14.5.8.4.2.1) The left column has each die type in descending order
+						(14.5.8.4.2.1.1) This includes percentile dice regardless of whether that setting is turned on.
+					(14.5.8.4.2.2) The right column has text fields, one for each die type
+                        (14.5.8.4.2.2.1) If the user taps the text field, the number pad opens
+                        (14.5.8.4.2.2.2) The maximum number that can be entered is 100.
+                        (14.5.8.4.2.2.3) The minimum number that can be entered is -100.
 
 
 ``CRITICIAL CELEBRATION``
 		(14.5.9) "Critical Celebration"
-
-
-Critical Celebration on/off toggle - off by default. This setting is available only if Announcement is toggled on. When on, fireworks display when a d20 rolls a 20 (only the number on the die face applies, even if an added modifier would equal 20 or more). This functionality is the same as celebration in spin mode.
+			(14.5.9.1) This setting requires Announce to be toggled on.
+                (14.5.9.1.1) If this setting is toggled on when Announce is toggled off, Announce is also toggled on.
+                (14.5.9.1.2) If this setting is toggled off after toggling on Announce, Announce remains toggled on.
+            (14.5.9.2) Following the phrase "Sum Results is an on/off toggle.
+				(14.5.9.2.1) The toggle includes the strings "On" and "Off"
+				(14.5.9.2.2) The default state is Off.
+			(14.5.9.3) If the setting is toggled on, a confetti display, as per (12.3.5.3.2), occurs anytime a user rolls a 20 on a d20.
+                (14.5.9.3.1) This animation occurs only if the die face is a 20.
+                    (14.5.9.3.1.1) This is referred to as a "natural 20" or a "nat 20".
+                (14.5.9.3.2) Values of 20 or higher that would occur as a result of a modifier do not trigger this celebration.
 
 
 ``GRAPH DISTRIBUTION``
@@ -807,16 +832,6 @@ Critical Celebration on/off toggle - off by default. This setting is available o
 
 
 DICE MODE 
-
-
-
-
-
-
-
-
-
-
 
 Graph Distribution - This opens a window with radio buttons "Off" (default), "Manual", "Normal", "Uniform". Below the radio buttons are three line-style icon buttons "solid line" (default), "dashed line", and "dotted line". The graph line displayed after a roll result is the type selected here (solid line, dashed line, or dotted line).
 
