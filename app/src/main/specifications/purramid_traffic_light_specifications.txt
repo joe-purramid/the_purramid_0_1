@@ -442,6 +442,6 @@ The traffic light is a vector image of a common traffic light with three colored
 	(20.1) When a user touches the Close button, its icon changes from (6.1) Default to (6.2) Active.
 	(20.2) The traffic light to which the Close button is attached closes.
 		(20.2.1) When a traffic light is closed:
-			(20.2.1.1) If it is the only traffic light currently open, its size, lock state, and position (if not fullscreen) are saved as the most recent user preferences, as per (2).
+			(20.2.1.1) If it is the only traffic light currently open, its size, position (if not fullscreen), and settings selecitons are saved as the most recent user preferences, as per (2).
 			(20.2.1.2) If it is one of multiple traffic lights currently open, its preferences are cleared.
 		(20.2.2) If the traffic lgiht is the only traffic light open, the traffic light service ends.

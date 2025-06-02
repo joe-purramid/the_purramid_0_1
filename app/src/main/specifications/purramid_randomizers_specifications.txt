@@ -90,7 +90,7 @@ Ranodmizers is a collection of four different randomization tools: Spin, Slots, 
     (6.1) "Slots" is three adjacent rectangles contained within one larger container rectangle.
 		(6.1.1) This is meant to mirror the design of a slot machine, as seen in this image: https://media.istockphoto.com/id/1408111718/vector/%C3%B0%C3%B0%C3%B1-%C3%B0%C3%B0%C3%B1%C3%B0%C2%B5%C3%B1%C3%B0%C3%B0%C2%B5%C3%B1%C3%B0.jpg?s=612x612&w=0&k=20&c=Je7yR0NLeB_befulI4C354Z6WMRRQZhX8209TzZL6qc=
 		(6.1.2) Each item rectangle may be called a "column", as the three rectangles act like three columnar lists.
-		(6.1.3) Minimum and maximum values are the same as (5.1)
+		(6.1.3) Minimum and maximum list quantities are the same as (5.1)
 		(6.1.4) There is one rectangle for every item on a list.
 	(6.2) Each rectangle has a diferent color.
 		(6.2) The rules for these colors are the same as (5.2).
@@ -104,14 +104,20 @@ Ranodmizers is a collection of four different randomization tools: Spin, Slots, 
 		(6.5.1) This arrow aligns with the randomized selections.
 		(6.5.2) This arrow aligns with the right-facing selection arrow.
     (6.6) An item can be text, an emoji, an image, or a combination of the three.
-    (6.7) A spin button appears below the slots container rectangle.
-        (5.7.1) Default icon state uses ic_spin.xml.
-        (5.7.2) Active state: Programmatically change fill colors for default state icons to #808080.
+	(6.7) Below each rectangle is a "lock" icon.
+		(6.7.1) Default state: ic_lock.xml
+		(6.7.2) Active state: ic_unlock.xml
+		(6.7.3) Each lock icon is 
+			(6.7.3.1) Centered with the item rectangle
+			(6.7.3.2) placed on top of the containing rectangle
+    (6.8) A spin button appears below the slots container rectangle.
+        (6.8.1) Default icon state uses ic_spin.xml.
+        (6.8.2) Active state: Programmatically change fill colors for default state icons to #808080.
 
 (7) ``DICE UI``
     (7.1) "Dice" is a collection of polyhedrals called a "dice pool" that are randomized
 		(7.1.1) A die type is colloqually abbreviated as d*
-			(7.1.1.1) For example a six-died die would be called a d6.
+			(7.1.1.1) For example a six-sided die would be called a d6.
 		(7.1.2) Available dice are:
 			(7.1.2.1) d4 (d4_result_blank.xml)
 			(7.1.2.2) d6 (d6_result_blank.xml)
@@ -129,6 +135,8 @@ Ranodmizers is a collection of four different randomization tools: Spin, Slots, 
 				(7.1.2.5.2) Percentile dice are only included in the dice pool if they are turned on in the settings.
 			(7.1.2.6) d20 (d20_result_blank.xml)
 		(7.1.3) Each die type can have a maximum of 10 dice.
+			(7.1.3.1) Multiple of one die type are colloquially abbreviated as #d*.
+				(7.1.3.1.1) For example, six six-sided dice would be called 6d6.
 	(7.2) Dice are displayed in the window 
 		(7.2.1) grouped by die type.
 			(7.2.1.1) All d4s are together, all d6s are together, and so on.
@@ -139,7 +147,7 @@ Ranodmizers is a collection of four different randomization tools: Spin, Slots, 
 			(7.2.2.3) Four die types would loosely form a rectangle
 			(7.2.2.4) Five die types would loosely form a pentagon
 			(7.2.2.5) Six die types woudl loosely form a hexagon.
-			(7.2.2.6) This shapes do not need to be exact, but offer a simple model for how to ensure space is availabe between each group of dice.
+			(7.2.2.6) These shapes do not need to be exact, but offer a simple model for how to ensure space is availabe between each group of dice.
 	(7.3) Below the display area are three buttons
 		(7.3.1) Roll
 			(7.3.1.1) Default icon state uses ic_spin.xml.
@@ -155,36 +163,44 @@ Ranodmizers is a collection of four different randomization tools: Spin, Slots, 
 (8) ``COIN FLIP UI``
     (8.1) "Coin Flip" is a collection of coins called a "coin pool" that are randomized.
 		(8.1.1) Coins use imaginary currency
-			(8.1.1.1) "Bits" are the equivalent of cents.
-			(8.1.1.2) "Meatballs" are the equivalent of dollars.
-		(7.1.2) Available coins are:
-			(7.1.2.1) b1 (b1_coin_flip_heads.xml and b1_coin_flip_tails.xml)
-			(7.1.2.2) b5 (b5_coin_flip_heads.xml and b5_coin_flip_tails.xml)
-			(7.1.2.3) b10 (b10_coin_flip_heads.xml and b10_coin_flip_tails.xml)
-			(7.1.2.4) b25 (b25_coin_flip_heads.xml and b25_coin_flip_tails.xml)
-			(7.1.2.5) mb1 (mb1_coin_flip_heads.xml and mb1_coin_flip_tails.xml)
-			(7.1.2.6) mb2 (mb2_coin_flip_heads.xml and mb2_coin_flip_tails.xml)
-		(7.1.3) Each coin type can have a maximum of 10 coins.
-	(7.2) Coins are displayed in the window 
-		(7.2.1) grouped by coin type.
-			(7.2.1.1) All b1s are together, all b5s are together, and so on.
-		(7.2.2) spaced so that each group is distinct from the others.
-			(7.2.2.1) Two coin types would appear horizontally in the center of the window with a large amount of space between them.
-			(7.2.2.2) Three coin types would loosely form a triangle.
-			(7.2.2.3) Four coin types would loosely form a rectangle
-			(7.2.2.4) Five coin types would loosely form a pentagon
-			(7.2.2.5) Six coin types woudl loosely form a hexagon.
-			(7.2.2.6) This shapes do not need to be exact, but offer a simple model for how to ensure space is availabe between each group of coins.
-	(7.3) Below the display area are three buttons
-		(7.3.1) Flip
-			(7.3.1.1) Default icon state uses ic_spin.xml.
-			(7.3.1.2) Active state: Programmatically change fill colors for default state icons to #808080.
-		(7.3.2) Reset
-			(7.3.2.1) Default icon state uses ic_reset.xml.
-			(7.3.2.2) Active state: Programmatically change fill colors for default state icons to #808080.
-		(7.3.3) Coin Pool
-	        (7.3.3.1) Default icon state uses ic_coin_pool.xml.
-			(7.3.3.2) Active state: Programmatically change fill colors for default state icons to #808080.
+			(8.1.1.1) "Bits" are
+				(8.1.1.1.1) the equivalent of cents in US dollars.
+				(8.1.1.1.2) coloqually referred to as b*
+					(8.1.1.1.2.1) for example, 25 bits are b25
+			(8.1.1.2) "Meatballs" are 
+				(8.1.1.2.1) the equivalent of dollars in US dollars.
+				(8.1.1.2.2) coloqually referred to as mb*
+					(8.1.1.2.2.1) for example, 2 meatballs are mb2
+		(8.1.2) Available coins are:
+			(8.1.2.1) b1 (b1_coin_flip_heads.xml and b1_coin_flip_tails.xml)
+			(8.1.2.2) b5 (b5_coin_flip_heads.xml and b5_coin_flip_tails.xml)
+			(8.1.2.3) b10 (b10_coin_flip_heads.xml and b10_coin_flip_tails.xml)
+			(8.1.2.4) b25 (b25_coin_flip_heads.xml and b25_coin_flip_tails.xml)
+			(8.1.2.5) mb1 (mb1_coin_flip_heads.xml and mb1_coin_flip_tails.xml)
+			(8.1.2.6) mb2 (mb2_coin_flip_heads.xml and mb2_coin_flip_tails.xml)
+		(8.1.3) Each coin type can have a maximum of 10 coins.
+			(8.1.3.1) Multiple of one coin type are colloquially abbreviated as #b* or #mb*.
+				(8.1.3.1.1) For example, six 25-bit coins would be called 6b25.
+	(8.2) Coins are displayed in the window 
+		(8.2.1) grouped by coin type.
+			(8.2.1.1) All b1s are together, all b5s are together, and so on.
+		(8.2.2) spaced so that each group is distinct from the others.
+			(8.2.2.1) Two coin types would appear horizontally in the center of the window with a large amount of space between them.
+			(8.2.2.2) Three coin types would loosely form a triangle.
+			(8.2.2.3) Four coin types would loosely form a rectangle
+			(8.2.2.4) Five coin types would loosely form a pentagon
+			(8.2.2.5) Six coin types woudl loosely form a hexagon.
+			(8.2.2.6) This shapes do not need to be exact, but offer a simple model for how to ensure space is availabe between each group of coins.
+	(8.3) Below the display area are three buttons
+		(8.3.1) Flip
+			(8.3.1.1) Default icon state uses ic_spin.xml.
+			(8.3.1.2) Active state: Programmatically change fill colors for default state icons to #808080.
+		(8.3.2) Reset
+			(8.3.2.1) Default icon state uses ic_reset.xml.
+			(8.3.2.2) Active state: Programmatically change fill colors for default state icons to #808080.
+		(8.3.3) Coin Pool
+	        (8.3.3.1) Default icon state uses ic_coin_pool.xml.
+			(8.3.3.2) Active state: Programmatically change fill colors for default state icons to #808080.
 
 
  --- USER EXPERIENCE ---
@@ -445,9 +461,9 @@ Ranodmizers is a collection of four different randomization tools: Spin, Slots, 
 									(12.3.2.3.2.4.3.3.6.1) the text field closes.
 									(12.3.2.3.2.4.3.3.6.2) Text/emoji/images in the text field are distributed into individual lists.
 
-``SPIN: SPIN``
-		(12.3.3) "Spin"
-			(12.3.3.1) Following the phrase "Spin" is a toggle.
+``SPIN: SPIN ANIMATION``
+		(12.3.3) "Spin Animation"
+			(12.3.3.1) Following the phrase "Spin Animation" is a toggle.
 				(12.3.3.1.1) The toggle's default position is on.
 					(12.3.3.1.1.1) The toggle should include the words "On" and "Off"
 					(12.3.3.1.1.2) These words should be strings so they can be translated.
@@ -531,12 +547,13 @@ Ranodmizers is a collection of four different randomization tools: Spin, Slots, 
 
 
 (13) ``SLOTS MODE SPECIFIC UX``
-    (13.1) If a user taps any marquee (the (5.4) title or the (5.5) arrow):
+    (13.1) If a user taps any marquee (the (5.3) title or the (5.5) arrow):
 		(13.1.1) That marquee arrow changes to its active state with a smooth animation
 		(13.1.2) A drop-down menu opens that displays all the available lists.
 			(13.1.2.1) The drop-down menu opens with a smooth animation. 
 			(13.1.2.2) The active list appears first in the order.
 			(13.1.2.3) All other lists are ordered alphanumerically.
+				(13.1.2.3.1) Slots uses the same pregenerated lists as Slots, as per (12.3.2.2.2.3.1)
 		(13.1.3) The user can tap any list title to apply that list to that column
 			(13.1.3.1) The new list title replaces the existing list title in the marquee.
 				(13.1.3.1.1) The new title is bold font.
@@ -544,91 +561,163 @@ Ranodmizers is a collection of four different randomization tools: Spin, Slots, 
 			(13.1.3.3) The drop-down menu closes with a smooth animation.
 			(13.1.3.4) The drop-down arrow returns to a default state with a smooth animation.
 			(13.1.3.5) The same list can be assigned to more than one column.
-	(13.2) If a user taps the (5.7) spin button:
+	(13.2) If a user taps the (6.8) spin button:
 		(13.2.1) The spin button changes to its active state.
-		(13.2.2) The itemXXXXX rotates with a smooth animation for 2.0 seconds.
-			(13.2.2.1) The spin dial rotates clockwise for left-to-right languages.
-			(13.2.2.2) The spin dial rotates counter-clockwise for right-to-left languages.
-			(13.2.2.3) Use a pseudo-random number generator to select an item from the list.
-				(13.2.2.3.1) An item's number is determined by its order in the list.
-				(13.2.2.3.2) Only one number result is generated per spin.
-				(13.2.2.3.3) Each spin is a unique event, generating a new number result.
-			(13.2.2.4) When the animation completes, the randomly selected list item should align with the (5.5) selection arrow.
-			(13.2.2.5) If spinning is turned off in the settings, the dial immediately displays the result.
+		(13.2.2) The item rectangles randomize for 2.0 seconds.
+			(13.2.2.1) Because there is no spin dial, slots spinning briefly displays a new item from the list until the final secection is made.
+				(13.2.2.1.1) Use a pseudo-random number generator to sequence the list items.
+					(13.2.2.1.1.1) Each list has its own distinct sequence order.
+					(13.2.2.1.1.1) An item's number is determined by its order in the list.
+				(13.2.2.1.2) Display rectangles in this randomized sequence order.
+					(13.2.2.1.2.1) Rectangles change every 0.2 seconds.
+					(13.2.2.1.2.2) The final selections are the tenth rectangle shown in each column.
+					(13.2.2.1.2.3) If a list has fewer than 10 items, the list repeats.
+				(13.2.2.1.3) Each spin is a unique event, generating a new number result for each column.
+		(13.2.3) When the animation completes, the randomly selected list item should align with the (5.5) selection arrow.
+		(13.2.4) If spinning is turned off in the settings, the slots immediately display their results.
+	(13.3) If a user taps the the (6.7) lock button:
+		(13.3.1) The lock button changes to its active state
+		(13.3.2) The locked column does not randomize when the spin button is activated.
+			(13.3.2.1) There is no color change.
+			(13.3.2.2) The displayed item remains the same.
+
+``SLOTS MODE SETTINGS``
+	(13.4) The settings window for Slots mode includes these additional settings:
+		(13.4.1) Each setting includes text and an icon.
+		(13.4.2) "Column Number"
+			(13.4.2.1) Following the phrase "Spin" is a toggle.
+				(13.4.2.1.1) The toggle's default state is "3" 
+					(13.4.2.1.1.1) The toggle should include the numerals "3" and "5".
+			(13.4.2.2) when the toggle is set to "3", it appears as detailed above.
+			(13.4.2.3) When the toggle is set to "5", the three-column UI changes to a five-column UI
+				(13.4.2.3.1) Two new item rectangles appear within the containing rectangle
+				(13.4.2.3.2) Each new rectangle has its own marquee.
+				(13.4.2.3.3) Each new rectangle has its own lock button.
+		(13.4.3) "List Editor" uses the same behavior as (12.3.2)
+		(13.4.4) "Spin Animation" uses the same behavior as (12.3.3)
+		(13.4.5) "Announce" uses the same behavior as (12.3.4)
+
 
 (14) ``DICE SPECIFIC UX``
-    (14.1) 
+	(14.1) If no preferences load on launch, the default dice pool is 1d6
+		(14.1.1) Any dice in the dice pool show their highest number on top of the polyhedral svg.
+			(14.1.1.1) For example, all d6 show a 6 face until they are rolled.
+    (14.2) If a user taps the Roll button
+		(14.2.1) The Roll icon changes to its active state
+		(14.2.2) Using a pseudo-random number generator, determine the outcome for each die in the pool.
+			(14.2.2.1) The number range for a randomized list is equal to the number of sides on each die.
+			(14.2.2.2) Each die has its own randomized outcome.
+			(14.2.2.3) Each roll is a unique event.
+		(14.2.3) Dice roll in a smooth animation for 1 second.
+			(14.2.3.1) TODO: Explore whether dice need to animate in place or if they can move about the display space.
+		(14.2.4) Following 1 second:
+			(14.2.4.1) The animation ends
+			(14.2.4.2) Each die shows the numeric result on top of the polyhedral svg.
+				(14.2.4.2.1) TODO: Explore whether it's possible to show numbers on the other visible faces of a die.
+					(14.2.4.2.1.1) If it's possible, use this rule: "f the number of sides of the polyhedral = n, then two opposites faces added together = n+1."
+			(14.2.4.3) The roll icon returns to its default state.
+	(14.3) If a user taps the Reset button
+		(14.3.1) The Reset icon changes to its active state for the duration of the onTouch event.
+		(14.3.2) All dice in the dice pool shows its highest number for its die type.
+		(14.3.3) If the animation moves, as per (14.2.3.1), return the dice to their starting points.
+	(14.4) If a user taps the Dice Pool button
+		(14.4.1) The Dice Pool icon change to its active state
+		(14.4.2) A popup window opens above the Dice Pool button
+			(14.4.2.1) A tooltip arrow points to the dice pool icon
+			(14.4.2.2) The window contains icons for each die type
+				(14.4.2.2.1) Percentile dice are included only if they are turned on in the settings
+				(14.4.2.2.2) Dice are ordered from left-to-right by increasing value
+					(14.4.2.2.2.1) A d4 is the left-most die type
+					(14.4.2.2.2.2) A d20 is the right-most die type
+					(14.4.2.2.2.3) Percentile dice appeaer between the d10 and the d12.
+			(14.4.2.3) Below each polyhedral SVG is:
+				(14.4.2.3.1) An up arrow
+					(14.4.2.3.1.1) Default state: ic_arrow_drop_up.xml
+					(14.4.2.3.1.2) Active state: Programmatically change fill colors for default state icons to #808080
+				(14.4.2.3.2) A text field that shows the quantity of that die type currently in the dice pool
+					(14.4.2.3.2.1) The default state would have d6 at 1 and all other dice at 0.
+					(14.4.2.3.2.2) Tapping this text field opens the number pad.
+				(14.4.2.3.3) A down arrow
+					(14.4.2.3.3.1) Default state: ic_arrow_drop_down.xml
+					(14.4.2.3.3.2) Active state: Programmatically change fill colors for default state icons to #808080
+			(14.4.2.4) Pressing the up arrow:
+				(14.4.2.4.1) Changes the icon state to active for the duration of the onTouch event
+				(14.4.2.4.2) Increases the numeric value in the text field of that die type by one.
+					(14.4.2.4.2.1) The maximum number of dice for a die type is 10.
+			(14.4.2.5) Pressing the down arrow:
+				(14.4.2.5.1) Changes the icon state to active for the duration of the onTouch event
+				(14.4.2.4.2) Decreases the numeric value in the text field of that die type by one.
+					(14.4.2.5.2.1) The minimum number of dice for a die type is 0.
+		(14.4.3) Tapping the Dice Pool button a second time closes the window.
+		(14.4.4) Tapping outside of the Dice Pool window closes the Dice Pool window.
+
+``DICE MODE SETTINGS``
+	(14.5) The settings window for Slots mode includes these additional settings:
+		(14.5.1) Each setting includes text and an icon.
+		(14.5.2) "Color"
+		(14.5.3) "d6 Pips"
+		(14.5.4) "Percentile Dice"
+		(14.5.5) "Roll Animation"
+		(14.5.6) "Announce"
+		(14.5.7) "Sum Results"
+		(14.5.8) "Add Modifiers"
+		(14.5.9) "Critical Celebration"
+		(14.5.10) "Graph Distribution"
+
+
 
 (15) ``COIN FLIP SPECIFIC UX``
-    (15.1) 
+    (15.1) If no preferences load on launch, the default coin pool is 1b25
+		(15.1.1) Any coins in the coin pool show the heads side of that coin.
+    (15.2) If a user taps the Flip button
+		(15.2.1) The Flip icon changes to its active state
+		(15.2.2) Using a pseudo-random number generator, determine the outcome for each coin in the pool.
+			(15.2.2.1) The number range for a randomized list is one (heads) or two (tails).
+			(15.2.2.2) Each coin has its own randomized outcome.
+			(15.2.2.3) Each roll is a unique event.
+		(15.2.3) Coins flip in a smooth animation for 1 second.
+		(15.2.4) Following 1 second:
+			(15.2.4.1) The animation ends
+			(15.2.4.2) Each coin shows the the appropriate heads or tails svg.
+			(15.2.4.3) The roll icon returns to its default state.
+	(15.3) If a user taps the Reset button
+		(15.3.1) The Reset icon changes to its active state for the duration of the onTouch event.
+		(15.3.2) All coins in the coin pool show the heads side of the coin.
+	(15.4) If a user taps the Coin Pool button
+		(15.4.1) The Coin Pool icon change to its active state
+		(15.4.2) A popup window opens above the Coin Pool button
+			(15.4.2.1) A tooltip arrow points to the coin pool icon
+			(15.4.2.2) The window contains icons for each coin type
+				(15.4.2.2.1) Coins are ordered from left-to-right by increasing value
+					(15.4.2.2.1.1) A b1 is the left-most coin type
+					(15.4.2.2.1.2) A mb2 is the right-most coin type
+			(15.4.2.3) Below each coin SVG is:
+				(15.4.2.3.1) An up arrow
+					(15.4.2.3.1.1) Default state: ic_arrow_drop_up.xml
+					(15.4.2.3.1.2) Active state: Programmatically change fill colors for default state icons to #808080
+				(15.4.2.3.2) A text field that shows the quantity of that coin type currently in the coin pool
+					(15.4.2.3.2.1) The default state would have b25 at 1 and all other coins at 0.
+					(15.4.2.3.2.2) Tapping this text field opens the number pad.
+				(15.4.2.3.3) A down arrow
+					(15.4.2.3.3.1) Default state: ic_arrow_drop_down.xml
+					(15.4.2.3.3.2) Active state: Programmatically change fill colors for default state icons to #808080
+			(15.4.2.4) Pressing the up arrow:
+				(15.4.2.4.1) Changes the icon state to active for the duration of the onTouch event
+				(15.4.2.4.2) Increases the numeric value in the text field of that coin type by one.
+					(15.4.2.4.2.1) The maximum number of coins for a coin type is 10.
+			(15.4.2.5) Pressing the down arrow:
+				(15.4.2.5.1) Changes the icon state to active for the duration of the onTouch event
+				(15.4.2.4.2) Decreases the numeric value in the text field of that coin type by one.
+					(15.4.2.5.2.1) The minimum number of coins for a coin type is 0.
+		(15.4.3) Tapping the Coin Pool button a second time closes the window.
+		(15.4.4) Tapping outside of the Coin Pool window closes the Coin Pool window.
+
+
+``COIN FLIP MODE SETTINGS``
 
 
 
-''SLOTS''
-
-The "slots" mode is similar in function to the spin dial. But where a spin dial is a circle that shows all available items, a slots dial is like the outside of a wheel that shows only a few items at a time. The slots dial (56) has a rectangle that shows the current item with a rectangle above and below showing other items. These tiles fade away in a similar manner to the (17) sequence setting. The (57) spin animation rotates the wheel so that the items visible in the (56) view move in a downward motion.
-
-The default is to show (58) three slots dials beside one another, immitating a slot machine. Each column has a list (8) title marquee at its top (with the same functionality as in spin mode) and (59) a padlock button at the bottom. The padlock icon appears unlocked by default. If a user taps the unlocked padlock button, it changes from unlocked to locked. If they tap a locked padlock, it unlocks.
-
-(59) A locked slots dial does not spin when the spin button is pressed. Unlocked slots dials will spin normally.
-
-Each slots dial (4) shows a list of items, with each item having (5) a defined color. It uses the same group of (19) pregenerated lists, with "Colors" being the default list for all three columns the first time this mode is used.
-
-
-
-Each column displays a list. The same list can be used by multiple columns. Their results are independent of one another. The most common example of this is the English lesson "consonant, vowel, consonant", where the teacher randomly selects three letters, two consonants and one vowel.
-
-
-
-When the user presses the spin button, all unlocked columns spin (vertically, not clockwise like a spin dial) and stop on a randomized result. Spin time is the same as it is for spin mode. Any locked column remains on the result currently displayed without any kind of spinning animation.
-
-
-
-The settings for slots mode are:
-
-
-
-Mode (same as spin except the user can choose from spin, dice, and coin flip)
-
-Three-column or Five-column toggle. This determines the number of columns shown as part of the slots interface.
-
-
-
-Create/Edit Lists - this is the same functionality as spin.
-
-
-
-Announce - This is the same functionality as spin, but the results of each column are shown at once (including any columns that were locked).
-
-
-''DICE''
-
-Understand a common abbreviation for die type is to list the number of sides after the letter d. So a six-sided die would be a d6 and a 10-sided die would be a d10. Dice mode will include d4, d6, d8, d10, d12, and d20 dice. There will also be a "percentile" setting that creates a d10 pair, one with numbers 0 to 9 in increments of one and the other with numbers 00 to 90 in increments of ten. When rolled together the dice results form a percentage.
-
-When entering Dice mode, the initial view is 1d6. The mode should restore the last combination of dice used, in the same fashion as spin and slots functions. Dice appear in a window, in the same fashion as the other modes. The "spin" button is replaced with a "roll" button. There is also an adjacent "dice pool" button, that allows the users to modify how many dice and the type of dice they are rolling. Dice are represented by SVG polyhedrals with a number on each side. The d6 also includes a setting to replace the number with pips, to match the appearance of popular dice.
-
-
-
-When a die is rolled, there is an animation that lasts 1 second long. The randomized result is then shown on the polyhedral face shown outward to the user. A decision will have to be made whether the die at rest should appear two dimensional and only the animation looks three dimensional, or whether the die at rest should also appear three dimensional. Let's discuss the possibility of numbers being visible during the animation. If we opt for three-dimensional polyhedrals at rest, let's also discuss other numbers being visible (perhaps faded to show they are not the active number). Each die animates during rolling. Dice are grouped by type, so all d4s are near each other, all d6s are near each other, etc. They do not intermingle.
-
-
-
-Dice with opposite sides have a number-placement rule. If the number of sides of the polyhedral = n, then two opposites sides added together should = n+1. (On a six-sided die, the one is opposite the six, the 2 is opposite the five, and the 3 is opposite the four. The same holds true for a d20, where the one is opposite the 20.)
-
-
-
-When pressing the Dice Pool button, a window appears with a row of polyhedrals increasing from d4 to d20 based on the number of edges they have. Percentile dice only appear if they are turned on in settings. Below each polyhedral is a text field with a number in it showing the number of dice currently in the pool. (Thus, at first initialization, all dice are at zero except for the d6, which is at 1.) An up arrow button is above the polyhedral. A down arrow button is below the text field. These buttons increase or decrease the number of dice available, respectively. The user can also tap the text field to open a system number pad and change the quantity manually. A die type can have no fewer than 0 and no more than 10. When dice quantities are changed, they appear immediately on the screen even if the dice pool window is still open. To close the dice pool window, the user can tap the button again or touch anywhere outside the dice pool window area.
-
-
-
-Unlike spin mode that allows a maximum of four dials, the user can add up to seven total dice pools. When added, a new dice pool window clones the settings of the window from which it was made. Settings changes are applied to the dice pool window from which settings was opened. The window has a yellow highlight border to show which window is actively being modified. Dice mode has the following settings:
-
-
-
-MODE - This is the same setting as Spin and Slots
-
-
-
+DICE MODE 
 COLOR - This opens a window with a column of polyhedrals ordered by their numbers of sides, with the d4 on top and the d20 on bottom. Percentile dice are listed below the d10 and above the d12. Percentiles can have a different color than the d10. Beside each polyhedral is a color square. This is the same as the color picker from spin and behaves the same. The square reflects the color assigned to the die type. By default, all dice are white with black numbering. Above the d4 row is a checkbox (unchecked by default) with the string "Apply to all". If this box is checked, a color picked applies to all dice and the color square in each row will display the selected color. (Apply all only applies to the dice of this window. If multiple dice windows are open, their dice colors are unchanged.)
 
 
