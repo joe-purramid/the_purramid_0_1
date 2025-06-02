@@ -654,14 +654,103 @@ Ranodmizers is a collection of four different randomization tools: Spin, Slots, 
 ``DICE MODE SETTINGS``
 	(14.5) The settings window for Slots mode includes these additional settings:
 		(14.5.1) Each setting includes text and an icon.
+
+``COLOR``
 		(14.5.2) "Color"
+			(14.5.2.1) Following the word "Color" is a color square, like (12.3.2.3.2.4.2.1)
+				(14.5.2.1.1) If all die types have the same color, the color square fill matches that color.
+				(14.5.2.1.2) If different die types have different colors, the color square fill is rainbow swirl.
+			(14.5.2.2) If the user taps the word "Color" or the color square, a color picker opens.
+			(14.5.2.3) The color picker 0pens a window with
+				(14.5.2.2.1) A checkbox followed by the string "Apply to all"
+					(14.5.2.2.1.1) The checkbox is unchecked by default.
+					(14.5.2.2.1.2) If the checkbox is checked, a color selectin for one die type applies to all dice.
+				(14.5.2.2.2) two columns
+					(14.5.2.2.2.1) The left column has each die type in descending order
+						(14.5.2.2.2.1.1) This includes percentile dice regardless of whether that setting is turned on.
+					(14.5.2.2.2.2) The right column has color squares, one for each die type
+						(14.5.2.2.2.2.1) Each square is aligned with each die type to form a row.
+						(14.5.2.2.2.2.2) Tapping a square opens PurramidPalette.kt for the user to choose a color.
+
+``PIPS``
 		(14.5.3) "d6 Pips"
+			(14.5.3.1) Following the phrase "d6 Pips" is an on/off toggle.
+				(14.5.3.1.1) The toggle includes the strings "On" and "Off"
+				(14.5.3.1.2) The default state is Off.
+			(14.5.3.2) If the setting is toggled on, the d6 face shows pips instead of numbers.
+				(14.5.3.2.1) Pips use the industry standard position for each die face
+					(14.5.3.2.1.1) For example, one pip is centered on the die face
+					(14.5.3.2.1.2) For example, six pips form two columns of three pips.
+
+``PERCENTILE DICE``
 		(14.5.4) "Percentile Dice"
+			(14.5.4.1) Following the phrase "d6 Pips" is an on/off toggle.
+				(14.5.4.1.1) The toggle includes the strings "On" and "Off"
+				(14.5.4.1.2) The default state is Off.
+			(14.5.3.2) If the setting is toggled on, percentile dice are available in the (14.4.2) Dice Pool selection window.
+		
+``ROLL ANIMATION``
 		(14.5.5) "Roll Animation"
+			(14.5.5.1) Following the phrase "d6 Pips" is an on/off toggle.
+				(14.5.5.1.1) The toggle includes the strings "On" and "Off"
+				(14.5.5.1.2) The default state is On.
+			(14.5.5.2) If the setting is toggled off, roll results are shown immediately. There is no roll animation.
+
+``ANNOUNCE``
 		(14.5.6) "Announce"
+			(14.5.6.1) Following the phrase "d6 Pips" is an on/off toggle.
+				(14.5.6.1.1) The toggle includes the strings "On" and "Off"
+				(14.5.6.1.2) The default state is Off.
+			(14.5.6.2) If the setting is toggled on, roll results are displayed enlarged on the screen.
+				(14.5.6.2.1) This behavior is similar to (12.3.4)
+				(14.5.6.2.2) If only one die type is rolled, the result number is displayed.
+					(14.5.6.2.2.1) If that die type rolls more than one die, results are
+						(14.5.6.2.2.1.1) listed sequentially from lowest to highest result
+						(14.5.6.2.2.1.2) separated by a comma
+				(14.5.6.2.3) If two or more different die types are rolled, the result numbers are displayed:
+					(14.5.6.2.3.1) on a row for each die type
+						(14.5.6.2.3.1.1) Each row starts with an icon of the die type
+						(14.5.6.2.3.1.2) Rows are in descending order from smallest die type to largest die type.
+					(14.5.6.2.3.2) If a die type rolls more than one die, the numbers of its row are separated by a comma.
+				(14.5.6.2.3) If (14.5.7) Sum Results is toggled on:
+					(14.5.6.2.3.1) and (14.5.7.2.1) Sum by Type is also toggled on:
+						(14.5.6.2.3.1.1) the results of each die of a die type are summed
+						(14.5.6.2.3.1.2) those results are displayed in rows in the same fashion as (14.5.6.2.3).
+					(14.5.6.2.3.2) and Sum by Type is not toggled on:
+						(14.5.6.2.3.2.1) the results of all dice rolled are summed
+						(14.5.6.2.3.2.2) that result is displayed in the same fashion as (14.5.6.2.2)
+
+``SUM RESULTS``
 		(14.5.7) "Sum Results"
+			(14.5.7.1) Following the phrase "Sum Results is an on/off toggle.
+				(14.5.7.1.1) The toggle includes the strings "On" and "Off"
+				(14.5.7.1.2) The default state is Off.
+			(14.5.7.2) If the setting is toggled on
+				(14.5.7.2.1) A new setting option becomes available: "Sum by type"
+					(14.5.7.2.1.1) Following the phrase "Sum by Type" is an on/off toggle
+						(14.5.7.2.1.1.1) The toggle includes the strings "On" and "Off"
+						(14.5.7.2.1.1.2) The default state is On.
+
+Sum Results - This setting is available only if Announcement is toggled on. It is a drop-down menu that allows the user to choose between "Individual" (the default), "Sum Die Type", and "Sum Total". Individual announces the results of each die rolled as a series or array. Sum Die Type announces the summed results for each die type that has one or more dice of its type in the die pool (2d4 with the result of 1 and 3 would display as 4; 0d8 would not display a result). Sum Total announces the summed results of all dice rolled as a single number.
+
+				
+		
+``ADD MODIFIERS``
 		(14.5.8) "Add Modifiers"
+
+
+Add Modifiers - This setting is available only if Announcement is toggled on. This functions similar to color, but instead of a color square, there is a text field to the right of the polyhedral. By default, all modifiers are set to 0. When tapping the text field, the system number pad opens and the user can enter a number between 0 and 100. When announcing a result, this number is added to the sum of its assigned die type. For example, if d4 had a modifier of 2, 2d4 with results of 1 and 3 would announce: 3 and 5 (for individual) or 8 (for sum die type/sum total).
+
+
+
+``CRITICIAL CELEBRATION``
 		(14.5.9) "Critical Celebration"
+
+
+Critical Celebration on/off toggle - off by default. This setting is available only if Announcement is toggled on. When on, fireworks display when a d20 rolls a 20 (only the number on the die face applies, even if an added modifier would equal 20 or more). This functionality is the same as celebration in spin mode.
+
+
+``GRAPH DISTRIBUTION``
 		(14.5.10) "Graph Distribution"
 
 
@@ -718,39 +807,14 @@ Ranodmizers is a collection of four different randomization tools: Spin, Slots, 
 
 
 DICE MODE 
-COLOR - This opens a window with a column of polyhedrals ordered by their numbers of sides, with the d4 on top and the d20 on bottom. Percentile dice are listed below the d10 and above the d12. Percentiles can have a different color than the d10. Beside each polyhedral is a color square. This is the same as the color picker from spin and behaves the same. The square reflects the color assigned to the die type. By default, all dice are white with black numbering. Above the d4 row is a checkbox (unchecked by default) with the string "Apply to all". If this box is checked, a color picked applies to all dice and the color square in each row will display the selected color. (Apply all only applies to the dice of this window. If multiple dice windows are open, their dice colors are unchanged.)
 
 
 
-d6 Pips on/off toggle - off by default. If turned on, this replaces the numbers on the d6 with pips.
 
 
 
-Percentile Dice on/off toggle. Off by default.If turned on, the percentile dice become a choosable die type in the dice pool view.
 
 
-
-Roll Animation on/off toggle - on by default. When turned off, a "roll" button press yields an immediate result without animation.
-
-
-
-Announcement on/off toggle - off by default. This functions the same way as announcement in Spin mode (including placement in the window).
-
-
-
-Sum Results - This setting is available only if Announcement is toggled on. It is a drop-down menu that allows the user to choose between "Individual" (the default), "Sum Die Type", and "Sum Total". Individual announces the results of each die rolled as a series or array. Sum Die Type announces the summed results for each die type that has one or more dice of its type in the die pool (2d4 with the result of 1 and 3 would display as 4; 0d8 would not display a result). Sum Total announces the summed results of all dice rolled as a single number.
-
-
-
-Add Modifiers - This setting is available only if Announcement is toggled on. This functions similar to color, but instead of a color square, there is a text field to the right of the polyhedral. By default, all modifiers are set to 0. When tapping the text field, the system number pad opens and the user can enter a number between 0 and 100. When announcing a result, this number is added to the sum of its assigned die type. For example, if d4 had a modifier of 2, 2d4 with results of 1 and 3 would announce: 3 and 5 (for individual) or 8 (for sum die type/sum total).
-
-
-
-(It's important that directions are not hard coded. When I say "there is a text field to the right of the polyhedral", this field should appear to the left of the polyhedral in right-to-left languages like Arabic.)
-
-
-
-Critical Celebration on/off toggle - off by default. This setting is available only if Announcement is toggled on. When on, fireworks display when a d20 rolls a 20 (only the number on the die face applies, even if an added modifier would equal 20 or more). This functionality is the same as celebration in spin mode.
 
 
 
