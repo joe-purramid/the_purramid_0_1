@@ -620,6 +620,8 @@ Ranodmizers is a collection of four different randomization tools: Spin, Slots, 
 		(14.3.1) The Reset icon changes to its active state for the duration of the onTouch event.
 		(14.3.2) All dice in the dice pool shows its highest number for its die type.
 		(14.3.3) If the animation moves, as per (14.2.3.1), return the dice to their starting points.
+		(14.3.4) Any results shown while (14.5.6) Announce is toggled on are cleared.
+		(14.3.5) Any graph data shown while (14.5.10) Graph Distribution is toggled on are cleared.
 	(14.4) If a user taps the Dice Pool button
 		(14.4.1) The Dice Pool icon change to its active state
 		(14.4.2) A popup window opens above the Dice Pool button
@@ -652,7 +654,7 @@ Ranodmizers is a collection of four different randomization tools: Spin, Slots, 
 		(14.4.4) Tapping outside of the Dice Pool window closes the Dice Pool window.
 
 ``DICE MODE SETTINGS``
-	(14.5) The settings window for Slots mode includes these additional settings:
+	(14.5) The settings window for Dice mode includes these additional settings:
 		(14.5.1) Each setting includes text and an icon.
 
 ``COLOR``
@@ -671,6 +673,7 @@ Ranodmizers is a collection of four different randomization tools: Spin, Slots, 
 					(14.5.2.2.2.2) The right column has color squares, one for each die type
 						(14.5.2.2.2.2.1) Each square is aligned with each die type to form a row.
 						(14.5.2.2.2.2.2) Tapping a square opens PurramidPalette.kt for the user to choose a color.
+						(14.5.2.2.2.2.3) The default color is white.
 
 ``PIPS``
 		(14.5.3) "d6 Pips"
@@ -698,7 +701,7 @@ Ranodmizers is a collection of four different randomization tools: Spin, Slots, 
 
 ``ANNOUNCE``
 		(14.5.6) "Announce"
-			(14.5.6.1) Following the phrase "d6 Pips" is an on/off toggle.
+			(14.5.6.1) Following the phrase "Announce" is an on/off toggle.
 				(14.5.6.1.1) The toggle includes the strings "On" and "Off"
 				(14.5.6.1.2) The default state is Off.
 			(14.5.6.2) If the setting is toggled on, roll results are displayed enlarged on the screen.
@@ -777,7 +780,113 @@ Ranodmizers is a collection of four different randomization tools: Spin, Slots, 
 
 ``GRAPH DISTRIBUTION``
 		(14.5.10) "Graph Distribution"
-
+			(14.5.10.1) This setting cannot be active while Announce, Sum Results, or Add Modifiers are toggled on.
+				(14.5.10.1.1) If this setting is toggled on when Announce, Sum Results, and/or Add Modifiers are toggled on, they are all toggled off.
+				(14.5.10.1.2) If this setting is then toggled off, those settings remain toggled off.
+			(14.5.10.2) Following the phrase "Graph Distribution" is a drop-down arrow.
+				(14.5.10.2.1) Deffault state: ic_arrow_drop_down.xml
+				(14.5.10.2.2) Active state: ic_arrow_drop_up.xml
+			(14.5.10.3) If the user taps the phrase "Graph Distribution" or the drop-down arrow:
+				(14.5.10.3.1) The drop-down arrow changess to its active state
+				(14.5.10.3.2) A Graph Distribution window opens over the current settings window.
+			(14.5.10.4) The Graph Distribution window inclues:
+				(14.5.10.4.1) A back arrow in the top left corner of the window. 
+					(14.5.10.4.1.1) Default icon state uses ic_back.xml.
+					(14.5.10.4.1.2) Active state: Programmatically change fill colors for default state icons to #808080.
+					(14.5.10.4.1.3) When activated the list collection editor window closes.
+						(14.5.10.4.1.3.1) The user returns to the main settings window.
+				(14.5.10.4.2) A close button in the top right corner of the window.
+					(14.5.10.4.2.1) Default icon state uses ic_close.xml.
+					(14.5.10.4.2.2) Active state: Programmatically change fill colors for default state icons to #808080.
+					(14.5.10.4.2.3) When activated all settings related windows close.
+				(14.5.10.4.3) Below the back arrow and close button is a header string: "Distribution Type"
+				(14.5.10.4.4) Below the distribution type header are 
+					(14.5.10.4.4.1) a column of four radio buttons
+					(14.5.10.4.4.2) a column four distribution type strings:
+						(14.5.10.4.4.2.1) "Off"
+							(14.5.10.4.4.2.1.1) This is the default state.
+						(14.5.10.4.4.2.2) "Manual"
+						(14.5.10.4.4.2.3) "Normal"
+						(14.5.10.4.4.2.4) "Uniform"
+					(14.5.10.4.4.3) To the right of "Normal" is a text field
+						(14.5.10.4.4.3.1) It includes the number 1,000
+						(14.5.10.4.4.3.2) Tapping this text field opens the system numberpad
+						(14.5.10.4.4.3.3) The user can enter a number from 2 - 10,000
+					(14.5.10.4.4.4) To the right of "Uniform" is a text field
+						(14.5.10.4.4.4.1) It includes the number 1,000
+						(14.5.10.4.4.4.2) Tapping this text field opens the system numberpad
+						(14.5.10.4.4.4.3) The user can enter a number from 2 - 10,000
+				(14.5.10.4.5) Below the distribution types is a header string: "Graph Type"
+				(14.5.10.4.6) Below the graphy type header are 
+					(14.5.10.4.6.1) a column of three radio buttons
+					(14.5.10.4.6.2) three graph type strings:
+						(14.5.10.4.6.1) "Histogram"
+						(14.5.10.4.6.2) "Line Graph"
+							(14.5.10.4.6.2.1) This is the default state.
+						(14.5.10.4.6.3) "Q-Q Scatter Plot"
+			(14.5.10.5) If a user selects any distrubtion type other than "Off", a "Graph Distribution" button appears below the dice beside the Dice Pool button.
+				(14.5.10.5.1) Default state: ic_graph.xml
+				(14.5.20.5.2) Active state: Programmatically change fill colors for default state icons to #808080
+			(14.5.10.6) If a user taps the graph button:
+				(14.5.10.6.1) The graph distribution button changes to its active state
+				(14.5.10.6.2) A graph appears in the space where roll results are normally displayed.
+					(14.5.10.6.2.1) (0,0) on the x-/y-axis never maps values. It creates a buffer between the axes and the plotted results.
+					(14.5.10.6.2.2) The x-axis 
+						(14.5.10.6.2.2.1) Is consistently positioned at the bottom of the graph.
+						(14.5.10.6.2.2.2) Has an interval between axis values of 1f
+						(14.5.10.6.2.2.3) Has interval labels for every number that can be rolled
+							(14.5.10.6.2.2.3.1) For example, if a dice pool includes 1d6 and 2d20, the x-axis intervals range from 1 to 20.
+							(14.5.10.6.2.2.3.2) If percentile dice are included, interval labels are increments of five.
+								(14.5.10.6.2.2.3.2.1) For example, if a dice pool includes 1d6, 2d20, and 1d%, the x-axis intervals range from 5 to 100, in increments of five (making 20 total interval labels).
+								(14.5.10.6.2.2.3.2.2) This will cause many results to be blotted not in line with an interval line. A result of 1 should be blotted 0.2f of the distance between 0 and 5.
+					(14.5.10.6.2.3) The y-axis
+						(14.5.10.6.2.3.1) Is consistently positioned at the side of the graph.
+						(14.5.10.6.2.3.2) Has an interval between axis values of 1f
+						(14.5.10.6.2.3.3) Has interval labels defined by this rule "If increment value = i and the maximum possible results = y, then i = y/50, with fractions rounded up to the next whole number."
+							(14.5.10.6.2.3.3.1) If the distribution method is "manual", the maximum possible results is set to 20.
+								(14.5.10.6.2.3.3.1.1) If the user exceeds 20 rolls while using manual distribution, the maximum possible results incdreases by 10.
+								(14.5.10.6.2.3.3.1.2) Any tie the user exceeds the current manual maximum value, increase the maximum value by 10.
+								(14.5.10.6.2.3.3.1.3) If the user surpasses a maximum value of 50, interval labels should be listed in increments of 2 so that the y-axis never has more than 50 intervals.
+							(14.5.10.6.2.3.3.2) If the distribution method is "normal", the maximum possible result is defined by (14.5.10.4.4.3).
+								(14.5.10.6.2.3.3.2.1) For example, the default value of 1,000 would cause y-axis intervals to be 0 to 1000 in increments of 20.
+									(14.5.10.6.2.3.3.2.1.1) This creates 50 intervals
+									(14.5.10.6.2.3.3.2.1.2) There is no instance where the y-axis will have more than 50 intervals.
+							(14.5.10.6.2.3.3.3) If the distribution method is "uniform", the maximum possible result is defined by (14.5.10.4.4.4).
+								(14.5.10.6.2.3.3.3.1) For example, the default value of 1,000 would cause y-axis intervals to be 0 to 1000 in increments of 20.
+									(14.5.10.6.2.3.3.3.1.1) This creates 50 intervals
+									(14.5.10.6.2.3.3.3.1.2) There is no instance where the y-axis will have more than 50 intervals.
+			(14.5.10.7) If a user taps the roll button while a graph distribution other than "Off" is selected:
+				(14.5.10.7.1) The results are graphed on (14.5.10.6.2) graph lines.
+					(14.5.10.1.1) If Manual distribution is selected:
+						(14.4.10.1.1.1) The roll animation lasts for 0.5 seconds.
+						(14.4.10.1.1.2) The result is plotted on the graph.
+						(14.4.10.1.1.3) Additional rolls add additional results to the graph.
+							(14.4.10.1.1.3.1) A Histogram bar lengthens every time that number is rolled as a result.
+							(14.4.10.1.1.3.2) A Line Graph line adjusts upward to the new value every time that number is rolled as a result.
+							(14.4.10.1.1.3.3) A new dot is added to the scatter plot for eery result rolled.
+						(14.4.10.1.1.4) The roll animation does not need to complete for the user to press Roll again.
+							(14.4.10.1.1.4.1) The roll animation continues for a total length of time equal to 0.5 seconds for every time the roll buttonw as pressed.
+							(14.4.10.1.1.4.2) Results populate on the graph when their specific animation completes, even if additional roll animations are occuring.
+					(14.5.10.1.2) If Normal distribution is selected:
+						(14.5.10.1.2.1) The roll animation lasts for 3.0 seconds
+						(14.5.10.1.2.2) A number of results equal to the value entered in (14.5.10.4.4.3) are plotted on the graph
+							(14.5.10.1.2.2.1) Use a Box-Muller Transformation to general normally distributed results.
+						(14.5.10.1.2.3) Plotting should occur during the roll animation. All values should be plotted when the animation ends.
+						(14.5.10.1.2.4) If the user presses the roll button a second time while the first distribution is calculating, the first roll is cancelled and a new roll begins.
+					(14.5.10.1.3) If Uniform distribution is selected:
+						(14.5.10.1.3.1) The roll animation lasts for 3.0 seconds.
+						(14.5.10.1.3.2) A number of results equal to the value entered in (14.5.10.4.4.4) are plotted on the graph
+						(14.5.10.1.3.3) Plotting should occur during the roll animation. All values should be plotted when the animation ends.
+						(14.5.10.1.3.4) If the user presses the roll button a second time while the first distribution is calculating, the first roll is cancelled and a new roll begins.
+					(14.5.10.1.4) If the graph distribution button is not active:
+						(14.5.10.1.4.1) Graphing data are still retained.
+						(14.5.10.1.4.2) Graphing data are displayed if the graph distribution button is activated.
+						(14.5.10.1.4.3) If the graph distribution is returned to its default state, results continue to be graphed
+							(14.5.10.1.4.3.1) These new results are displayed if the graph is active again.
+						(14.5.10.1.4.4) It is the Graphing Distribution setting that determines whether results data are plotted, not whether the graph itself is visible or not.
+				(14.5.10.7.2) Results are not differentiated by die type.
+					(14.5.10.7.2.1) For example, if a dice pool includes 1d6 and 2d20 with roll results of 3, 11, and 17, the graph would plot points (3,1), (11,1), and (17,1).
+					(14.5.10.7.2.2) TODO: Research whether to differentiate results by die type.
 
 
 (15) ``COIN FLIP SPECIFIC UX``
@@ -828,81 +937,43 @@ Ranodmizers is a collection of four different randomization tools: Spin, Slots, 
 
 
 ``COIN FLIP MODE SETTINGS``
+	(15.5) The settings window for Coin Flip mode includes these additional settings:
+		(15.5.1) Each setting includes text and an icon.
+
+``COLOR``
+		(15.5.2) "Color" functions identially to (14.5.2), replacing dice with coins.
+			(14.5.2.1) "Goldenrod" is the default color.
+
+``FLIP ANIMATION``
+		(15.5.3) "Flip Animation"
+			(15.5.3.1) Following the phrase "Flip Animation" is an on/off toggle.
+				(15.5.3.1.1) The toggle includes the strings "On" and "Off"
+				(15.5.3.1.2) The default state is On.
+			(15.5.3.2) If the setting is toggled off, flip results are shown immediately. There is no flip animation.
+
+``FREE FORM``
+		(15.5.4) "Free Form"
+			(15.5.4.1) Following the phrase "Free Form" is an on/off toggle.
+				(15.5.5.1.1) The toggle includes the strings "On" and "Off"
+				(15.5.5.1.2) The default state is Off.
+			(15.5.5.2) If the setting is toggled on:
 
 
+``ANNOUNCE``
+		(15.5.5) "Announce" functions identically to (14.5.6), replacing dice with coins.
 
-DICE MODE 
-
-Graph Distribution - This opens a window with radio buttons "Off" (default), "Manual", "Normal", "Uniform". Below the radio buttons are three line-style icon buttons "solid line" (default), "dashed line", and "dotted line". The graph line displayed after a roll result is the type selected here (solid line, dashed line, or dotted line).
-
-
-
-If "Normal" or "Uniform" are selected, there is also a number field and the string "number of rolls" below the line-style buttons. This value is set at 1000 by default. How large of a number of roll computations can we achieve in three seconds?
+``PROBABILITY``
 
 
+``GRAPH DISTRIBUTION``
+		(15.5.7) "Graph Distribution" functions identically to (14.5.10), replacing dice with coins.
+			(15.5.7.1) An x-axis would never have more than two intervals, one for heads and one for tails.
 
-If Manual, Normal, or Uniform radio buttons are selected, Announcement is automatically toggled off. If announcement is toggled on, Graph Distribution changes to off.
-
-
-
-When Graph Distribution is active and the roll button is pressed, the following behaviors occur:
-
-
-
-Manual: The roll animation (if active) lasts 0.5 seconds. The result becomes the first entry on an x-y line graph, where the x axis is the number rolls in 5-roll increments (rounded up). The y axis is increments of one to the maximum total possible result (based on sum results setting selection). The roll animation does not need to complete for the user to be able to press the roll button again. With rapid tapping, the animation continues through 0.5 seconds after the final tap (total roll time is not summed based on number of taps). Each tap yields a new result on the line graph. The x-axis grows as the number of rolls exceeds increments of five. A "reset" button should appear beside the Dice Pool button. If pressed, the manual graph is eliminated. Pressing the roll button would then begin a new graph. (Consider whether a reset button should be included for Normal and Uniform as well.)
-
-
-
-If Sum Results is set to "individual", each die within a die type is considered a separate roll. 5d10 would yield 5 dots along the x-axis even if the roll button was only pressed once. If the dice pool contains more than one die type, each die type gets its own line on the graph. Lines should be different colors (using the color sequence we created for spin dial wedges to ensure proper contrast).
-
-
-
-If Sum Results is set to "Sum Die Type", the functionality is the same as "individual" except multiple dice of the same die type are summed together and entered as a single point on the x-axis. This means the number of points on the x-axis would equal the number of times the roll button is pressed. 
-
-
-
-If Sum results is set to "Sum Total", the functionality is the same as "Sum Results" except there is only a single line on the graph rather than a line for each die type. The Y-axis uses increments of 10% of the total possible value (rounded to the closest whole number) after the total sum surpasses the number 20.
-
-
-
-Normal: This functionality matches "Manual" with the following variations. The roll animation (if active) lasts for 3.0 seconds. During that time, a number of roles equal to the number listed in settings (default 1000) are computed and a graph with a Normal distribution is plotted. The behaviors for Sum Results settings are the same as in Manual. If the user presses the roll button, the current graph is removed, and a new graph is created.
-
-
-
-Uniform: This functionality matches "Manual" with the following variations. The roll animation (if active) lasts for 3.0 seconds. During that time, a number of roles equal to the number listed in settings (default 1000) are computed and a graph with a Uniform distribution is plotted. The behaviors for Sum Results settings are the same as in Manual. If the user presses the roll button, the current graph is removed, and a new graph is created.
-
-
-
-The last setting is "Add Another Dice Pool". A total of seven pools can be created. Each window should have a close button and a settings button.
-
-
-''COIN FLIP''
-
-Each window includes its own pool of coins. Coins available are 1 bit (1b), 5 bits (5b), 10 bits (10b), 25 bits (25b), 1 meatball (1MB), and 2 meatballs (2MB). A user can have a max of ten of each coin in their pool. Coin flipping behavior will be the same as dice rolling, with a button that flips all the coins in the user's pool. Coins animate a flipping motion for 0.75 seconds and then display either a heads (obverse) or tails (reverse) result.
-
-
-
-The settings for coin flip are as follows:
-
-
-
-1. Mode - Spin, Slots, Dice, Coin Flip
-
-
-
-2. Coin Colors - this uses the colorpalette shared file. Goldenrod is the default color.
-
-
-
-3. Flip Animation - on/off toggle, default on. If turned off, the coin flip animation is not shown and the result is displayed immediately.
 
 
 
 4. Free Form - on/off toggle, default off. When on, all dice in the dice pool appear on the screen. They show their heads (obverse) side. The Flip button is replaced with a Tails button. If pressed, all coins switch to their tails (reverse) side and the button changes to a Heads button. The user can drag each coin anywhere within the bounds of the window.
 
-
-
-5. Announcement - On/off toggle, default on. Match the Dice Announcement design. Mutually exclusive with Probability and free form.
 
 
 
@@ -939,15 +1010,3 @@ If a user taps a box, a flip action is implemented for that box and any other em
 - 10x10 Grid: The same as 3x3 but with a larger matrix.
 
 
-
-- Graph Distribution
-
-
-
-If graph disstribution is selected, the following settings become visible:
-
-- Graph Distribution Type - match Dice graph distribution design
-
-- Graph Line Style - match Dice line style design
-
-- Graph Flip Count - match Dice flip count design
