@@ -1,0 +1,90 @@
+// the_purramid_0_1\app\src\main\specifications
+// ClockOverlayService.kt
+Clock is a collection of timekeeping services that allows teachers to demonstrate how time works across the globe. It creates a digital or analog clock to manage classroom time.
+
+ --- RUNTIME EVENTS ---
+(1) On first app-intent launch, the clock opens in a windowed state.
+(2) The most recent clock user preferences are saved. Save the following:
+	(2.1) Clock size
+	(2.2) 24-hour toggle state
+	(2.3) Current time zone
+	(2.4) Seconds togle state
+	(2.5) All user-created alarms
+		(2.5.1) Alarms are saved whether they are active or not.
+		(2.5.2) Active alarms remain active on next app launch.
+	(2.6) Clock position on the screen if not full-screen
+(3) On future app-intent launches, the clock loads saved user preferences.
+
+
+ --- USER INTERFACE ---
+(4) A Settings button is positioned in the bottom left corner.
+	(5.1) Default icon state uses ic_settings.xml.
+	(5.2) Active state: Programmatically change fill colors for default state icons to #808080.
+(5) A Close button is positioned in the top right corner.
+	(6.1) Default icon state uses ic_close.xml.
+	(6.2) Active state: Programmatically change fill colors for default state icons to #808080.
+
+(6) A clock face appears in the middle of the window
+	(6.1) The face can be one of two types:
+
+``ANALOG``
+		(6.1.1) A circular analog clock with the following components:
+			(6.1.1.1) Numbers 1 - 12 ordered around the interior circumferance of the circle
+				(6.1.1.1.1) A second series of numbers, 13 - 24, can be turned on in the settings.
+				(6.1.1.1.2) 12-hour clock face: clock_face.xml
+				(6.1.1.1.3) 24-hour clock face: clock_face24.xml
+					(6.1.1.1.3.1) TODO: Confirm accuracy. Is a 24-hour view programmatically added to clock_face.xml?
+			(6.1.1.2) Four small tick marks between each number
+			(6.1.1.3) One large tick mark aligned with each number
+			(6.1.1.4) A second hand
+				(6.1.1.4.1) This can be disabled in the settings.
+			(6.1.1.5) A minute hand
+			(6.1.1.6) An hour hand.
+
+``DIGITAL``
+		(6.1.2) A rectangular digital clock displayed as HH:MM:SS.
+			(6.1.2.1) If seconds are turned off in settings, time is displayed HH:MM.
+				(6.1.2.1.1) If the clock is set to 12-hour:
+					(6.1.2.1.1.1) a leading zero is not included for hours between 1 - 9.
+					(6.1.2.1.1.2) AM and PM appear following seconds.
+						(6.1.2.1.1.2.1) They are stacked on top of one another, with AM  on top and PM on the bottom.
+						(6.1.2.1.1.2.2) When AM is active, PM is not shown.
+						(6.1.2.1.1.2.3) When PM is active, AM is not shown.
+				(6.1.2.1.2) If the clock is set to 24-hour:
+					(6.1.2.1.2.1) Midnight is displayed as 00:00 (not 24:00)
+					(6.1.2.1.2.2) a leading zero is included for hours between 0 - 9
+	
+	(6.2) Time passing is animated:
+		(6.2.1) Analog hands rotate around the clock face
+		(6.2.2) Digital numbers count upward
+			
+``BUTTONS``
+(7) Below the clock face are two buttons:
+	(7.1) Play/Puase
+		(7.1.1) Default state: ic_play.xml
+		(7.1.2) Active state: ic_pause.xml
+	(7.2) Reset
+		(7.2.1) Default state: ic_reset.xml
+		(7.2.2) Active state: Programmatically change fill colors for default state icons to #808080
+	(7.3) Play/Pause is on the left, and Reset is on the right.
+		(7.3.1) This order is reversed for right-to-left languages.
+
+
+``SET TIME ZONE``
+(8) The time zone selection menu is an interactive 3D globe
+
+
+ --- USER EXPERIENCE ---
+``
+
+
+Mode
+Color Palette color square button
+12-/24-Hour toggle
+Set Time Zone edit button
+Seconds on/off toggle
+Set Alarm edit button
+Nest on/off toggle
+Add Another
+
+Is "Enable Overlay" implemented correctly? It should be an auto-prompt and not a button.

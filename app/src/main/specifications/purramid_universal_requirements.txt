@@ -80,7 +80,7 @@
 	
 (7) Each app intent has its own user settings.
 	(7.1) Unless specified otherwise, settings apply only to the window from which the settings menu was opened.
-	(7.2) The window from which the settings menu was opened will be highlighted with a yellow border.
+	(7.2) The window from which the settings menu was opened will be highlighted with a yellow border (#FFFACD; highlight_border.xml)
 		(7.2.1) This border is present while the settings menu is open.
 		(7.2.2) This border is removed when the settings menu is closed.
 		
