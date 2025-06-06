@@ -58,30 +58,44 @@ Clock is a collection of timekeeping services that allows teachers to demonstrat
 		(6.2.1) Analog hands rotate around the clock face
 		(6.2.2) Digital numbers count upward
 			
+``NESTED``
+(7) If the user toggles on the "Nested" setting:
+    (7.1) The clock reduces in size
+        (7.1.1) An analog clock is 75px by 75px
+        (7.1.2) A digital clock is 75px b7 50px
+    (7.2) The clock is affixed to the top right corner of the screen
+        (7.2.1) This includes 20px of padding so that the clock does not appear flush against the edge
+    (7.3) The (8) buttons are not visible.
+    (7.4) The nested clock can still be moved or resized by the user with dragging or pinching actions, like normal.
+    (7.5) If multiple nested clocks are added, any clocks in the top right corner of the screen are stacked one above the other, with the newest clock on the bottom.
+
 ``BUTTONS``
-(7) Below the clock face are two buttons:
-	(7.1) Play/Puase
-		(7.1.1) Default state: ic_play.xml
-		(7.1.2) Active state: ic_pause.xml
-	(7.2) Reset
-		(7.2.1) Default state: ic_reset.xml
-		(7.2.2) Active state: Programmatically change fill colors for default state icons to #808080
-	(7.3) Play/Pause is on the left, and Reset is on the right.
-		(7.3.1) This order is reversed for right-to-left languages.
+(8) Below the clock face are two buttons:
+	(8.1) Play/Puase
+		(8.1.1) Default state: ic_play.xml
+		(8.1.2) Active state: ic_pause.xml
+	(8.2) Reset
+		(8.2.1) Default state: ic_reset.xml
+		(8.2.2) Active state: Programmatically change fill colors for default state icons to #808080
+	(8.3) Play/Pause is on the left, and Reset is on the right.
+		(8.3.1) This order is reversed for right-to-left languages.
 
 
 ``SET TIME ZONE``
-(8) The time zone selection menu is an interactive 3D globe
-	(8.1) An overlay divides the globe into time zone sections
-	(8.2) Time zones are colored to better show their entire coverage space.
-		(8.2.1) The current time zone is not colored
-			(8.2.1.1) If not changed by the user, the current time zone matches the system time zone.
-			(8.2.1.2) if changed by the user, the system clock settings do not affect the clock app-intent
-		(8.2.2) Color overlays have 40% opacity
-		(8.2.3) Time zones that are offset by 30 or 45 minutes have a striped coloring that matches the time zone on either side of them.
-		(8.2.4) Time zone divisions change based on daylight saving time
-			(8.2.4.1) For example, time zones that are UTC-3 may split in half when some of the countries move to daylight saving time and some don't. The color overlay would change at the time shift, with the some of those countries displaying the color for UTC-3 and some displaying UTC-2.
-	(8.3)
+(9) The time zone selection menu is an interactive 3D globe
+	(9.1) An overlay divides the globe into time zone sections
+	(9.2) Time zones are colored to better show their entire coverage space.
+		(9.2.1) The current time zone is not colored
+			(9.2.1.1) If not changed by the user, the current time zone matches the system time zone.
+			(9.2.1.2) if changed by the user, the system clock settings do not affect the clock app-intent
+		(9.2.2) Color overlays have 40% opacity
+		(9.2.3) Time zones that are offset by 30 or 45 minutes have a striped coloring that matches the time zone on either side of them.
+		(9.2.4) Time zone divisions change based on daylight saving time
+			(9.2.4.1) For example, time zones that are UTC-3 may split in half when some of the countries move to daylight saving time and some don't. The color overlay would change at the time shift, with the some of those countries displaying the color for UTC-3 and some displaying UTC-2.
+	(9.3) City information is displayed that includes:
+        (9.3.1) City name
+        (9.3.2) Country
+        (9.3.3) UTC offset
 
 
  --- USER EXPERIENCE ---

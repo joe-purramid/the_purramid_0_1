@@ -83,6 +83,7 @@
 	(7.2) The window from which the settings menu was opened will be highlighted with a yellow border (#FFFACD; highlight_border.xml)
 		(7.2.1) This border is present while the settings menu is open.
 		(7.2.2) This border is removed when the settings menu is closed.
+    (7.3) There are no settings for the main app, only the app intents.
 		
 (8) When the user selects the "Add Another" option from the settings, the new instance duplicates the preferences of the instance from which it was cloned.
 
