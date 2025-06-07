@@ -83,7 +83,7 @@ Clock is a collection of timekeeping services that allows teachers to demonstrat
 
 
 ``TIME ZONE DISPLAY``
-(9) The time zone selection menu is an interactive 3D globe
+(9) The time zone selection menu is an interactive 3D globe (scene.gltf)
 	(9.1) An overlay divides the globe into time zone sections
 	(9.2) Time zones are colored to better show their entire coverage space.
 		(9.2.1) The current time zone is not colored
@@ -115,6 +115,9 @@ Clock is a collection of timekeeping services that allows teachers to demonstrat
 	(9.5) Each time zone includes two or more city pins 
 		(9.5.1) At least one pin is in the northern hemisphere whenever possible.
 		(9.5.2) At least one pin is in the southern hemisphere whenever possible.
+        (9.5.3) City database entries include latitude and longitude
+            (9.5.3.1) These values are not displayed to the user.
+            (9.5.3.20 They are tracked to ensure accurate placement of the city pins.
 	(9.6) Below the globe are:
 		(9.6.1) a right-facing arrow
 			(9.6.1.1) Default state: ic_arrow_right.xml
@@ -187,6 +190,8 @@ Clock is a collection of timekeeping services that allows teachers to demonstrat
 						(10.2.2.4.2.3.3) by pressing the circle between the left and right arrows
 							(10.2.2.4.2.3.3.1) Pressing this button centers the globe on the current time zone.
 					(10.2.2.4.2.4) UTC offset, city, and country information are included in a database.
+                        (10.2.2.4.2.4.1) See ThePurramid01\app\src\main\assets\cities_timezones.csv
+                        (10.2.2.4.2.4.2) See ThePurramid01\app\src\main\assets\time_zones.geojson
 					(10.2.2.4.2.5) When a user taps on a time zone:
 						(10.2.2.4.2.5.1) it becomes the active time zone
 						(10.2.2.4.2.5.2) it no longer has a colored overlay
