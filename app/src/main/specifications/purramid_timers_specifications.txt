@@ -1,0 +1,88 @@
+// the_purramid_0_1\app\src\main\specifications
+// TimersService.kt
+Timers are companion countdown timer and stopwatch. These appear only as digital clocks.
+
+ --- RUNTIME EVENTS ---
+(1) On first app-intent launch, the timer opens in a windowed state.
+(2) The most recent timer user preferences are saved. Save the following:
+	(2.1) Timer size
+	(2.2) Background color
+	(2.3) Set countdown time
+	(2.4) Hundredths togle state
+	(2.5) Ending alarm toggle state
+	(2.6) User-defined music URL
+    (2.7) Sequence toggle state
+    (2.8) Lap toggle state
+    (2.9) Sounds toggle state
+(3) On future app-intent launches, the timer loads saved user preferences.
+
+
+ --- USER INTERFACE ---
+(4) A Settings button is positioned in the bottom left corner.
+	(4.1) Default icon state uses ic_settings.xml.
+	(4.2) Active state: Programmatically change fill colors for default state icons to #808080.
+(5) A Close button is positioned in the top right corner.
+	(5.1) Default icon state uses ic_close.xml.
+	(5.2) Active state: Programmatically change fill colors for default state icons to #808080.
+(6) All timers use a digital clock face HH:MM:SS
+    (6.1) Hundredths will be abbreviated as cs (centiseconds) in the instructions, but all user-facing strings say Hundredths.
+    (6.2) If Hundredths is toggled on, time displays as HH:MM:SS.cs
+        (6.2.1) Hundredths appear 0.6f the size of the other numbers.
+        (6.2.2) Hundredths are separated from seconds with a period not a colon.
+
+``BUTTONS``
+(7) Below the timer clock is two buttons:
+	(7.1) Play/Puase
+		(7.1.1) Default state: ic_play.xml
+		(7.1.2) Active state: ic_pause.xml
+	(7.2) Reset
+		(7.2.1) Default state: ic_reset.xml
+		(7.2.2) Active state: Programmatically change fill colors for default state icons to #808080
+	(7.3) Play/Pause is on the left, and Reset is on the right.
+		(7.3.1) This order is reversed for right-to-left languages.
+
+``NESTED``
+(8) A nested timer:
+    (8.1) is reduced in size, 75px by 75px
+    (8.2) is affixed to the top right corner of the screen
+        (8.2.1) This includes 20px of padding so that the timer does not appear flush against the edge
+    (8.3) does not have any (7) control buttons visible.
+    (8.4) can still be moved or resized by the user with dragging or pinching actions, like normal.
+    (8.5) is stacked if multiple nested timers are added, with multiple timers in the top right corner of the screen 
+		(8.5.1) Nested timers are are stacked one above the other, with the newest timer on the bottom.
+
+
+ --- USER EXPERIENCE ---
+(9) ``SETTINGS SUMMARY``
+	(9.1) When a user touches the settings button, its icon changes from (4.1) Default to (4.2) Active.
+	(9.2) When activated, a settings menu extends with a smooth transition animation from the settings button.
+		(9.2.1) The settings button remains active while the settings window is open.
+		(9.2.2) The settings window is rows of strings and an icon:
+			(9.2.2.1) "Mode"
+				(9.2.2.1.2) Following the word "Mode" are two icons:
+					(9.2.2.1.2.1) A countdown icon
+					(9.2.2.1.2.2) A stopwatch icon
+				(9.2.2.1.3) The active mode has:
+					(9.2.2.1.3.1) its fill programmatically changed to #808080
+					(9.2.2.1.3.2) A thick blue bar beneath the icon
+				(9.2.2.1.4) The default mode is (9.2.2.1.2.2) Countdown Timer
+				(9.2.2.1.5) When a mode is activated, the UI changes to that timer type
+			(9.2.2.2) "Colors"
+				(9.2.2.2.1) Following the word "Color" is a color square
+					(9.2.2.2.1.1) The fill for this square is the color current used for the clock face background
+					(9.2.2.2.1.2) The default color is White.
+				(9.2.2.2.2) If the user taps the word "Color" or the color square, a color picker opens.
+				(9.2.2.2.3) The color picker displays the six color options from PurramidPalette.kt
+					(9.2.2.2.3.1) This color applies to the clock face background
+					(9.2.2.2.3.2) Clock hands and numbers are either black and white depending on which option creates the best color contrast with the background color.
+
+
+
+
+
+
+
+
+
+
+(12) TODO: Is "Enable Overlay" implemented correctly? It should be an auto-prompt and not a button.

@@ -6,13 +6,14 @@ Clock is a collection of timekeeping services that allows teachers to demonstrat
 (1) On first app-intent launch, the clock opens in a windowed state.
 (2) The most recent clock user preferences are saved. Save the following:
 	(2.1) Clock size
-	(2.2) 24-hour toggle state
-	(2.3) Current time zone
-	(2.4) Seconds togle state
-	(2.5) All user-created alarms
-		(2.5.1) Alarms are saved whether they are active or not.
-		(2.5.2) Active alarms remain active on next app launch.
-	(2.6) Clock position on the screen if not full-screen
+    (2.2) Clock face color
+	(2.3) 24-hour toggle state
+	(2.4) Current time zone
+	(2.5) Seconds togle state
+	(2.6) All user-created alarms
+		(2.6.1) Alarms are saved whether they are active or not.
+		(2.6.2) Active alarms remain active on next app launch.
+	(2.7) Clock position on the screen if not full-screen
 (3) On future app-intent launches, the clock loads saved user preferences.
 
 
@@ -58,29 +59,28 @@ Clock is a collection of timekeeping services that allows teachers to demonstrat
 		(6.2.1) Analog hands rotate around the clock face
 		(6.2.2) Digital numbers count upward
 			
-``NESTED``
-(7) A nested clock:
-    (7.1) is reduced in size
-        (7.1.1) An analog clock is 75px by 75px
-        (7.1.2) A digital clock is 75px b7 50px
-    (7.2) is affixed to the top right corner of the screen
-        (7.2.1) This includes 20px of padding so that the clock does not appear flush against the edge
-    (7.3) does not have any (8) control buttons visible.
-    (7.4) can still be moved or resized by the user with dragging or pinching actions, like normal.
-    (7.5) is stacked if multiple nested clocks are added, with multiple clocks in the top right corner of the screen 
-		(7.5.1) Nested clocks are are stacked one above the other, with the newest clock on the bottom.
-
 ``BUTTONS``
-(8) Below the clock face are two buttons:
-	(8.1) Play/Puase
-		(8.1.1) Default state: ic_play.xml
-		(8.1.2) Active state: ic_pause.xml
-	(8.2) Reset
-		(8.2.1) Default state: ic_reset.xml
-		(8.2.2) Active state: Programmatically change fill colors for default state icons to #808080
-	(8.3) Play/Pause is on the left, and Reset is on the right.
-		(8.3.1) This order is reversed for right-to-left languages.
+(7) Below the clock face are two buttons:
+	(7.1) Play/Puase
+		(7.1.1) Default state: ic_play.xml
+		(7.1.2) Active state: ic_pause.xml
+	(7.2) Reset
+		(7.2.1) Default state: ic_reset.xml
+		(7.2.2) Active state: Programmatically change fill colors for default state icons to #808080
+	(7.3) Play/Pause is on the left, and Reset is on the right.
+		(7.3.1) This order is reversed for right-to-left languages.
 
+``NESTED``
+(8) A nested clock:
+    (8.1) is reduced in size
+        (8.1.1) An analog clock is 75px by 75px
+        (8.1.2) A digital clock is 75px b7 50px
+    (8.2) is affixed to the top right corner of the screen
+        (8.2.1) This includes 20px of padding so that the clock does not appear flush against the edge
+    (8.3) does not have any (8) control buttons visible.
+    (8.4) can still be moved or resized by the user with dragging or pinching actions, like normal.
+    (8.5) is stacked if multiple nested clocks are added, with multiple clocks in the top right corner of the screen 
+		(8.5.1) Nested clocks are are stacked one above the other, with the newest clock on the bottom.
 
 ``TIME ZONE DISPLAY``
 (9) The time zone selection menu is an interactive 3D globe (scene.gltf)
