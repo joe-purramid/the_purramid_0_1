@@ -11,7 +11,7 @@ Timers are companion countdown timer and stopwatch. These appear only as digital
 	(2.4) Hundredths togle state
 	(2.5) Ending alarm toggle state
 	(2.6) User-defined music URL
-    (2.7) Sequence toggle state
+    (2.7) User-defined sequence
     (2.8) Lap toggle state
     (2.9) Sounds toggle state
 (3) On future app-intent launches, the timer loads saved user preferences.
@@ -54,7 +54,9 @@ Timers are companion countdown timer and stopwatch. These appear only as digital
 
  --- USER EXPERIENCE ---
 (9) ``SETTINGS SUMMARY``
-	(9.1) When a user touches the settings button, its icon changes from (4.1) Default to (4.2) Active.
+	(9.1) When a user touches the settings button
+		(9.1.1) its icon changes from (4.1) Default to (4.2) Active.
+		(9.1.2) time is paused if it is actively counting
 	(9.2) When activated, a settings menu extends with a smooth transition animation from the settings button.
 		(9.2.1) The settings button remains active while the settings window is open.
 		(9.2.2) The settings window is rows of strings and an icon:
@@ -75,13 +77,25 @@ Timers are companion countdown timer and stopwatch. These appear only as digital
 				(9.2.2.2.3) The color picker displays the six color options from PurramidPalette.kt
 					(9.2.2.2.3.1) This color applies to the clock face background
 					(9.2.2.2.3.2) Clock hands and numbers are either black and white depending on which option creates the best color contrast with the background color.
-
-
-
-
-
-
-
+			(9.2.2.3) Set Countdown
+			(9.2.2.4) Hundredths
+			(9.2.2.5) Ending alarm
+			(9.2.2.6) User-defined music URL
+			(9.2.2.7) Sequence
+			(9.2.2.8) Lap
+			(9.2.2.9) Sounds
+			(9.2.2.10) Nest
+			(9.2.2.11) "Add Another
+				(9.2.2.11.1) Following the phrase "Add Another" is an add icon.
+					(9.2.2.11.1.1) Default icon state: ic_add_circle.xml.
+					(9.2.2.11.1.2) The active icon state: programatically changes the fill color of the default icon to #808080.
+				(9.2.2.11.2) When a user touches the Add Another button
+					(9.2.2.11.2.1) its icon changes from Default to Active for the duration of the onTouch event
+					(9.2.2.11.2.2) a new clock appears at the geometric center of the screen.
+						(9.2.2.11.2.2.1) the new clock is offset 25px to the right and 25px down if a clock already exists at the center of the screen.
+						(9.2.2.11.2.2.2) it adopts all the preferences of the clock from which it was opened
+							(9.2.2.11.2.2.2.10) For example, a new clock opened from a 300px by 300px analog clock that has a light blue clock face would also be a 300px by 300px analog clock with a light blue clock face.
+					(9.2.2.11.2.3) If four clocks already exist on the screen, the add Another setting is inactivated.
 
 
 

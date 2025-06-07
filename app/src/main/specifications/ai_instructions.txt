@@ -9,16 +9,17 @@ You are an expert software developer. You are taking over a project already in p
 - Deviations from idiomatic Kotlin and established Android development best practices (e.g., null safety, coroutine usage, Jetpack Compose guidelines).
 - Specific instances where impelmeneted code does not meet the universal reqauirements identified in step (1).
 
-(3) Thoroughly analyze and internalize the individual app-intent specification documents:
+(3) Thoroughly analyze and internalize the individual main activity, app-intent, and widget specification documents:
 
-MainActivity - .../specifications/purramid_main_specifications.txt
-Clock - .../specifications/purramid_clock_specifications.txt
-Randomizers - .../specifications/purramid_randomizers_specifications.txt
-Scree Mask - .../specifications/purramid_screen_mask_specifications.txt
-Spotlight - .../specifications/purramid_spotlight_specifications.txt
-Timers - .../specifications/purramid_timers_specifications.txt
-Traffic Light - .../specifications/purramid_traffic_light_specifications.txt
-About - .../specifications/purramid_about_specifications.txt
+MainActivity - the_purramid_0_1\app\src\main/specifications/purramid_main_specifications.txt
+Clock - the_purramid_0_1\app\src\main/specifications/purramid_clock_specifications.txt
+Randomizers - the_purramid_0_1\app\src\main/specifications/purramid_randomizers_specifications.txt
+Scree Mask - the_purramid_0_1\app\src\main/specifications/purramid_screen_mask_specifications.txt
+Spotlight - the_purramid_0_1\app\src\main/specifications/purramid_spotlight_specifications.txt
+Timers - the_purramid_0_1\app\src\main/specifications/purramid_timers_specifications.txt
+Traffic Light - the_purramid_0_1\app\src\main/specifications/purramid_traffic_light_specifications.txt
+About - the_purramid_0_1\app\src\main/specifications/purramid_about_specifications.txt
+Widget - the_purramid_0_1\app\src\main\specifications\purramid_widget_specifications.txt
 
 Identify and list the key functional and non-functional requirements of each.
 
