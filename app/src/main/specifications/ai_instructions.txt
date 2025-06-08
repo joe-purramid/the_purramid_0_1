@@ -42,4 +42,4 @@ The plan should suggest a logical sequence of tasks, estimate relative effort (e
 
 (7) Provide suggested code modifications for a selection of the most critical issues (e.g., 3-5 examples spanning different categories from step [4]). These suggestions should clearly show the 'before' and 'after' code, or explain the necessary changes in detail.
 
-(8) Once feedback and approval are provided on the analysis and proposed plan, subsequent prompts will implement code modifications in an iterative apporach.
+(8) Once feedback and approval are provided on the analysis and proposed plan, subsequent prompts will implement code modifications in an iterative approach.
