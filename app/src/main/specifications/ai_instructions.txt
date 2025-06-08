@@ -30,7 +30,7 @@ Identify and list the key functional and non-functional requirements of each.
 - coding inefficencies (e.g., suboptimal algorithms, redundant computations, inefficient UI rendering)
 - departures from Kotlin best practices (e.g., improper use of scope functions, lack of immutability where appropriate)
 - non-compliance with universal requirements (List each universal requirement not met, referencing the specific section of purramid_universal_requirements.txt and the code location.)
-- non-compliance with app intent specifications (For each app intent, list discrepancies between the specification document and the implemented code. Some app-intent specifications have changed since original implementation [such as in Spotlight]. Clearly note significant discrepancies when found.)
+- non-compliance with app-intent specifications (For each app-intent, list discrepancies between the specification document and the implemented code. Some app-intent specifications have changed since original implementation [such as in Spotlight]. Clearly note significant discrepancies when found.)
 
 (5) Compile a list of critical assumptions made during your analysis where specification details were ambiguous or missing. Phrase these as specific questions that need clarification before proceeding with code modifications. For each assumption, briefly explain its potential impact if incorrect.
 

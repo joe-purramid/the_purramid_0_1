@@ -202,8 +202,8 @@ class MainActivity : AppCompatActivity() {
             AppIntent.AppType.RANDOMIZERS -> {
                 launchNewRandomizerInstanceWithBounds()
             }
-            // Handle other app intent types
-            else -> Log.w("MainActivity", "Unknown app intent type clicked: ${appIntent.name}")
+            // Handle other app-intent types
+            else -> Log.w("MainActivity", "Unknown app-intent type clicked: ${appIntent.name}")
         }
     }
 
@@ -543,7 +543,7 @@ class MainActivity : AppCompatActivity() {
 // TODO Address how services are handling multiple instances of [clock, timers, etc.] compared to
 // the individual free form windows of Randomizers (which is an activity and not a service
 
-// TODO: [MULTI-INSTANCE RE-ARCHITECTURE] Revisit the multi-instance behavior for all app intents
+// TODO: [MULTI-INSTANCE RE-ARCHITECTURE] Revisit the multi-instance behavior for all app-intents
 // (Clock, Spotlight, Timers, ScreenMask, TrafficLight). The current vision is to allow
 // up to four distinct, draggable, and individually configurable instances for each of these,
 // similar to how Randomizers are intended to work.

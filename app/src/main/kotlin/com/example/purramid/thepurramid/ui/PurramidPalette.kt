@@ -4,7 +4,7 @@ package com.example.purramid.thepurramid.ui
 import android.graphics.Color
 
 /**
- * Defines the standard Purramid color palette for consistent use across app intents.
+ * Defines the standard Purramid color palette for consistent use across app-intents.
  */
 object PurramidPalette {
     data class NamedColor(val name: String, val colorInt: Int, val isDefault: Boolean = false)

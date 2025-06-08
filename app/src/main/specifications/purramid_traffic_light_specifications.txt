@@ -185,7 +185,7 @@ The traffic light is a vector image of a common traffic light with three colored
                     (10.2.1.10.1.2) The phrase "Purramid Learning®" is never translated.
             
 (11) ``DANGEROUS SOUND ALERT``
-    (11.1) If the traffic light app intent detects a sound at 150 dB or louder:
+    (11.1) If the traffic light app-intent detects a sound at 150 dB or louder:
         (11.1.1) It overrides any mode parameters currently in effect.
         (11.1.2) The following message is displayed beside the traffic light.
             (11.1.2.1) Aligned with the red light: "Warning"
