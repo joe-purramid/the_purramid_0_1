@@ -3,6 +3,37 @@
 Randomizers is a collection of four different randomization tools: Spin, Slots, Dice, and Coin Flip. Spin and Slots display a random selection from a defined list of items. Dice displays random results of selected polyhedral dice. Coin Flip displays heads or tails results from selected coins.
 
 
+## Technical Implementation Notes
+- Service/Activity type: Activity only (RandomizersHostActivity)
+- Multi-window support: Yes (up to 4 simultaneous spin dials, slots, or coin flips; up to 7 dice pools)
+- Window tracking: UUID per randomizer window
+- Shares single service: Not applicable
+- Requires permissions:
+  - READ_MEDIA_IMAGES (Android 13+) for image uploads in lists
+  - WAKE_LOCK
+  - RECEIVE_BOOT_COMPLETED
+- Instance tracking: 
+  - Uses standardized instanceId (1-4) pattern
+  - Persists with UUID for crash recovery
+  - Managed by InstanceManager
+- Database entities:
+  - RandomizerInstanceEntity
+  - SpinItemEntity
+  - SpinListEntity
+  - SpinSettingsEntity
+- Key dependencies:
+  - ViewModels: 
+	-- CoinFlipViewModel
+	-- DiceViewModel
+	-- ListCreatorViewModel
+	-- ListEditorViewModel
+	-- RandomzierSettingsViewModel
+	-- RandomizerViewModel
+	-- SlotsViewModel
+  - DAO: RandomizerDao
+  - Shared: PurramidPalette, MultiWindowManager
+
+
  --- RUNTIME EVENTS ---
 (1) On first app-intent launch, the randomizer opens in a windowed state.
 (2) The most recent randomizer user preferences are saved. Save the following:

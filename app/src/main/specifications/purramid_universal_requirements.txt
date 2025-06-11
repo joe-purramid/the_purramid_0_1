@@ -147,3 +147,34 @@
 			(13.1.2.3) Any text entered remains.
 				(13.1.2.3.1) If no text was entered in a field that shows a default string, that default string returns.
 					(13.1.2.3.1.1) For example, the Edit Sequence title field in Traffic Light includes the string "Sequence Title." This string disappears when the text field is in use. When the user exits the text field without entering text, "Sequence Title" is displayed again.
+
+(14) ``INSTANCE TRACKING AND WINDOW MANAGEMENT``
+    (14.1) All app-intents use standardized instance tracking
+        (14.1.1) Each window is assigned an instanceId (integer 1-4)
+        (14.1.2) Each window also maintains a UUID for crash recovery
+        (14.1.3) Instance IDs are managed by a central InstanceManager
+    (14.2) Window state persistence
+        (14.2.1) All app-intents must save window position (x, y)
+        (14.2.2) All app-intents must save window size (width, height)
+        (14.2.3) Use -1 to indicate WRAP_CONTENT for width/height
+    (14.3) Instance lifecycle
+        (14.3.1) On creation, request next available instanceId from InstanceManager
+        (14.3.2) If no instanceId available, show "maximum windows reached" message
+        (14.3.3) On close, release instanceId back to InstanceManager
+        (14.3.4) On crash/onDestroy, maintain instance data for restoration
+    (14.4) Database requirements
+        (14.4.1) All state entities must include: instanceId, uuid, windowX, windowY, windowWidth, windowHeight
+        (14.4.2) Use Room database with standardized DAO patterns
+        (14.4.3) Support full state restoration after app restart
+		
+(15) Error Handling Standards
+    (15.1) All network operations must have timeout handling
+    (15.2) All file operations must check permissions first
+    (15.3) User-friendly error messages via Snackbar
+    (15.4) Crash recovery preserves instance state
+
+(16) Performance Requirements  
+    (16.1) UI must maintain 60fps during animations
+    (16.2) Touch response within 100ms
+    (16.3) Service memory usage under 50MB per instance
+    (16.4) Battery optimization for long classroom sessions

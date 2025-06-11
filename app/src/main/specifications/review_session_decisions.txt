@@ -1,0 +1,19 @@
+# The Purramid - Implementation Decisions
+
+## MainActivity
+- **Reviewed**: [Date]
+- **Architecture**: Activity without ViewModel
+- **Key Decisions**:
+  - Curved list uses custom RecyclerView.LayoutManager
+  - App-intent launching via explicit Intents
+  - No persistence needed
+
+## Clock
+- **Reviewed**: [Date]
+- **Architecture**: Foreground Service + ViewModel
+- **Key Decisions**:
+  - Time zones use java.time API
+  - 3D globe uses SceneView library
+  - Alarms stored in Room, not system AlarmManager
+  
+[Continue for each app-intent]
