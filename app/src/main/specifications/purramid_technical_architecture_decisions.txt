@@ -23,15 +23,25 @@ Last Updated: [11JUN25]
 
 ### Data Layer
 - **Room Database for:**
-  - User preferences per app-intent (mode, colors, positions, etc.)
-  - Instance tracking with UUID
-  - Custom lists (Randomizers)
-  - Alarm settings (Clock)
-  - Sequences (Traffic Light)
-  - ALL persistent data
+  - All instance-specific data (window state, user preferences per window)
+  - User-created content (lists, sequences, alarms)
+  - Complex data structures requiring queries
+  - Instance tracking and multi-window management
+  
+- **Shared Preferences:** 
+  - Simple app-level settings (not instance-specific)
+  - Permission flags (overlay permission granted)
+  - Onboarding completion flags
+  - Default values for new instances
+  - Managed via qualified providers (@ClockPrefs, @TimersPrefs, etc.)
 
-- **Shared Preferences:** NOT USED (everything goes through Room)
-
+- **Data Storage Rules:**
+  - If it's per-window → Room
+  - If it's per-app → SharedPreferences
+  - If it's a list/collection → Room
+  - If it needs queries → Room
+  - If it's a simple flag → SharedPreferences
+  
 ### Architecture Components
 - **ViewModel + StateFlow required for:**
   - All Activities with UI state

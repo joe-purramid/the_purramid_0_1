@@ -3,6 +3,28 @@
 The traffic light is a vector image of a common traffic light with three colored "bulbs" or "lights": red, yellow, and green. One bulb can be lit at a time, used by the teacher to better manage the classroom.
 
 
+## Technical Implementation Notes
+- Service/Activity type: Foreground Service (TrafficLightService) + Settings Activity (TrafficLightActivity)
+- Multi-window support: Yes (up to 4 simultaneous traffic lights)
+- Window tracking: UUID per traffic light window
+- Shares single service: Yes
+- Requires permissions:
+  - SYSTEM_ALERT_WINDOW (for overlay)
+  - FOREGROUND_SERVICE
+  - POST_NOTIFICATIONS
+  - WAKE_LOCK
+  - RECEIVE_BOOT_COMPLETED
+- Instance tracking: 
+  - Uses standardized instanceId (1-4) pattern
+  - Persists with UUID for crash recovery
+  - Managed by InstanceManager
+- Database entities: TrafficLightStateEntity
+- Key dependencies:
+  - ViewModels: TrafficLightViewModel
+  - DAO: TrafficLightDao
+  - Shared: MultiWindowManager
+
+
  --- RUNTIME EVENTS ---
 (1) On launch, the traffic light 
 	(1.1) checks if the system has a mic array or other active mic input

@@ -2,6 +2,29 @@
 // ScreenMaskService.kt
 Screen Mask (formerly named Screen Shade) creates a black, opaque mask that covers some or all of the screen. It is meant to hide the content it covers. 
 
+
+## Technical Implementation Notes
+- Service/Activity type: Foreground Service (ScreenMaskService) + Settings Activity (ScreenMaskActivity)
+- Multi-window support: Yes (up to 4 simultaneous masks)
+- Window tracking: UUID per screen mask window
+- Shares single service: Yes
+- Requires permissions:
+  - SYSTEM_ALERT_WINDOW (for overlay)
+  - FOREGROUND_SERVICE
+  - POST_NOTIFICATIONS
+  - READ_MEDIA_IMAGES (Android 13+) for image uploads in lists
+  - RECEIVE_BOOT_COMPLETED
+- Instance tracking: 
+  - Uses standardized instanceId (1-4) pattern
+  - Persists with UUID for crash recovery
+  - Managed by InstanceManager
+- Database entities: ScreenMaskStateEntity
+- Key dependencies:
+  - ViewModels: ScreenMaskViewModel
+  - DAO: ScreenMaskDao
+  - Shared: MultiWindowManager
+
+
  --- RUNTIME EVENTS ---
 (1) On first app-intent launch, the mask covers the entire screen.
 (2) The most recent mask user preferences are saved. Save the following:

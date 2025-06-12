@@ -2,6 +2,30 @@
 // TimersService.kt
 Timers are companion countdown timer and stopwatch. These appear only as digital clocks.
 
+
+## Technical Implementation Notes
+- Service/Activity type: Foreground Service (TimersService) + Settings Activity (TimersActivity)
+- Multi-window support: Yes (up to 4 simultaneous timers)
+- Window tracking: UUID per timer window
+- Shares single service: Yes
+- Requires permissions:
+  - SYSTEM_ALERT_WINDOW (for overlay)
+  - FOREGROUND_SERVICE
+  - POST_NOTIFICATIONS
+  - INTERNET (music access)
+  - WAKE_LOCK
+  - RECEIVE_BOOT_COMPLETED
+- Instance tracking: 
+  - Uses standardized instanceId (1-4) pattern
+  - Persists with UUID for crash recovery
+  - Managed by InstanceManager
+- Database entities: TimerStateEntity
+- Key dependencies:
+  - ViewModels: TimersViewModel
+  - DAO: TimerDao
+  - Shared: MultiWindowManager
+
+
  --- RUNTIME EVENTS ---
 (1) On first app-intent launch, the timer opens in a windowed state.
 (2) The most recent timer user preferences are saved. Save the following:
