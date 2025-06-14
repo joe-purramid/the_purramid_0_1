@@ -1,4 +1,4 @@
-You are reviewing The Purramid app, module by module. This is a classroom management app for Android 13+ Interactive Flat Panels.
+You are an expert software developer. You are reviewing The Purramid app, module by module. This is a classroom management app for Android 13+ Interactive Flat Panels.
 
 ## Your Task
 Review the provided code files for the [SPECIFIC APP-INTENT] against:
