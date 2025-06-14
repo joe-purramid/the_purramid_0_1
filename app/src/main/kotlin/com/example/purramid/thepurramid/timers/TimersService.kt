@@ -26,6 +26,7 @@ import android.widget.TextView
 import android.widget.Toast // For Settings placeholder
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.*
+import com.example.purramid.thepurramid.instance.InstanceManager
 import com.example.purramid.thepurramid.MainActivity
 import com.example.purramid.thepurramid.R
 import com.example.purramid.thepurramid.timers.TimerState
@@ -46,13 +47,14 @@ const val ACTION_START_COUNTDOWN = "com.example.purramid.timers.ACTION_START_COU
 const val ACTION_STOP_TIMER_SERVICE = "com.example.purramid.timers.ACTION_STOP_TIMER_SERVICE" // Renamed for clarity
 const val EXTRA_TIMER_ID = TimersViewModel.KEY_TIMER_ID
 const val EXTRA_DURATION_MS = "com.example.purramid.timers.EXTRA_DURATION_MS"
+const val PREFS_NAME = "com.example.purramid.thepurramid.screen_mask.APP_PREFERENCES"
 
 @AndroidEntryPoint
 class TimersService : LifecycleService(), ViewModelStoreOwner {
 
     @Inject lateinit var windowManager: WindowManager
-    // Inject Hilt's factory; no need for custom factory if using SavedStateViewModelFactory
-    // @Inject lateinit var viewModelFactory: ViewModelProvider.Factory
+    @Inject lateinit var instanceManager: InstanceManager
+    @Inject lateinit var viewModelFactory: ViewModelProvider.Factory
 
     private val viewModelStore = ViewModelStore()
     override fun getViewModelStore(): ViewModelStore = viewModelStore

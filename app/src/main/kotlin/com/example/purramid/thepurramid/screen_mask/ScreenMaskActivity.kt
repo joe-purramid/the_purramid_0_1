@@ -25,7 +25,7 @@ class ScreenMaskActivity : AppCompatActivity() {
         private const val TAG = "ScreenMaskActivity"
         const val ACTION_LAUNCH_IMAGE_CHOOSER_FROM_SERVICE = "com.example.purramid.screen_mask.ACTION_LAUNCH_IMAGE_CHOOSER_FROM_SERVICE"
         // Using the constants defined in ScreenMaskService for SharedPreferences
-        const val PREFS_NAME = ScreenMaskService.PREFS_NAME
+        const val PREFS_NAME = ScreenMaskService.PREFS_NAME_FOR_ACTIVITY
         const val KEY_ACTIVE_COUNT = ScreenMaskService.KEY_ACTIVE_COUNT
     }
 

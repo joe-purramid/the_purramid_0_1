@@ -1,5 +1,24 @@
 # The Purramid - Implementation Decisions
 
+## All App-Intents
+- **Reviewed**: 14 June 2025
+- **Architecture**: Instance management
+- **Key Decisions**:
+  - Do not use AtomicInteger for instance numbering
+  - Use thepurramid.instance.InstanceManager.kt
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+
 ## MainActivity
 - **Reviewed**: [Date]
 - **Architecture**: Activity without ViewModel

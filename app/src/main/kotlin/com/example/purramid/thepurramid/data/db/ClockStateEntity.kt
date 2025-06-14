@@ -5,11 +5,13 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.example.purramid.thepurramid.clock.ClockOverlayService // For default values if needed
 import java.time.ZoneId // Import for default zone ID
+import java.util.UUID
 
 @Entity(tableName = "clock_state")
 data class ClockStateEntity(
     @PrimaryKey // Use the unique clock ID managed by the service
     val clockId: Int,
+    val uuid: String = UUID.randomUUID().toString(),
 
     val timeZoneId: String = ZoneId.systemDefault().id, // Store ZoneId as String, provide default
     val isPaused: Boolean = false,

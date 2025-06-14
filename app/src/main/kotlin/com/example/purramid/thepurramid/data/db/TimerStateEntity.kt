@@ -5,11 +5,14 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.example.purramid.thepurramid.timers.TimerType
 import com.example.purramid.thepurramid.ui.PurramidPalette
+import java.util.UUID
 
 @Entity(tableName = "timer_state")
 data class TimerStateEntity(
     @PrimaryKey
     val timerId: Int,
+    val uuid: String = UUID.randomUUID().toString(),
+
     val type: String = TimerType.STOPWATCH.name, // Store enum as String
     val initialDurationMillis: Long = 0L,
     val currentMillis: Long = 0L,

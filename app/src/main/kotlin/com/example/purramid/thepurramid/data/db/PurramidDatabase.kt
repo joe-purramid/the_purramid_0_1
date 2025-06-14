@@ -28,7 +28,7 @@ import androidx.room.TypeConverters
         TimerStateEntity::class,
         TrafficLightStateEntity::class
     ],
-    version = 11, // Updated with Slots randomizer mode
+    version = 12, // Updated StateEntity files with UUID for crash recovery
     exportSchema = false // Set to true if you want to export the schema to a file for version control (recommended for production apps)
 )
 @TypeConverters(Converters::class) // Register the TypeConverters class
@@ -48,10 +48,21 @@ abstract class PurramidDatabase : RoomDatabase() {
     abstract fun trafficLightDao(): TrafficLightDao
 
     companion object {
-        // Singleton prevents multiple instances of the database opening at once
-        // Using @Volatile ensures that writes to this field are immediately made visible to other threads.
         @Volatile
         private var INSTANCE: PurramidDatabase? = null
+
+        // Migration from 11 to 12: Add UUID to screen_mask_state
+        private val MIGRATION_11_12 = object : Migration(11, 12) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(
+                    "ALTER TABLE screen_mask_state ADD COLUMN uuid TEXT NOT NULL DEFAULT '${UUID.randomUUID()}'"
+                )
+            }
+        }
+
+        // Future migrations would be added here:
+        // private val MIGRATION_12_13 = object : Migration(12, 13) { ... }
+        // private val MIGRATION_13_14 = object : Migration(13, 14) { ... }
 
         fun getDatabase(context: Context): PurramidDatabase {
             return INSTANCE ?: synchronized(this) {
@@ -60,9 +71,12 @@ abstract class PurramidDatabase : RoomDatabase() {
                     PurramidDatabase::class.java,
                     "purramid_database"
                 )
-                // IMPORTANT: Migration needed due to version bump
-                .fallbackToDestructiveMigration() // Replace with real migrations later
-                .build()
+                    .addMigrations(
+                        MIGRATION_11_12
+                        // Add future migrations here: MIGRATION_12_13, MIGRATION_13_14, etc.
+                    )
+                    .fallbackToDestructiveMigrationOnDowngrade() // Only destroy on downgrade
+                    .build()
                 INSTANCE = instance
                 instance
             }

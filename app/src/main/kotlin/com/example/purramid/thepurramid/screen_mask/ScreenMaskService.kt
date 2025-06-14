@@ -31,6 +31,7 @@ import androidx.savedstate.SavedStateRegistryOwner
 import com.example.purramid.thepurramid.R
 import com.example.purramid.thepurramid.data.db.ScreenMaskDao // For restoring state
 import com.example.purramid.thepurramid.di.HiltViewModelFactory // Assuming Hilt Factory for custom creation
+import com.example.purramid.thepurramid.instance.InstanceManager
 import com.example.purramid.thepurramid.screen_mask.ui.MaskView
 import com.example.purramid.thepurramid.screen_mask.viewmodel.ScreenMaskViewModel
 import dagger.hilt.android.AndroidEntryPoint
@@ -56,6 +57,7 @@ const val EXTRA_IMAGE_URI = "com.example.purramid.screen_mask.EXTRA_IMAGE_URI"
 class ScreenMaskService : LifecycleService(), ViewModelStoreOwner, SavedStateRegistryOwner {
 
     @Inject lateinit var windowManager: WindowManager
+    @Inject lateinit var instanceManager: InstanceManager
     @Inject lateinit var viewModelFactory: ViewModelProvider.Factory // Hilt provides default factory
     @Inject lateinit var screenMaskDao: ScreenMaskDao // Inject DAO for state restoration
     @Inject @ScreenMaskPrefs lateinit var servicePrefs: SharedPreferences
@@ -75,7 +77,6 @@ class ScreenMaskService : LifecycleService(), ViewModelStoreOwner, SavedStateReg
     private val maskLayoutParams = ConcurrentHashMap<Int, WindowManager.LayoutParams>()
     private val stateObserverJobs = ConcurrentHashMap<Int, Job>()
 
-    private val instanceIdCounter = AtomicInteger(0)
     private var isForeground = false
     private var imageChooserTargetInstanceId: Int? = null
 
@@ -86,7 +87,7 @@ class ScreenMaskService : LifecycleService(), ViewModelStoreOwner, SavedStateReg
         const val MAX_MASKS = 4 // Shared constant for max masks
 
         // Define the actual string literals here
-        const val PREFS_NAME = "com.example.purramid.thepurramid.screen_mask.APP_PREFERENCES"
+        const val PREFS_NAME_FOR_ACTIVITY = "com.example.purramid.thepurramid.screen_mask.APP_PREFERENCES"
         const val KEY_ACTIVE_COUNT = "SCREEN_MASK_ACTIVE_INSTANCE_COUNT"
         const val KEY_LAST_INSTANCE_ID = "last_instance_id_screenmask"
     }
@@ -99,19 +100,7 @@ class ScreenMaskService : LifecycleService(), ViewModelStoreOwner, SavedStateReg
         super.onCreate()
         Log.d(TAG, "onCreate")
         createNotificationChannel()
-        loadLastInstanceId()
         loadAndRestoreMaskStates() // Attempt to restore any previously active masks
-    }
-
-    private fun loadLastInstanceId() {
-        val lastId = servicePrefs.getInt(KEY_LAST_INSTANCE_ID, 0)
-        instanceIdCounter.set(lastId)
-        Log.d(TAG, "Loaded last instance ID for ScreenMask: $lastId")
-    }
-
-    private fun saveLastInstanceId() {
-        servicePrefs.edit().putInt(KEY_LAST_INSTANCE_ID, instanceIdCounter.get()).apply()
-        Log.d(TAG, "Saved last instance ID for ScreenMask: ${instanceIdCounter.get()}")
     }
 
     private fun updateActiveInstanceCountInPrefs() {
@@ -124,26 +113,23 @@ class ScreenMaskService : LifecycleService(), ViewModelStoreOwner, SavedStateReg
             val persistedStates = screenMaskDao.getAllStates()
             if (persistedStates.isNotEmpty()) {
                 Log.d(TAG, "Found ${persistedStates.size} persisted screen mask states. Restoring...")
-                var maxId = instanceIdCounter.get()
                 persistedStates.forEach { entity ->
-                    maxId = max(maxId, entity.instanceId)
-                    // Initialize ViewModel for this persisted ID.
-                    // The ViewModel's init block will load the specific state from DB.
-                    // The view will be created/updated when the ViewModel emits its state.
-                    launch(Dispatchers.Main) { // Ensure VM init is on main if it touches LiveData immediately
-                        initializeViewModel(entity.instanceId, Bundle().apply { putInt(ScreenMaskViewModel.KEY_INSTANCE_ID, entity.instanceId) })
+                    // Register the existing instance ID
+                    instanceManager.registerExistingInstance(InstanceManager.SCREEN_MASK, entity.instanceId)
+
+                    launch(Dispatchers.Main) {
+                        initializeViewModel(entity.instanceId, Bundle().apply {
+                            putInt(ScreenMaskViewModel.KEY_INSTANCE_ID, entity.instanceId)
+                        })
                     }
                 }
-                instanceIdCounter.set(maxId) // Ensure counter is beyond highest loaded ID
             }
 
-            // Ensure service is in foreground if any masks were restored or become active via VM loading
-            if (activeMaskViewModels.isNotEmpty()) { // Check after potential restorations
+            if (activeMaskViewModels.isNotEmpty()) {
                 startForegroundServiceIfNeeded()
             }
         }
     }
-
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
@@ -197,7 +183,6 @@ class ScreenMaskService : LifecycleService(), ViewModelStoreOwner, SavedStateReg
         initializeViewModel(newInstanceId, initialArgs)
         // View creation/update is handled by the ViewModel's state observer
 
-        saveLastInstanceId()
         updateActiveInstanceCountInPrefs()
         startForegroundServiceIfNeeded() // Ensure foreground if adding the first mask
     }
@@ -448,7 +433,6 @@ class ScreenMaskService : LifecycleService(), ViewModelStoreOwner, SavedStateReg
             }
         }
         activeMaskViewModels.clear()
-        saveLastInstanceId()
         _viewModelStore.clear() // Clear the ViewModelStore
         super.onDestroy()
     }
@@ -476,3 +460,9 @@ object ScreenMaskServiceModule {
     }
 }
 */
+
+// TODO: Review UUID implementation approach after completing all corrections:
+// Option 1: Add UUID to database entity with proper migrations
+// Option 2: Use runtime-only UUID management with mutableMapOf<Int, UUID>
+// Option 3: Hybrid approach with optional database UUID field
+// Decision impacts: crash recovery, database migrations, and consistency across app-intents

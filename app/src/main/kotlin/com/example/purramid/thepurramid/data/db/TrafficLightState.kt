@@ -3,11 +3,13 @@ package com.example.purramid.thepurramid.data.db
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import java.util.UUID
 
 @Entity(tableName = "traffic_light_state")
 data class TrafficLightStateEntity(
     @PrimaryKey // Using instanceId passed during creation/loading
     val instanceId: Int,
+    val uuid: String = UUID.randomUUID().toString(),
 
     // Fields mirroring TrafficLightState
     val currentMode: String, // Store enum TrafficLightMode as String

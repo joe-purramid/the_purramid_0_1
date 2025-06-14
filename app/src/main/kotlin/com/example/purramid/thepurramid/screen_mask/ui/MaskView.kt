@@ -65,7 +65,7 @@ class MaskView @JvmOverloads constructor(
     private var initialMaskHeight: Int = 0
     private var isMoving = false
     private var isResizing = false // More sophisticated resize later
-    private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
+    private val touchSlop = dpToPx(10)
     private enum class ResizeDirection { NONE, MOVE, LEFT, TOP, RIGHT, BOTTOM, TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT }
     private var currentResizeDirection = ResizeDirection.NONE
     private val resizeHandleSize = context.dpToPx(24) // Increased for easier touch
@@ -83,12 +83,25 @@ class MaskView @JvmOverloads constructor(
     private val tapTimeout = ViewConfiguration.getTapTimeout().toLong()
     private var downEventTimestamp: Long = 0
 
+    // Mask stamp icon in center
+    private val maskStampImageView: ImageView = ImageView(context).apply {
+        setImageDrawable(ContextCompat.getDrawable(context, R.drawable.ic_mask_stamp))
+        scaleType = ImageView.ScaleType.FIT_CENTER
+        alpha = 0.3f // Semi-transparent as it's a watermark-style stamp
+        layoutParams = LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply {
+            gravity = Gravity.CENTER
+        }
+    }
+
     init {
         // Set initial background (will be updated by state)
         setBackgroundColor(Color.BLACK) // Or any other opaque default you prefer
 
         scaleGestureDetector = ScaleGestureDetector(context, ScaleListener())
         setupMaskTouchListener()
+
+        // Add mask stamp before other views so it's behind
+        addView(maskStampImageView, 0) // Insert at index 0 to be behind other elements
 
         // Billboard ImageView
         billboardImageView = ImageView(context).apply {
@@ -144,6 +157,9 @@ class MaskView @JvmOverloads constructor(
 
     fun updateState(newState: ScreenMaskState) {
         this.currentState = newState
+
+        // Hide mask stamp when billboard is visible
+        maskStampImageView.visibility = if (newState.isBillboardVisible) GONE else VISIBLE
 
         // Update border visibility based on lock state
         if (newState.isLocked) {
@@ -476,14 +492,24 @@ class MaskView @JvmOverloads constructor(
         }
     }
 
+    private fun updateMaskStampSize() {
+        val parentWidth = this.width
+        val parentHeight = this.height
+
+        // Size should be 0.5f of the mask size (50%)
+        val stampSize = minOf(parentWidth, parentHeight) * 0.5f
+
+        maskStampImageView.layoutParams = (maskStampImageView.layoutParams as LayoutParams).apply {
+            width = stampSize.toInt()
+            height = stampSize.toInt()
+            gravity = Gravity.CENTER
+        }
+    }
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
         if (currentState.isBillboardVisible && currentState.billboardImageUri != null) {
             applyImagePadding()
         }
-    }
-
-    private fun dpToPx(dp: Int): Int {
-        return TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp.toFloat(), resources.displayMetrics).toInt()
+        updateMaskStampSize()
     }
 }

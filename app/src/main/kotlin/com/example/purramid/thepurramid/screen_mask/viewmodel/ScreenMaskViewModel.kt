@@ -147,7 +147,6 @@ class ScreenMaskViewModel @Inject constructor(
             width = state.width,
             height = state.height,
             isLocked = state.isLocked,
-            color = Color.WHITE,
             billboardImageUri = state.billboardImageUri,
             isBillboardVisible = state.isBillboardVisible,
             isControlsVisible = state.isControlsVisible
