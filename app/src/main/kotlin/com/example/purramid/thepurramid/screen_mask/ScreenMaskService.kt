@@ -50,6 +50,7 @@ const val ACTION_STOP_SCREEN_MASK_SERVICE = "com.example.purramid.screen_mask.AC
 const val ACTION_ADD_NEW_MASK_INSTANCE = "com.example.purramid.screen_mask.ACTION_ADD_NEW_INSTANCE"
 const val ACTION_REQUEST_IMAGE_CHOOSER = "com.example.purramid.screen_mask.ACTION_REQUEST_IMAGE_CHOOSER" // Service sends to Activity
 const val ACTION_BILLBOARD_IMAGE_SELECTED = "com.example.purramid.screen_mask.ACTION_BILLBOARD_IMAGE_SELECTED" // Activity sends to Service
+const val ACTION_REMOVE_HIGHLIGHT = "com.example.purramid.screen_mask.ACTION_REMOVE_HIGHLIGHT"
 const val EXTRA_MASK_INSTANCE_ID = ScreenMaskViewModel.KEY_INSTANCE_ID // From ViewModel
 const val EXTRA_IMAGE_URI = "com.example.purramid.screen_mask.EXTRA_IMAGE_URI"
 
@@ -164,8 +165,34 @@ class ScreenMaskService : LifecycleService(), ViewModelStoreOwner, SavedStateReg
                 }
                 imageChooserTargetInstanceId = null // Clear target
             }
+            ACTION_REMOVE_HIGHLIGHT -> {
+                val instanceId = intent.getIntExtra(EXTRA_MASK_INSTANCE_ID, -1)
+                if (instanceId != -1) {
+                    highlightMask(instanceId, false)
+                }
+            }
         }
         return START_STICKY
+    }
+
+    override fun onSettingsRequested(id: Int) {
+        // Highlight the mask that requested settings
+        highlightMask(id, true)
+
+        // Store which instance requested settings
+        val intent = Intent(this@ScreenMaskService, ScreenMaskActivity::class.java).apply {
+            putExtra(EXTRA_MASK_INSTANCE_ID, id)
+            putExtra("EXTRA_SETTINGS_BUTTON_SCREEN_LOCATION", getSettingsButtonLocation(id))
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        startActivity(intent)
+    }
+
+    private fun getSettingsButtonLocation(instanceId: Int): IntArray {
+        val maskView = activeMaskViews[instanceId] ?: return intArrayOf(0, 0)
+        val location = IntArray(2)
+        maskView.settingsButton.getLocationOnScreen(location)
+        return location
     }
 
     private fun handleAddNewMaskInstance() {
@@ -185,6 +212,10 @@ class ScreenMaskService : LifecycleService(), ViewModelStoreOwner, SavedStateReg
 
         updateActiveInstanceCountInPrefs()
         startForegroundServiceIfNeeded() // Ensure foreground if adding the first mask
+    }
+
+    fun highlightMask(instanceId: Int, highlight: Boolean) {
+        activeMaskViews[instanceId]?.setHighlighted(highlight)
     }
 
     private fun initializeViewModel(id: Int, initialArgs: Bundle?): ScreenMaskViewModel {

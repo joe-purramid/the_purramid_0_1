@@ -29,8 +29,14 @@ class ScreenMaskSettingsFragment : Fragment() {
 
     companion object {
         const val TAG = "ScreenMaskSettingsFragment"
-        fun newInstance(): ScreenMaskSettingsFragment {
-            return ScreenMaskSettingsFragment()
+        private const val ARG_INSTANCE_ID = "instance_id"
+
+        fun newInstance(instanceId: Int): ScreenMaskSettingsFragment {
+            return ScreenMaskSettingsFragment().apply {
+                arguments = Bundle().apply {
+                    putInt(ARG_INSTANCE_ID, instanceId)
+                }
+            }
         }
     }
 
@@ -44,7 +50,13 @@ class ScreenMaskSettingsFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        setupListeners()
+
+        val instanceId = arguments?.getInt(ARG_INSTANCE_ID) ?: -1
+
+        // Highlight the requesting mask with yellow border
+        sendHighlightCommand(instanceId, true)
+
+        setupListeners(instanceId)
     }
 
     private fun setupListeners() {
@@ -71,7 +83,16 @@ class ScreenMaskSettingsFragment : Fragment() {
     }
 
     override fun onDestroyView() {
+        // Remove highlight when closing
+        val instanceId = arguments?.getInt(ARG_INSTANCE_ID) ?: -1
+        if (instanceId != -1) {
+            // Send intent to service to remove highlight
+            val intent = Intent(requireContext(), ScreenMaskService::class.java).apply {
+                action = ACTION_REMOVE_HIGHLIGHT
+                putExtra(EXTRA_MASK_INSTANCE_ID, instanceId)
+            }
+            requireContext().startService(intent)
+        }
         super.onDestroyView()
-        _binding = null
     }
 }

@@ -4,7 +4,9 @@ package com.example.purramid.thepurramid.screen_mask
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.transition.Slide
 import android.util.Log
+import android.view.Gravity
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -35,6 +37,15 @@ class ScreenMaskActivity : AppCompatActivity() {
         setContentView(binding.root)
         Log.d(TAG, "onCreate - Intent Action: ${intent.action}")
 
+        // Set up Material Fade transition (appears in center)
+        window.enterTransition = Fade().apply {
+            duration = 300
+        }
+        window.exitTransition = Fade().apply {
+            duration = 300
+        }
+
+        // Initialize image picker launcher (keep existing functionality)
         imagePickerLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
             if (uri != null) {
                 Log.d(TAG, "Image selected: $uri, forwarding to service.")
@@ -43,30 +54,19 @@ class ScreenMaskActivity : AppCompatActivity() {
                 Log.d(TAG, "No image selected from picker.")
                 sendImageUriToService(null)
             }
-            finish() // Finish after image picking attempt
+            finish()
         }
 
         // Check the action that started this activity
-        if (intent.action == ACTION_LAUNCH_IMAGE_CHOOSER_FROM_SERVICE) {
-            Log.d(TAG, "Launched by service to pick image.")
-            openImageChooser()
-            // Activity will finish after imagePickerLauncher returns
-        } else {
-            // Default launch path (e.g., from MainActivity or if no specific action)
-            val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-            val activeCount = prefs.getInt(KEY_ACTIVE_COUNT, 0)
-
-            if (activeCount > 0) {
-                Log.d(TAG, "Screen Masks active ($activeCount), launching settings fragment.")
-                showSettingsFragment()
-                // Activity remains open to host the fragment
-            } else {
-                Log.d(TAG, "No active Screen Masks, requesting service to add a new one.")
-                val serviceIntent = Intent(this, ScreenMaskService::class.java).apply {
-                    action = ACTION_ADD_NEW_MASK_INSTANCE
-                }
-                ContextCompat.startForegroundService(this, serviceIntent)
-                finish() // Finish after telling service to add the first instance
+        when (intent.action) {
+            ACTION_LAUNCH_IMAGE_CHOOSER_FROM_SERVICE -> {
+                Log.d(TAG, "Launched by service to pick image.")
+                openImageChooser()
+            }
+            else -> {
+                // Default: Show settings
+                val requestingInstanceId = intent.getIntExtra(EXTRA_MASK_INSTANCE_ID, -1)
+                showSettingsFragment(requestingInstanceId)
             }
         }
     }
@@ -91,13 +91,12 @@ class ScreenMaskActivity : AppCompatActivity() {
         startService(serviceIntent)
     }
 
-    private fun showSettingsFragment() {
-        if (supportFragmentManager.findFragmentByTag(ScreenMaskSettingsFragment.TAG) == null) {
-            Log.d(TAG, "Showing Screen Mask settings fragment.")
-            supportFragmentManager.beginTransaction()
-                .replace(R.id.screen_mask_fragment_container, ScreenMaskSettingsFragment.newInstance())
-                .commit()
-        }
+    private fun showSettingsFragment(instanceId: Int) {
+        val fragment = ScreenMaskSettingsFragment.newInstance(instanceId)
+
+        supportFragmentManager.beginTransaction()
+            .replace(R.id.screen_mask_fragment_container, fragment)
+            .commit()
     }
 
     override fun onNewIntent(intent: Intent) {

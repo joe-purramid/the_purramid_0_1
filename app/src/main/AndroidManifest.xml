@@ -105,6 +105,10 @@
                 android:defaultHeight="500dp" android:gravity="center" />
         </activity>
 
+        <activity
+            android:name=".screen_mask.ScreenMaskActivity"
+            android:theme="@style/CenteredActivityTheme" />
+
         <service android:name=".screen_mask.ScreenMaskService"
             android:enabled="true"
             android:exported="false"

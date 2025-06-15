@@ -39,6 +39,7 @@ class MaskView @JvmOverloads constructor(
     interface InteractionListener {
         fun onMaskMoved(instanceId: Int, x: Int, y: Int)
         fun onMaskResized(instanceId: Int, width: Int, height: Int)
+        fun onSettingsRequested(instanceId: Int)
         fun onLockToggled(instanceId: Int)
         fun onCloseRequested(instanceId: Int)
         fun onBillboardTapped(instanceId: Int) // To request image change
@@ -49,11 +50,36 @@ class MaskView @JvmOverloads constructor(
     var interactionListener: InteractionListener? = null
     private var currentState: ScreenMaskState
 
+    // Control buttons
     private var billboardImageView: ImageView
     private var closeButton: ImageView
-    // Add other control buttons if they are part of the mask itself (e.g., lock, color)
+    private val topLeftResizeHandle: ImageView = ImageView(context).apply {
+        setImageDrawable(ContextCompat.getDrawable(context, R.drawable.ic_resize_left_handle))
+        val handleSize = dpToPx(48) // Make handles large enough to grab easily
+        layoutParams = LayoutParams(handleSize, handleSize).apply {
+            gravity = Gravity.TOP or Gravity.START
+        }
+    }
+    private val bottomRightResizeHandle: ImageView = ImageView(context).apply {
+        setImageDrawable(ContextCompat.getDrawable(context, R.drawable.ic_resize_right_handle))
+        val handleSize = dpToPx(48)
+        layoutParams = LayoutParams(handleSize, handleSize).apply {
+            gravity = Gravity.BOTTOM or Gravity.END
+        }
+    }
+    private val settingsButton: ImageView = ImageView(context).apply {
+        setImageDrawable(ContextCompat.getDrawable(context, R.drawable.ic_settings))
+        val buttonSize = dpToPx(32)
+        setPadding(dpToPx(4), dpToPx(4), dpToPx(4), dpToPx(4))
+        layoutParams = LayoutParams(buttonSize, buttonSize).apply {
+            gravity = Gravity.BOTTOM or Gravity.START
+            setMargins(dpToPx(4), dpToPx(4), dpToPx(4), dpToPx(4))
+        }
+    }
 
+    // Border styling
     private var yellowBorder: GradientDrawable
+    private var lockBorder: GradientDrawable
     private var borderFadeAnimator: ObjectAnimator? = null
 
     // Touch handling for move and resize
@@ -100,6 +126,25 @@ class MaskView @JvmOverloads constructor(
         scaleGestureDetector = ScaleGestureDetector(context, ScaleListener())
         setupMaskTouchListener()
 
+        // Add resize handles
+        addView(topLeftResizeHandle)
+        addView(bottomRightResizeHandle)
+
+        // Add settings button
+        addView(settingsButton)
+        settingsButton.setOnClickListener {
+            if (!currentState.isLocked) {
+                // Apply active state color
+                settingsButton.setColorFilter(Color.parseColor("#808080"), PorterDuff.Mode.SRC_IN)
+                interactionListener?.onSettingsRequested(instanceId)
+
+                // Reset color after a delay (will be reset anyway when activity closes)
+                postDelayed({
+                    settingsButton.clearColorFilter()
+                }, 500)
+            }
+        }
+
         // Add mask stamp before other views so it's behind
         addView(maskStampImageView, 0) // Insert at index 0 to be behind other elements
 
@@ -139,10 +184,10 @@ class MaskView @JvmOverloads constructor(
         }
         addView(closeButton)
 
-        // Yellow border for locked state
-        yellowBorder = GradientDrawable().apply {
-            setStroke(context.dpToPx(3), Color.YELLOW)
-            setColor(Color.TRANSPARENT) // Transparent fill
+        // Red border for locked state
+        lockBorder = GradientDrawable().apply {
+            setStroke(dpToPx(3), Color.RED)  // Change to RED as specified
+            setColor(Color.TRANSPARENT)
         }
 
         // Initialize with a default state (will be overwritten)
@@ -158,16 +203,21 @@ class MaskView @JvmOverloads constructor(
     fun updateState(newState: ScreenMaskState) {
         this.currentState = newState
 
+        // Hide resize handles when locked
+        val handleVisibility = if (newState.isLocked || !newState.isControlsVisible) GONE else VISIBLE
+        topLeftResizeHandle.visibility = handleVisibility
+        bottomRightResizeHandle.visibility = handleVisibility
+
         // Hide mask stamp when billboard is visible
         maskStampImageView.visibility = if (newState.isBillboardVisible) GONE else VISIBLE
 
         // Update border visibility based on lock state
         if (newState.isLocked) {
             // Start fade-in then fade-out animation
-            foreground = yellowBorder // Set border as foreground to overlay content
-            yellowBorder.alpha = 255
+            foreground = lockBorder // Set border as foreground to overlay content
+            lockBorder.alpha = 255
             borderFadeAnimator?.cancel()
-            borderFadeAnimator = ObjectAnimator.ofInt(yellowBorder, "alpha", 255, 0).apply {
+            borderFadeAnimator = ObjectAnimator.ofInt(lockBorder, "alpha", 255, 0).apply {
                 duration = 1000 // Fade out over 1 second
                 startDelay = 500 // Wait 0.5s before starting fade
                 addUpdateListener { invalidate() } // Invalidate to redraw border alpha
@@ -225,6 +275,21 @@ class MaskView @JvmOverloads constructor(
                     potentialClick = true
                     downEventTimestamp = currentTime
                     // --- End tracking ---
+
+                    // Update handle visual state
+                    when (currentResizeDirection) {
+                        ResizeDirection.TOP_LEFT -> {
+                            topLeftResizeHandle.setImageDrawable(
+                                ContextCompat.getDrawable(context, R.drawable.ic_resize_left_handle_active)
+                            )
+                        }
+                        ResizeDirection.BOTTOM_RIGHT -> {
+                            bottomRightResizeHandle.setImageDrawable(
+                                ContextCompat.getDrawable(context, R.drawable.ic_resize_right_handle_active)
+                            )
+                        }
+                        else -> { /* No visual change for move */ }
+                    }
 
                     return@setOnTouchListener true // Consume DOWN event
                 }
@@ -284,7 +349,7 @@ class MaskView @JvmOverloads constructor(
                     }
                     // --- End Check for click ---
 
-                    // If it wasn't a click, it was the end of move/resize/etc.
+                        // If it wasn't a click, it was the end of move/resize/etc.
                     // Final state reported continuously, so nothing specific needed here usually.
                     return@setOnTouchListener true // Consume UP if we consumed DOWN
                 }
@@ -296,6 +361,14 @@ class MaskView @JvmOverloads constructor(
                     currentResizeDirection = ResizeDirection.NONE
                     potentialClick = false
                     return@setOnTouchListener true
+
+                    // Reset handle visuals to default
+                    topLeftResizeHandle.setImageDrawable(
+                        ContextCompat.getDrawable(context, R.drawable.ic_resize_left_handle)
+                    )
+                    bottomRightResizeHandle.setImageDrawable(
+                        ContextCompat.getDrawable(context, R.drawable.ic_resize_right_handle)
+                    )
                 }
             }
             // Default fallback (shouldn't be reached often if DOWN is consumed)
@@ -326,25 +399,21 @@ class MaskView @JvmOverloads constructor(
     }
 
     private fun getResizeDirection(localX: Float, localY: Float): ResizeDirection {
-        val viewWidth = this.width.toFloat()
-        val viewHeight = this.height.toFloat()
+        // Check if touching a resize handle specifically
+        val hitRect = android.graphics.Rect()
 
-        val onLeftEdge = localX < resizeHandleSize
-        val onRightEdge = localX > viewWidth - resizeHandleSize
-        val onTopEdge = localY < resizeHandleSize
-        val onBottomEdge = localY > viewHeight - resizeHandleSize
-
-        return when {
-            onTopEdge && onLeftEdge -> ResizeDirection.TOP_LEFT
-            onTopEdge && onRightEdge -> ResizeDirection.TOP_RIGHT
-            onBottomEdge && onLeftEdge -> ResizeDirection.BOTTOM_LEFT
-            onBottomEdge && onRightEdge -> ResizeDirection.BOTTOM_RIGHT
-            onLeftEdge -> ResizeDirection.LEFT
-            onRightEdge -> ResizeDirection.RIGHT
-            onTopEdge -> ResizeDirection.TOP
-            onBottomEdge -> ResizeDirection.BOTTOM
-            else -> ResizeDirection.MOVE // If not on an edge, it's a move
+        topLeftResizeHandle.getHitRect(hitRect)
+        if (topLeftResizeHandle.isVisible && hitRect.contains(localX.toInt(), localY.toInt())) {
+            return ResizeDirection.TOP_LEFT
         }
+
+        bottomRightResizeHandle.getHitRect(hitRect)
+        if (bottomRightResizeHandle.isVisible && hitRect.contains(localX.toInt(), localY.toInt())) {
+            return ResizeDirection.BOTTOM_RIGHT
+        }
+
+        // If not on a handle, it's a move
+        return ResizeDirection.MOVE
     }
 
     private fun handleResize(rawDeltaX: Float, rawDeltaY: Float) {
@@ -354,37 +423,19 @@ class MaskView @JvmOverloads constructor(
         var newHeight = currentState.height
 
         when (currentResizeDirection) {
-            ResizeDirection.LEFT -> {
-                newWidth = (initialMaskWidth - rawDeltaX).toInt()
-                newX = (initialMaskX + rawDeltaX).toInt()
-            }
-            ResizeDirection.RIGHT -> newWidth = (initialMaskWidth + rawDeltaX).toInt()
-            ResizeDirection.TOP -> {
-                newHeight = (initialMaskHeight - rawDeltaY).toInt()
-                newY = (initialMaskY + rawDeltaY).toInt()
-            }
-            ResizeDirection.BOTTOM -> newHeight = (initialMaskHeight + rawDeltaY).toInt()
             ResizeDirection.TOP_LEFT -> {
+                // Anchor point is bottom-right
                 newWidth = (initialMaskWidth - rawDeltaX).toInt()
                 newX = (initialMaskX + rawDeltaX).toInt()
                 newHeight = (initialMaskHeight - rawDeltaY).toInt()
                 newY = (initialMaskY + rawDeltaY).toInt()
-            }
-            ResizeDirection.TOP_RIGHT -> {
-                newWidth = (initialMaskWidth + rawDeltaX).toInt()
-                newHeight = (initialMaskHeight - rawDeltaY).toInt()
-                newY = (initialMaskY + rawDeltaY).toInt()
-            }
-            ResizeDirection.BOTTOM_LEFT -> {
-                newWidth = (initialMaskWidth - rawDeltaX).toInt()
-                newX = (initialMaskX + rawDeltaX).toInt()
-                newHeight = (initialMaskHeight + rawDeltaY).toInt()
             }
             ResizeDirection.BOTTOM_RIGHT -> {
+                // Anchor point is top-left
                 newWidth = (initialMaskWidth + rawDeltaX).toInt()
                 newHeight = (initialMaskHeight + rawDeltaY).toInt()
             }
-            else -> return
+            else -> return // Only handle corner resizes
         }
 
         // Apply min size constraints
@@ -511,5 +562,17 @@ class MaskView @JvmOverloads constructor(
             applyImagePadding()
         }
         updateMaskStampSize()
+    }
+
+    fun setHighlighted(highlighted: Boolean) {
+        if (highlighted) {
+            foreground = GradientDrawable().apply {
+                setStroke(dpToPx(3), Color.parseColor("#FFFACD"))  // Yellow border as specified
+                setColor(Color.TRANSPARENT)
+            }
+        } else {
+            foreground = null
+        }
+        invalidate()
     }
 }
