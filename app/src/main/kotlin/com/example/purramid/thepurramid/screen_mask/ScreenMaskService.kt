@@ -35,11 +35,12 @@ import com.example.purramid.thepurramid.instance.InstanceManager
 import com.example.purramid.thepurramid.screen_mask.ui.MaskView
 import com.example.purramid.thepurramid.screen_mask.viewmodel.ScreenMaskViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import kotlin.math.max
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import kotlin.math.max
+import kotlinx.coroutines.withContext
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
@@ -49,6 +50,8 @@ const val ACTION_START_SCREEN_MASK = "com.example.purramid.screen_mask.ACTION_ST
 const val ACTION_STOP_SCREEN_MASK_SERVICE = "com.example.purramid.screen_mask.ACTION_STOP_SERVICE"
 const val ACTION_ADD_NEW_MASK_INSTANCE = "com.example.purramid.screen_mask.ACTION_ADD_NEW_INSTANCE"
 const val ACTION_REQUEST_IMAGE_CHOOSER = "com.example.purramid.screen_mask.ACTION_REQUEST_IMAGE_CHOOSER" // Service sends to Activity
+const val ACTION_TOGGLE_LOCK = "com.example.purramid.screen_mask.ACTION_TOGGLE_LOCK"
+const val ACTION_TOGGLE_LOCK_ALL = "com.example.purramid.screen_mask.ACTION_TOGGLE_LOCK_ALL"
 const val ACTION_BILLBOARD_IMAGE_SELECTED = "com.example.purramid.screen_mask.ACTION_BILLBOARD_IMAGE_SELECTED" // Activity sends to Service
 const val ACTION_REMOVE_HIGHLIGHT = "com.example.purramid.screen_mask.ACTION_REMOVE_HIGHLIGHT"
 const val EXTRA_MASK_INSTANCE_ID = ScreenMaskViewModel.KEY_INSTANCE_ID // From ViewModel
@@ -63,20 +66,21 @@ class ScreenMaskService : LifecycleService(), ViewModelStoreOwner, SavedStateReg
     @Inject lateinit var screenMaskDao: ScreenMaskDao // Inject DAO for state restoration
     @Inject @ScreenMaskPrefs lateinit var servicePrefs: SharedPreferences
 
-    private val _viewModelStore = ViewModelStore()
-    override fun getViewModelStore(): ViewModelStore = _viewModelStore
+    override val viewModelStore: ViewModelStore
+        get() = super.getViewModelStore()
 
     // For SavedStateRegistryOwner
     private lateinit var savedStateRegistryController: SavedStateRegistryController
 
-    override fun getSavedStateRegistry(): SavedStateRegistry { // Implement method
-        return savedStateRegistryController.savedStateRegistry
-    }
+    override val savedStateRegistry: SavedStateRegistry
+        get() = savedStateRegistryController.savedStateRegistry
 
     private val activeMaskViewModels = ConcurrentHashMap<Int, ScreenMaskViewModel>()
     private val activeMaskViews = ConcurrentHashMap<Int, MaskView>()
     private val maskLayoutParams = ConcurrentHashMap<Int, WindowManager.LayoutParams>()
     private val stateObserverJobs = ConcurrentHashMap<Int, Job>()
+
+    private var isLockAllActive = false
 
     private var isForeground = false
     private var imageChooserTargetInstanceId: Int? = null
@@ -154,6 +158,44 @@ class ScreenMaskService : LifecycleService(), ViewModelStoreOwner, SavedStateReg
             ACTION_STOP_SCREEN_MASK_SERVICE -> {
                 stopAllInstancesAndService()
             }
+            ACTION_TOGGLE_LOCK -> {
+                val instanceId = intent.getIntExtra(EXTRA_MASK_INSTANCE_ID, -1)
+                if (instanceId != -1) {
+                    activeMaskViewModels[instanceId]?.let { viewModel ->
+                        val currentLockState = viewModel.isLocked()
+                        viewModel.setLocked(!currentLockState)
+
+                        // If unlocking and Lock All is active, this mask is no longer controlled by Lock All
+                        if (currentLockState && isLockAllActive) {
+                            activeMaskViews[instanceId]?.isLockedByLockAll = false
+                        }
+                    }
+                }
+            }
+            ACTION_REQUEST_IMAGE_CHOOSER -> {
+                val instanceId = intent.getIntExtra(EXTRA_MASK_INSTANCE_ID, -1)
+                if (instanceId != -1) {
+                    imageChooserTargetInstanceId = instanceId
+                    val activityIntent = Intent(this, ScreenMaskActivity::class.java).apply {
+                        action = ScreenMaskActivity.ACTION_LAUNCH_IMAGE_CHOOSER_FROM_SERVICE
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    try {
+                        startActivity(activityIntent)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Could not start ScreenMaskActivity for image chooser", e)
+                        activeMaskViews[instanceId]?.showMessage(getString(R.string.cannot_open_image_picker))
+                        imageChooserTargetInstanceId = null
+                    }
+                }
+            }
+            ACTION_TOGGLE_LOCK_ALL -> {
+                // Trigger the Lock All functionality
+                activeMaskViews.values.firstOrNull()?.let { anyMaskView ->
+                    createMaskInteractionListener(0, anyMaskView, WindowManager.LayoutParams())
+                        .onLockAllToggled(0)
+                }
+            }
             ACTION_BILLBOARD_IMAGE_SELECTED -> {
                 val uriString = intent.getStringExtra(EXTRA_IMAGE_URI)
                 val targetId = imageChooserTargetInstanceId ?: intent.getIntExtra(EXTRA_MASK_INSTANCE_ID, -1)
@@ -195,32 +237,68 @@ class ScreenMaskService : LifecycleService(), ViewModelStoreOwner, SavedStateReg
         return location
     }
 
-    private fun handleAddNewMaskInstance() {
-        if (activeMaskViewModels.size >= MAX_MASKS) {
+    private fun handleAddNewMaskInstance(sourceInstanceId: Int? = null) {
+        val activeCount = instanceManager.getActiveInstanceCount(InstanceManager.SCREEN_MASK)
+        if (activeCount >= MAX_MASKS) {
             Log.w(TAG, "Maximum number of masks ($MAX_MASKS) reached.")
-            // The settings UI should display the Snackbar. Service just doesn't add.
             return
         }
 
-        val newInstanceId = instanceIdCounter.incrementAndGet()
+        val newInstanceId = instanceManager.getNextInstanceId(InstanceManager.SCREEN_MASK)
+        if (newInstanceId == null) {
+            Log.w(TAG, "No available instance slots for Screen Mask")
+            return
+        }
+
         Log.d(TAG, "Adding new mask instance with ID: $newInstanceId")
 
-        // Initialize VM (it will create default state and save it via its init block)
-        val initialArgs = Bundle().apply { putInt(ScreenMaskViewModel.KEY_INSTANCE_ID, newInstanceId) }
-        initializeViewModel(newInstanceId, initialArgs)
-        // View creation/update is handled by the ViewModel's state observer
+        lifecycleScope.launch {
+            // If sourceInstanceId provided, clone its state
+            val initialState = if (sourceInstanceId != null) {
+                screenMaskDao.getByInstanceId(sourceInstanceId)?.let { sourceEntity ->
+                    // Clone the source state with new instance ID
+                    sourceEntity.copy(
+                        instanceId = newInstanceId,
+                        uuid = UUID.randomUUID().toString(),
+                        // Offset position slightly so it's visible
+                        x = sourceEntity.x + dpToPx(25),
+                        y = sourceEntity.y + dpToPx(25)
+                    )
+                }
+            } else null
 
-        updateActiveInstanceCountInPrefs()
-        startForegroundServiceIfNeeded() // Ensure foreground if adding the first mask
+            withContext(Dispatchers.Main) {
+                val initialArgs = Bundle().apply {
+                    putInt(ScreenMaskViewModel.KEY_INSTANCE_ID, newInstanceId)
+                }
+
+                // If we have a cloned state, save it first
+                initialState?.let {
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        screenMaskDao.insertOrUpdate(it)
+                    }
+                }
+
+                initializeViewModel(newInstanceId, initialArgs)
+                updateActiveInstanceCountInPrefs()
+                startForegroundServiceIfNeeded()
+            }
+        }
     }
 
     fun highlightMask(instanceId: Int, highlight: Boolean) {
-        activeMaskViews[instanceId]?.setHighlighted(highlight)
+        lifecycleScope.launch(Dispatchers.Main) {
+            activeMaskViews[instanceId]?.setHighlighted(highlight)
+        }
     }
 
     private fun initializeViewModel(id: Int, initialArgs: Bundle?): ScreenMaskViewModel {
         return activeMaskViewModels.computeIfAbsent(id) {
             Log.d(TAG, "Creating ScreenMaskViewModel for ID: $id")
+
+            // Create a unique key for each instance
+            val key = "ScreenMaskViewModel_$id"
+
             // Directly use the ViewModelProvider with the intended HiltViewModelFactory.
             ViewModelProvider(this, HiltViewModelFactory(this, initialArgs ?: Bundle().apply { putInt(ScreenMaskViewModel.KEY_INSTANCE_ID, id) }, viewModelFactory))
                 .get(ScreenMaskViewModel::class.java)
@@ -242,14 +320,14 @@ class ScreenMaskService : LifecycleService(), ViewModelStoreOwner, SavedStateReg
     }
 
     private fun addOrUpdateMaskView(instanceId: Int, state: ScreenMaskState) {
-        Handler(Looper.getMainLooper()).post { // Ensure UI operations on Main thread
+        lifecycleScope.launch(Dispatchers.Main) {
             var maskView = activeMaskViews[instanceId]
             var params = maskLayoutParams[instanceId]
 
             if (maskView == null) {
                 Log.d(TAG, "Creating new MaskView UI for ID: $instanceId")
-                params = createDefaultLayoutParams(state) // Create params based on initial state
-                maskView = MaskView(this, instanceId = instanceId).apply {
+                params = createDefaultLayoutParams(state)
+                maskView = MaskView(this@ScreenMaskService, instanceId = instanceId).apply {
                     setLayerType(View.LAYER_TYPE_HARDWARE, null)
                     interactionListener = createMaskInteractionListener(instanceId, this, params)
                 }
@@ -268,7 +346,7 @@ class ScreenMaskService : LifecycleService(), ViewModelStoreOwner, SavedStateReg
                     val viewModel = activeMaskViewModels.remove(instanceId)
                     viewModel?.deleteState()
                     updateActiveInstanceCountInPrefs()
-                    return@post
+                    return@launch
                 }
             }
 
@@ -300,8 +378,11 @@ class ScreenMaskService : LifecycleService(), ViewModelStoreOwner, SavedStateReg
     }
 
     private fun removeMaskInstance(instanceId: Int) {
-        Handler(Looper.getMainLooper()).post {
+        lifecycleScope.launch(Dispatchers.Main) {
             Log.d(TAG, "Removing Mask instance ID: $instanceId")
+
+            instanceManager.releaseInstanceId(InstanceManager.SCREEN_MASK, instanceId)
+
             val maskView = activeMaskViews.remove(instanceId)
             maskLayoutParams.remove(instanceId)
             stateObserverJobs[instanceId]?.cancel()
@@ -310,11 +391,15 @@ class ScreenMaskService : LifecycleService(), ViewModelStoreOwner, SavedStateReg
 
             maskView?.let {
                 if (it.isAttachedToWindow) {
-                    try { windowManager.removeView(it) }
-                    catch (e: Exception) { Log.e(TAG, "Error removing MaskView ID $instanceId", e) }
+                    try {
+                        windowManager.removeView(it)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error removing MaskView ID $instanceId", e)
+                    }
                 }
             }
-            viewModel?.deleteState() // Tell ViewModel to delete its persisted state
+
+            viewModel?.deleteState()
             updateActiveInstanceCountInPrefs()
 
             if (activeMaskViewModels.isEmpty()) {
@@ -339,6 +424,30 @@ class ScreenMaskService : LifecycleService(), ViewModelStoreOwner, SavedStateReg
             override fun onLockToggled(id: Int) {
                 activeMaskViewModels[id]?.toggleLock()
             }
+            override fun onLockAllToggled(id: Int) {
+                if (!isLockAllActive) {
+                    // Lock all masks
+                    activeMaskViewModels.forEach { (maskId, viewModel) ->
+                        viewModel.setLocked(true, isFromLockAll = true)
+                        activeMaskViews[maskId]?.isLockedByLockAll = true
+                    }
+                    isLockAllActive = true
+                } else {
+                    // Unlock all masks that were locked by Lock All
+                    activeMaskViewModels.forEach { (maskId, viewModel) ->
+                        activeMaskViews[maskId]?.let { view ->
+                            if (view.isLockedByLockAll) {
+                                viewModel.setLocked(false)
+                                view.isLockedByLockAll = false
+                            }
+                        }
+                    }
+                    isLockAllActive = false
+                }
+
+                // Update all mask views to reflect new button states
+                activeMaskViews.values.forEach { it.updateLockButtonState() }
+            }
             override fun onCloseRequested(id: Int) {
                 removeMaskInstance(id)
             }
@@ -352,7 +461,7 @@ class ScreenMaskService : LifecycleService(), ViewModelStoreOwner, SavedStateReg
                     startActivity(activityIntent)
                 } catch (e: Exception) {
                     Log.e(TAG, "Could not start ScreenMaskActivity for image chooser", e)
-                    Toast.makeText(this@ScreenMaskService, "Could not open image picker.", Toast.LENGTH_SHORT).show()
+                    activeMaskViews[id]?.showMessage(getString(R.string.cannot_open_image_picker))
                     imageChooserTargetInstanceId = null
                 }
             }
@@ -368,10 +477,22 @@ class ScreenMaskService : LifecycleService(), ViewModelStoreOwner, SavedStateReg
     }
 
     private fun createDefaultLayoutParams(initialState: ScreenMaskState): WindowManager.LayoutParams {
-        val displayMetrics = DisplayMetrics()
-        windowManager.defaultDisplay.getMetrics(displayMetrics)
-        val screenWidth = displayMetrics.widthPixels
-        val screenHeight = displayMetrics.heightPixels
+        val screenWidth: Int
+        val screenHeight: Int
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val windowMetrics = windowManager.currentWindowMetrics
+            val bounds = windowMetrics.bounds
+            screenWidth = bounds.width()
+            screenHeight = bounds.height()
+        } else {
+            // Fallback for older versions
+            val displayMetrics = DisplayMetrics()
+            @Suppress("DEPRECATION")
+            windowManager.defaultDisplay.getMetrics(displayMetrics)
+            screenWidth = displayMetrics.widthPixels
+            screenHeight = displayMetrics.heightPixels
+        }
 
         // Default to full screen if width/height are invalid or 0
         val width = if (initialState.width <= 0) screenWidth else initialState.width
@@ -452,19 +573,24 @@ class ScreenMaskService : LifecycleService(), ViewModelStoreOwner, SavedStateReg
 
     override fun onDestroy() {
         Log.d(TAG, "onDestroy")
+
+        // Cancel all coroutines first
         stateObserverJobs.values.forEach { it.cancel() }
         stateObserverJobs.clear()
+
+        // Remove all views
         activeMaskViews.keys.toList().forEach { id ->
             val view = activeMaskViews.remove(id)
             maskLayoutParams.remove(id)
             view?.let {
                 if (it.isAttachedToWindow) {
-                    try { windowManager.removeView(it) } catch (e:Exception) { Log.e(TAG, "Error removing view on destroy for $id")}
+                    try { windowManager.removeView(it) } catch (e:Exception) { Log.e(TAG, "Error removing view on destroy for $id", e)}
                 }
             }
         }
+
+        // Clear ViewModels
         activeMaskViewModels.clear()
-        _viewModelStore.clear() // Clear the ViewModelStore
         super.onDestroy()
     }
 

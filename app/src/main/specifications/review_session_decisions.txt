@@ -7,7 +7,12 @@
   - Do not use AtomicInteger for instance numbering
   - Use thepurramid.instance.InstanceManager.kt
 
-  
+ - **Reviewed**: 15 June 2025
+- **Architecture**: Settings Window Implementation
+- **Key Decisions**:
+  - Settings should open at the center of the screen
+  - Future efforts may revise this implemenation to have settings open from the settings button in the app-intent window
+ 
   
   
   

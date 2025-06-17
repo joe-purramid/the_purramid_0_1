@@ -1,9 +1,13 @@
 // ScreenMaskActivity.kt
 package com.example.purramid.thepurramid.screen_mask
 
+import android.app.AlertDialog
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Bundle
+import android.provider.MediaStore
 import android.transition.Slide
 import android.util.Log
 import android.view.Gravity
@@ -11,11 +15,18 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
+import androidx.lifecycle.lifecycleScope
 import com.example.purramid.thepurramid.R
 import com.example.purramid.thepurramid.databinding.ActivityScreenMaskBinding
 import com.example.purramid.thepurramid.screen_mask.ui.ScreenMaskSettingsFragment
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
+import java.io.ByteArrayOutputStream
+import java.io.File
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @AndroidEntryPoint
 class ScreenMaskActivity : AppCompatActivity() {
@@ -48,13 +59,21 @@ class ScreenMaskActivity : AppCompatActivity() {
         // Initialize image picker launcher (keep existing functionality)
         imagePickerLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
             if (uri != null) {
-                Log.d(TAG, "Image selected: $uri, forwarding to service.")
-                sendImageUriToService(uri)
+                Log.d(TAG, "Image selected: $uri")
+
+                // Check image size before forwarding
+                val fileSize = getFileSize(uri)
+                if (fileSize > 3 * 1024 * 1024) { // 3MB in bytes
+                    showImageSizeDialog(uri)
+                } else {
+                    sendImageUriToService(uri)
+                    finish()
+                }
             } else {
                 Log.d(TAG, "No image selected from picker.")
                 sendImageUriToService(null)
+                finish()
             }
-            finish()
         }
 
         // Check the action that started this activity
@@ -78,6 +97,88 @@ class ScreenMaskActivity : AppCompatActivity() {
             Log.e(TAG, "Cannot open image picker", e)
             Snackbar.make(binding.root, getString(R.string.cannot_open_image_picker), Snackbar.LENGTH_LONG).show()
             finish()
+        }
+    }
+
+    private fun getFileSize(uri: Uri): Long {
+        return try {
+            contentResolver.openFileDescriptor(uri, "r")?.use { pfd ->
+                pfd.statSize
+            } ?: 0L
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting file size", e)
+            0L
+        }
+    }
+
+    private fun showImageSizeDialog(uri: Uri) {
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.image_too_large_title))
+            .setMessage(getString(R.string.image_too_large_message))
+            .setPositiveButton(getString(R.string.optimize)) { _, _ ->
+                compressAndSendImage(uri)
+            }
+            .setNegativeButton(getString(R.string.cancel)) { _, _ ->
+                // Return to picker
+                openImageChooser()
+            }
+            .setCancelable(false)
+            .show()
+    }
+
+    private fun compressAndSendImage(uri: Uri) {
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val compressedUri = compressImage(uri)
+                withContext(Dispatchers.Main) {
+                    sendImageUriToService(compressedUri)
+                    finish()
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error compressing image", e)
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@ScreenMaskActivity, getString(R.string.compression_failed), Toast.LENGTH_LONG).show()
+                    openImageChooser()
+                }
+            }
+        }
+    }
+
+    private suspend fun compressImage(uri: Uri): Uri? {
+        return withContext(Dispatchers.IO) {
+            try {
+                val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    val source = ImageDecoder.createSource(contentResolver, uri)
+                    ImageDecoder.decodeBitmap(source)
+                } else {
+                    @Suppress("DEPRECATION")
+                    MediaStore.Images.Media.getBitmap(contentResolver, uri)
+                }
+
+                // Calculate compression quality to get close to 3MB
+                var quality = 90
+                var outputStream: ByteArrayOutputStream
+                var compressed: ByteArray
+
+                do {
+                    outputStream = ByteArrayOutputStream()
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, quality, outputStream)
+                    compressed = outputStream.toByteArray()
+                    quality -= 10
+                } while (compressed.size > 3 * 1024 * 1024 && quality > 10)
+
+                // Save compressed image to cache
+                val fileName = "compressed_${System.currentTimeMillis()}.jpg"
+                val file = File(cacheDir, fileName)
+                file.writeBytes(compressed)
+
+                // Return URI of compressed file
+                FileProvider.getUriForFile(this@ScreenMaskActivity, "${packageName}.fileprovider", file)
+
+            } catch (e: Exception) {
+                Log.e(TAG, "Compression error", e)
+                null
+            }
         }
     }
 

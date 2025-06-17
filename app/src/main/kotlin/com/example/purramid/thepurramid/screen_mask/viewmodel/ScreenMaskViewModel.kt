@@ -80,6 +80,13 @@ class ScreenMaskViewModel @Inject constructor(
         saveState(_uiState.value)
     }
 
+    fun setLocked(locked: Boolean, isFromLockAll: Boolean = false) {
+        _uiState.update { it.copy(isLocked = locked) }
+        saveState(_uiState.value)
+    }
+
+    fun isLocked(): Boolean = _uiState.value.isLocked
+
     fun setBillboardImageUri(uriString: String?) {
         if (_uiState.value.billboardImageUri == uriString) return
         _uiState.update { it.copy(billboardImageUri = uriString, isBillboardVisible = uriString != null) }

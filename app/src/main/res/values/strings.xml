@@ -44,6 +44,7 @@
     <string name="back">Back</string>
     <string name="cancel">Cancel</string>
     <string name="delete">Delete</string>
+    <string name="optimize">Optimize</string>
 
     <!-- `` CLOCK APP `` -->
     <string name="clock_settings_title">Clock Settings</string>
@@ -564,7 +565,10 @@
     <string name="lock_unlock_all">Lock/Unlock All</string>
     <string name="billboard">Billboard</string>
     <string name="cannot_open_image_picker">Cannot open image picker</string>
-
+    <string name="image_too_large_title">Image Too Large</string>
+    <string name="image_too_large_message">The image is too large to be uploaded. You may optimize it or select a different image.</string>
+    <string name="compression_failed">Failed to compress image</string>
+    <string name="unlock_mask_to_close">Unlock the screen mask to close</string>
 
     <!-- `` SPOTLIGHT APP `` -->
     <string name="spotlight_settings_title">Spotlight Settings</string>

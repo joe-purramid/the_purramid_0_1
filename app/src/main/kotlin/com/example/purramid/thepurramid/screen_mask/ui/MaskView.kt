@@ -15,9 +15,9 @@ import android.view.ScaleGestureDetector
 import android.view.ViewConfiguration
 import android.widget.FrameLayout
 import android.widget.ImageView
-import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
+import com.google.android.material.snackbar.Snackbar
 import com.example.purramid.thepurramid.R
 import com.example.purramid.thepurramid.screen_mask.ScreenMaskState
 import com.example.purramid.thepurramid.util.dpToPx
@@ -80,6 +80,7 @@ class MaskView @JvmOverloads constructor(
     // Border styling
     private var yellowBorder: GradientDrawable
     private var lockBorder: GradientDrawable
+    private var isLockedByLockAll = false
     private var borderFadeAnimator: ObjectAnimator? = null
 
     // Touch handling for move and resize
@@ -177,8 +178,7 @@ class MaskView @JvmOverloads constructor(
                 if (!currentState.isLocked) {
                     interactionListener?.onCloseRequested(instanceId)
                 } else {
-                    // Consider Snackbar if Activity context is available, or log for now
-                    Toast.makeText(context, "Unlock mask to close", Toast.LENGTH_SHORT).show()
+                    showMessage(context.getString(R.string.unlock_mask_to_close))
                 }
             }
         }
@@ -574,5 +574,28 @@ class MaskView @JvmOverloads constructor(
             foreground = null
         }
         invalidate()
+    }
+
+    fun showMessage(message: String) {
+        Snackbar.make(this, message, Snackbar.LENGTH_LONG)
+            .setAnchorView(settingsButton) // Position above settings button
+            .show()
+    }
+
+    // Update the lock button display based on lock state
+    fun updateLockButtonState() {
+        val lockDrawable = if (currentState.isLocked) {
+            R.drawable.ic_lock_open
+        } else {
+            R.drawable.ic_lock
+        }
+        lockButton.setImageDrawable(ContextCompat.getDrawable(context, lockDrawable))
+
+        val lockAllDrawable = if (isLockedByLockAll) {
+            R.drawable.ic_lock_all_open
+        } else {
+            R.drawable.ic_lock_all
+        }
+        lockAllButton.setImageDrawable(ContextCompat.getDrawable(context, lockAllDrawable))
     }
 }

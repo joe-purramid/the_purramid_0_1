@@ -64,6 +64,24 @@ class ScreenMaskSettingsFragment : Fragment() {
             activity?.finish() // Close the hosting ScreenMaskActivity
         }
 
+        // Lock button for individual mask
+        binding.lockButton.setOnClickListener {
+            val instanceId = arguments?.getInt(ARG_INSTANCE_ID) ?: return@setOnClickListener
+            sendLockCommand(instanceId)
+        }
+
+        // Lock All button
+        binding.lockAllButton.setOnClickListener {
+            sendLockAllCommand()
+        }
+
+        // Billboard button
+        binding.billboardButton.setOnClickListener {
+            val instanceId = arguments?.getInt(ARG_INSTANCE_ID) ?: return@setOnClickListener
+            sendBillboardCommand(instanceId)
+        }
+
+        // Add New Mask
         binding.buttonAddNewMask.setOnClickListener {
             val prefs = requireActivity().getSharedPreferences(ScreenMaskActivity.PREFS_NAME, Context.MODE_PRIVATE)
             val activeCount = prefs.getInt(ScreenMaskActivity.KEY_ACTIVE_COUNT, 0)
@@ -80,6 +98,30 @@ class ScreenMaskSettingsFragment : Fragment() {
                 Snackbar.make(binding.root, getString(R.string.max_masks_reached_snackbar), Snackbar.LENGTH_LONG).show()
             }
         }
+    }
+
+    private fun sendLockCommand(instanceId: Int) {
+        val intent = Intent(requireContext(), ScreenMaskService::class.java).apply {
+            action = ACTION_TOGGLE_LOCK
+            putExtra(EXTRA_MASK_INSTANCE_ID, instanceId)
+        }
+        requireContext().startService(intent)
+    }
+
+    private fun sendLockAllCommand() {
+        val intent = Intent(requireContext(), ScreenMaskService::class.java).apply {
+            action = ACTION_TOGGLE_LOCK_ALL
+        }
+        requireContext().startService(intent)
+    }
+
+    private fun sendBillboardCommand(instanceId: Int) {
+        // This triggers the image picker via the service
+        val intent = Intent(requireContext(), ScreenMaskService::class.java).apply {
+            action = ACTION_REQUEST_IMAGE_CHOOSER
+            putExtra(EXTRA_MASK_INSTANCE_ID, instanceId)
+        }
+        requireContext().startService(intent)
     }
 
     override fun onDestroyView() {
