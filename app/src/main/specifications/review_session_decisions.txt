@@ -11,6 +11,7 @@
 - **Architecture**: Settings Window Implementation
 - **Key Decisions**:
   - Settings should open at the center of the screen
+  - Use an explosion animation
   - Future efforts may revise this implemenation to have settings open from the settings button in the app-intent window
  
   

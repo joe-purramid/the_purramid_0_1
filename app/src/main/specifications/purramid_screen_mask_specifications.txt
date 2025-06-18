@@ -83,7 +83,7 @@ Screen Mask (formerly named Screen Shade) creates a black, opaque mask that cove
 
 (10) ``SETTINGS``
 	(10.1) When a user touches the settings button, its icon changes from (5.1) Default to (5.2) Active.
-	(10.2) When activated, a settings menu extends with a smooth transition animation from the settings button.
+	(10.2) When activated, a settings window opens with a smooth transition animation, as per the universal specifications.
 		(10.2.1) The settings button remains active while the settings window is open.
 		(10.2.2) The settings window is a collection of icons ordered from top down as follows:
 			(10.2.2.1) "Lock in place"

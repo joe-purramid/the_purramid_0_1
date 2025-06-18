@@ -8,7 +8,7 @@ import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
-import android.transition.Slide
+import android.transition.Explode
 import android.util.Log
 import android.view.Gravity
 import androidx.activity.result.ActivityResultLauncher
@@ -48,11 +48,11 @@ class ScreenMaskActivity : AppCompatActivity() {
         setContentView(binding.root)
         Log.d(TAG, "onCreate - Intent Action: ${intent.action}")
 
-        // Set up Material Fade transition (appears in center)
-        window.enterTransition = Fade().apply {
+        // Explosion transition (appears in center)
+        window.enterTransition = Explode().apply {
             duration = 300
         }
-        window.exitTransition = Fade().apply {
+        window.exitTransition = Explode().apply {
             duration = 300
         }
 

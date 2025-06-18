@@ -1,7 +1,8 @@
 // PurramidDatabase.kt
 package com.example.purramid.thepurramid.data.db 
 
-import android.content.Context
+import
+android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
@@ -24,11 +25,13 @@ import androidx.room.TypeConverters
         SpinItemEntity::class,
         SpinListEntity::class,
         SpinSettingsEntity::class,
-        SpotlightStateEntity::class,
+        // SpotlightStateEntity::class,
+        SpotlightInstanceEntity::class,
+        SpotlightOpeningEntity::class,
         TimerStateEntity::class,
         TrafficLightStateEntity::class
     ],
-    version = 12, // Updated StateEntity files with UUID for crash recovery
+    version = 13, // Added Spotlight instance management
     exportSchema = false // Set to true if you want to export the schema to a file for version control (recommended for production apps)
 )
 @TypeConverters(Converters::class) // Register the TypeConverters class

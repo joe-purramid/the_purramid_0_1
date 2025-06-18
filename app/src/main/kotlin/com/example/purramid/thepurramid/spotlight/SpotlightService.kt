@@ -141,7 +141,7 @@ class SpotlightService : LifecycleService(), ViewModelStoreOwner {
         return START_STICKY
     }
 
-    private fun handleAddNewSpotlightkInstance() {
+    private fun handleAddNewSpotlightInstance() {
         val activeCount = instanceManager.getActiveInstanceCount(InstanceManager.SPOTLIGHT)
         if (activeCount >= MAX_SPOTLIGHTS) {
             Log.w(TAG, "Maximum number of spotlights ($MAX_SPOTLIGHTS) reached.")

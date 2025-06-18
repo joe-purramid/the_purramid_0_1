@@ -80,7 +80,7 @@ Timers are companion countdown timer and stopwatch. These appear only as digital
 	(9.1) When a user touches the settings button
 		(9.1.1) its icon changes from (4.1) Default to (4.2) Active.
 		(9.1.2) time is paused if it is actively counting
-	(9.2) When activated, a settings menu extends with a smooth transition animation from the settings button.
+	(9.2) When activated, a settings window opens with a smooth transition animation, as per the universal specifications.
 		(9.2.1) The settings button remains active while the settings window is open.
 		(9.2.2) The settings window is rows of strings and an icon:
 			(9.2.2.1) "Mode"

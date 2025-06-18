@@ -2,12 +2,14 @@
 package com.example.purramid.thepurramid.spotlight.viewmodel
 
 import android.util.Log
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.purramid.thepurramid.data.db.SpotlightDao
-import com.example.purramid.thepurramid.data.db.SpotlightStateEntity
-import com.example.purramid.thepurramid.spotlight.SpotlightUiState // Import the UI state
-import com.example.purramid.thepurramid.spotlight.SpotlightView // Import for Shape enum and Spotlight data class
+import com.example.purramid.thepurramid.data.db.SpotlightInstanceEntity
+import com.example.purramid.thepurramid.data.db.SpotlightOpeningEntity
+import com.example.purramid.thepurramid.spotlight.SpotlightUiState
+import com.example.purramid.thepurramid.spotlight.model.SpotlightOpening
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,269 +19,268 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
-import kotlin.math.maxOf // Added import
-import kotlin.random.Random // For initial positioning if needed
+import kotlin.math.maxOf
 
 @HiltViewModel
 class SpotlightViewModel @Inject constructor(
-    private val spotlightDao: SpotlightDao
+    private val spotlightDao: SpotlightDao,
+    private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
     companion object {
         private const val TAG = "SpotlightViewModel"
-        private const val MAX_SPOTLIGHTS = 4
         const val KEY_INSTANCE_ID = "spotlight_instance_id"
+        private const val DEFAULT_RADIUS = 125f // 250px diameter as per spec
     }
 
-    private val _uiState = MutableStateFlow(SpotlightUiState(isLoading = true))
+    private val instanceId: Int = savedStateHandle.get<Int>(KEY_INSTANCE_ID) ?: 1
+
+    private val _uiState = MutableStateFlow(SpotlightUiState(instanceId = instanceId, isLoading = true))
     val uiState: StateFlow<SpotlightUiState> = _uiState.asStateFlow()
 
     init {
-        loadSpotlights()
+        initializeInstance()
+        observeOpenings()
     }
 
-    private fun loadSpotlights() {
-        _uiState.update { it.copy(isLoading = true)} // Indicate loading
+    private fun initializeInstance() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val entities = spotlightDao.getAllSpotlights()
-                val spotlightsData = entities.map { mapEntityToData(it) }
-                // Determine initial global shape from loaded data or default
-                val currentShape = spotlightsData.firstOrNull()?.shape ?: SpotlightView.Spotlight.Shape.CIRCLE
-
-                withContext(Dispatchers.Main) {
-                    _uiState.update {
-                        it.copy(
-                            spotlights = spotlightsData,
-                            globalShape = currentShape,
-                            isLoading = false,
-                            error = null
-                        )
-                    }
+                // Check if instance exists
+                var instance = spotlightDao.getInstanceById(instanceId)
+                if (instance == null) {
+                    // Create new instance
+                    instance = SpotlightInstanceEntity(
+                        instanceId = instanceId,
+                        isActive = true
+                    )
+                    spotlightDao.insertOrUpdateInstance(instance)
+                    Log.d(TAG, "Created new Spotlight instance: $instanceId")
                 }
-                Log.d(TAG, "Loaded ${spotlightsData.size} spotlights.")
+
+                // Load existing openings
+                val openings = spotlightDao.getOpeningsForInstance(instanceId)
+                if (openings.isEmpty()) {
+                    // Create default opening at center
+                    createDefaultOpening()
+                }
             } catch (e: Exception) {
-                Log.e(TAG, "Error loading spotlights from DB", e)
+                Log.e(TAG, "Error initializing instance", e)
                 withContext(Dispatchers.Main) {
-                    _uiState.update { it.copy(isLoading = false, error = "Failed to load spotlights") }
+                    _uiState.update { it.copy(isLoading = false, error = "Failed to initialize") }
                 }
             }
         }
     }
 
-    fun addSpotlight(screenWidth: Int, screenHeight: Int) {
-        if (_uiState.value.spotlights.size >= MAX_SPOTLIGHTS) {
-            Log.w(TAG, "Max spotlights reached")
-            _uiState.update { it.copy(error = "Maximum number of spotlights reached") } // Inform UI
+    private fun observeOpenings() {
+        viewModelScope.launch {
+            spotlightDao.getOpeningsForInstanceFlow(instanceId).collect { openingEntities ->
+                val openings = openingEntities.map { mapEntityToOpening(it) }
+                _uiState.update { currentState ->
+                    currentState.copy(
+                        openings = openings,
+                        isAnyLocked = openings.any { it.isLocked },
+                        areAllLocked = openings.isNotEmpty() && openings.all { it.isLocked },
+                        canAddMore = openings.size < SpotlightUiState.MAX_OPENINGS,
+                        isLoading = false,
+                        error = null
+                    )
+                }
+            }
+        }
+    }
+
+    fun addOpening(screenWidth: Int, screenHeight: Int) {
+        if (_uiState.value.openings.size >= SpotlightUiState.MAX_OPENINGS) {
+            Log.w(TAG, "Max openings reached")
+            _uiState.update { it.copy(error = "Maximum number of spotlight openings reached") }
             return
         }
 
-        val currentShape = _uiState.value.globalShape
-        val initialRadius = 150f
-        val initialSize = initialRadius * 2f
-        val initialWidth = if(currentShape == SpotlightView.Spotlight.Shape.OVAL || currentShape == SpotlightView.Spotlight.Shape.RECTANGLE) initialRadius * 2 * 1.5f else initialSize
-        val initialHeight = if(currentShape == SpotlightView.Spotlight.Shape.OVAL || currentShape == SpotlightView.Spotlight.Shape.RECTANGLE) initialRadius * 2 / 1.5f else initialSize
-        // Add some offset/randomness to initial position
-        val offsetX = Random.nextInt(-50, 51) * (_uiState.value.spotlights.size + 1)
-        val offsetY = Random.nextInt(-50, 51) * (_uiState.value.spotlights.size + 1)
-        val initialX = (screenWidth / 2f + offsetX).coerceIn(initialWidth / 2f, screenWidth - initialWidth / 2f)
-        val initialY = (screenHeight / 2f + offsetY).coerceIn(initialHeight / 2f, screenHeight - initialHeight / 2f)
-
-        // Create the data object (ID is 0 for Room auto-generation)
-        val newSpotlightData = SpotlightView.Spotlight(
-            id = 0,
-            centerX = initialX,
-            centerY = initialY,
-            radius = initialRadius,
-            shape = currentShape,
-            width = initialWidth,
-            height = initialHeight,
-            size = if(currentShape == SpotlightView.Spotlight.Shape.SQUARE || currentShape == SpotlightView.Spotlight.Shape.RECTANGLE) maxOf(initialWidth, initialHeight) else initialSize
-        )
-
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val entityToInsert = mapDataToEntity(newSpotlightData)
-                spotlightDao.insertOrUpdate(entityToInsert)
-                // Reload all spotlights to get the new one with its generated ID
-                // Trigger load on main thread to update UI state
-                withContext(Dispatchers.Main) { loadSpotlights() }
-                Log.d(TAG, "Added new spotlight to DB.")
+                val existingCount = _uiState.value.openings.size
+                // Offset new openings to avoid exact overlap
+                val offsetX = 50f * existingCount
+                val offsetY = 50f * existingCount
+
+                val centerX = (screenWidth / 2f + offsetX).coerceIn(DEFAULT_RADIUS, screenWidth - DEFAULT_RADIUS)
+                val centerY = (screenHeight / 2f + offsetY).coerceIn(DEFAULT_RADIUS, screenHeight - DEFAULT_RADIUS)
+
+                val newOpening = SpotlightOpeningEntity(
+                    instanceId = instanceId,
+                    centerX = centerX,
+                    centerY = centerY,
+                    radius = DEFAULT_RADIUS,
+                    width = DEFAULT_RADIUS * 2,
+                    height = DEFAULT_RADIUS * 2,
+                    size = DEFAULT_RADIUS * 2,
+                    shape = SpotlightOpening.Shape.CIRCLE.name,
+                    isLocked = false,
+                    displayOrder = existingCount
+                )
+
+                spotlightDao.insertOpening(newOpening)
+                Log.d(TAG, "Added new opening to instance $instanceId")
             } catch (e: Exception) {
-                Log.e(TAG, "Error adding spotlight to DB", e)
+                Log.e(TAG, "Error adding opening", e)
                 withContext(Dispatchers.Main) {
-                    _uiState.update { it.copy(error = "Failed to add spotlight") }
+                    _uiState.update { it.copy(error = "Failed to add opening") }
                 }
             }
         }
     }
 
-    fun updateSpotlightState(updatedSpotlightData: SpotlightView.Spotlight) {
-         viewModelScope.launch(Dispatchers.IO) {
-             try {
-                 val entity = mapDataToEntity(updatedSpotlightData)
-                 spotlightDao.insertOrUpdate(entity)
-                 // Update local state immediately for smoother UI
-                 withContext(Dispatchers.Main) {
-                     _uiState.update { currentState ->
-                         val updatedList = currentState.spotlights.map {
-                             if (it.id == updatedSpotlightData.id) updatedSpotlightData else it
-                         }
-                         currentState.copy(spotlights = updatedList, error = null) // Clear previous error on success
-                     }
-                 }
-                 Log.d(TAG, "Updated spotlight ${updatedSpotlightData.id} in DB.")
-             } catch (e: Exception) {
-                 Log.e(TAG, "Error updating spotlight ${updatedSpotlightData.id} in DB", e)
-                 withContext(Dispatchers.Main) {
-                      _uiState.update { it.copy(error = "Failed to update spotlight") }
-                 }
-             }
-         }
+    private suspend fun createDefaultOpening() {
+        // Get screen dimensions from SavedStateHandle if available, otherwise use defaults
+        val screenWidth = savedStateHandle.get<Int>("screen_width") ?: 1920
+        val screenHeight = savedStateHandle.get<Int>("screen_height") ?: 1080
+
+        val defaultOpening = SpotlightOpeningEntity(
+            instanceId = instanceId,
+            centerX = screenWidth / 2f,
+            centerY = screenHeight / 2f,
+            radius = DEFAULT_RADIUS,
+            width = DEFAULT_RADIUS * 2,
+            height = DEFAULT_RADIUS * 2,
+            size = DEFAULT_RADIUS * 2,
+            shape = SpotlightOpening.Shape.CIRCLE.name,
+            isLocked = false,
+            displayOrder = 0
+        )
+
+        spotlightDao.insertOpening(defaultOpening)
     }
 
-    fun deleteSpotlight(spotlightId: Int) {
+    fun updateOpeningPosition(openingId: Int, newX: Float, newY: Float) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                spotlightDao.deleteSpotlightById(spotlightId)
-                 withContext(Dispatchers.Main) {
-                    _uiState.update { currentState ->
-                        val updatedList = currentState.spotlights.filterNot { it.id == spotlightId }
-                        currentState.copy(spotlights = updatedList, error = null)
+                val opening = spotlightDao.getOpeningById(openingId)
+                if (opening != null && !opening.isLocked) {
+                    val updated = opening.copy(centerX = newX, centerY = newY)
+                    spotlightDao.updateOpening(updated)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error updating opening position", e)
+            }
+        }
+    }
+
+    fun updateOpeningSize(openingId: Int, newRadius: Float? = null, newWidth: Float? = null, newHeight: Float? = null) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val opening = spotlightDao.getOpeningById(openingId)
+                if (opening != null && !opening.isLocked) {
+                    val updated = opening.copy(
+                        radius = newRadius ?: opening.radius,
+                        width = newWidth ?: opening.width,
+                        height = newHeight ?: opening.height,
+                        size = maxOf(newWidth ?: opening.width, newHeight ?: opening.height)
+                    )
+                    spotlightDao.updateOpening(updated)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error updating opening size", e)
+            }
+        }
+    }
+
+    fun toggleOpeningShape(openingId: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val opening = spotlightDao.getOpeningById(openingId)
+                if (opening != null && !opening.isLocked) {
+                    val currentShape = SpotlightOpening.Shape.valueOf(opening.shape)
+                    val newShape = when (currentShape) {
+                        SpotlightOpening.Shape.CIRCLE -> SpotlightOpening.Shape.SQUARE
+                        SpotlightOpening.Shape.SQUARE -> SpotlightOpening.Shape.CIRCLE
+                        SpotlightOpening.Shape.OVAL -> SpotlightOpening.Shape.RECTANGLE
+                        SpotlightOpening.Shape.RECTANGLE -> SpotlightOpening.Shape.OVAL
+                    }
+
+                    // Maintain dimensions when switching shapes
+                    val updated = when (newShape) {
+                        SpotlightOpening.Shape.CIRCLE -> {
+                            val avgDim = (opening.width + opening.height) / 2f
+                            opening.copy(
+                                shape = newShape.name,
+                                radius = avgDim / 2f,
+                                width = avgDim,
+                                height = avgDim,
+                                size = avgDim
+                            )
+                        }
+                        SpotlightOpening.Shape.SQUARE -> {
+                            val avgDim = (opening.width + opening.height) / 2f
+                            opening.copy(
+                                shape = newShape.name,
+                                radius = avgDim / 2f,
+                                width = avgDim,
+                                height = avgDim,
+                                size = avgDim
+                            )
+                        }
+                        SpotlightOpening.Shape.OVAL -> {
+                            // Maintain existing width/height from rectangle
+                            opening.copy(
+                                shape = newShape.name,
+                                radius = maxOf(opening.width, opening.height) / 2f
+                            )
+                        }
+                        SpotlightOpening.Shape.RECTANGLE -> {
+                            // Maintain existing width/height from oval
+                            opening.copy(
+                                shape = newShape.name,
+                                size = maxOf(opening.width, opening.height)
+                            )
+                        }
+                    }
+
+                    spotlightDao.updateOpening(updated)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error toggling shape", e)
+            }
+        }
+    }
+
+    fun toggleOpeningLock(openingId: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val opening = spotlightDao.getOpeningById(openingId)
+                if (opening != null) {
+                    spotlightDao.updateOpeningLockState(openingId, !opening.isLocked)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error toggling lock", e)
+            }
+        }
+    }
+
+    fun toggleAllLocks() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val areAllLocked = _uiState.value.areAllLocked
+                spotlightDao.updateAllOpeningsLockState(instanceId, !areAllLocked)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error toggling all locks", e)
+            }
+        }
+    }
+
+    fun deleteOpening(openingId: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val currentOpenings = _uiState.value.openings
+                if (currentOpenings.size > 1 || currentOpenings.isEmpty()) {
+                    // Only delete if not the last opening
+                    spotlightDao.deleteOpening(openingId)
+                    Log.d(TAG, "Deleted opening $openingId")
+                } else {
+                    Log.w(TAG, "Cannot delete last opening")
+                    withContext(Dispatchers.Main) {
+                        _uiState.update { it.copy(error = "Cannot delete the last opening") }
                     }
                 }
-                Log.d(TAG, "Deleted spotlight $spotlightId from DB.")
-            } catch (e: Exception) {
-                Log.e(TAG, "Error deleting spotlight $spotlightId from DB", e)
-                 withContext(Dispatchers.Main) {
-                      _uiState.update { it.copy(error = "Failed to delete spotlight") }
-                 }
-            }
-        }
-    }
-
-    fun cycleGlobalShape() {
-        val currentShape = _uiState.value.globalShape
-        val nextShape = when (currentShape) {
-            SpotlightView.Spotlight.Shape.CIRCLE -> SpotlightView.Spotlight.Shape.SQUARE
-            SpotlightView.Spotlight.Shape.SQUARE -> SpotlightView.Spotlight.Shape.OVAL
-            SpotlightView.Spotlight.Shape.OVAL -> SpotlightView.Spotlight.Shape.RECTANGLE
-            SpotlightView.Spotlight.Shape.RECTANGLE -> SpotlightView.Spotlight.Shape.CIRCLE
-        }
-        setGlobalShape(nextShape) // Call internal function
-    }
-
-
-    // Internal function to apply shape change and save
-    private fun setGlobalShape(newShape: SpotlightView.Spotlight.Shape) {
-         val currentSpotlights = _uiState.value.spotlights
-         val updatedSpotlights = currentSpotlights.map { spotlight ->
-             // Maintain size/proportions (logic moved from SpotlightView)
-             val avgDim = (spotlight.width + spotlight.height) / 2f
-             val updatedData = spotlight.copy(shape = newShape)
-             when (newShape) {
-                 SpotlightView.Spotlight.Shape.CIRCLE -> {
-                     updatedData.radius = avgDim / 2f
-                     updatedData.width = updatedData.radius * 2
-                     updatedData.height = updatedData.radius * 2
-                     updatedData.size = updatedData.radius * 2
-                 }
-                 SpotlightView.Spotlight.Shape.SQUARE -> {
-                     updatedData.size = avgDim
-                     updatedData.width = updatedData.size
-                     updatedData.height = updatedData.size
-                     updatedData.radius = updatedData.size / 2f
-                 }
-                 SpotlightView.Spotlight.Shape.OVAL -> {
-                     updatedData.radius = avgDim / 2f
-                     updatedData.width = updatedData.radius * 2 * 1.5f // Keep aspect ratio logic consistent
-                     updatedData.height = updatedData.radius * 2 / 1.5f
-                     updatedData.size = maxOf(updatedData.width, updatedData.height)
-                 }
-                 SpotlightView.Spotlight.Shape.RECTANGLE -> {
-                     updatedData.radius = avgDim / 2f
-                     updatedData.width = updatedData.radius * 2 * 1.5f
-                     updatedData.height = updatedData.radius * 2 / 1.5f
-                     updatedData.size = maxOf(updatedData.width, updatedData.height)
-                 }
-             }
-             // Make sure center remains the same
-             updatedData.centerX = spotlight.centerX
-             updatedData.centerY = spotlight.centerY
-             updatedData // return the modified copy
-         }
-
-         // Update UI State on Main Thread
-         _uiState.update { it.copy(spotlights = updatedSpotlights, globalShape = newShape, error = null) }
-
-         // Save all updated entities to DB
-         viewModelScope.launch(Dispatchers.IO) {
-             var saveError = false
-             updatedSpotlights.forEach { updatedData ->
-                 try {
-                     spotlightDao.insertOrUpdate(mapDataToEntity(updatedData))
-                 } catch (e: Exception) {
-                      Log.e(TAG, "Error saving updated shape for spotlight ${updatedData.id}", e)
-                      saveError = true
-                 }
-             }
-             if (saveError) {
-                 withContext(Dispatchers.Main) {
-                      _uiState.update { it.copy(error = "Failed to save some spotlight shapes") }
-                 }
-             }
-         }
-    }
-
-    // --- Mappers ---
-    private fun mapEntityToData(entity: SpotlightStateEntity): SpotlightView.Spotlight {
-        return SpotlightView.Spotlight(
-            id = entity.id,
-            centerX = entity.centerX,
-            centerY = entity.centerY,
-            radius = entity.radius,
-            shape = try { SpotlightView.Spotlight.Shape.valueOf(entity.shape) } catch (e: Exception) { SpotlightView.Spotlight.Shape.CIRCLE },
-            width = entity.width,
-            height = entity.height,
-            size = entity.size
-        )
-    }
-
-    // Map data to entity (handle ID: 0 for inserts, specific ID for updates)
-    private fun mapDataToEntity(data: SpotlightView.Spotlight): SpotlightStateEntity {
-        // If ID is 0, let Room auto-generate. If it's non-zero, use it for update.
-        return SpotlightStateEntity(
-            id = if (data.id == 0) 0 else data.id,
-            centerX = data.centerX,
-            centerY = data.centerY,
-            radius = data.radius,
-            shape = data.shape.name,
-            width = data.width,
-            height = data.height,
-            size = data.size
-        )
-    }
-
-    /**
-     * Called by SpotlightService when a ViewModel instance is being removed.
-     * This is the place for any specific cleanup related to this ViewModel's data,
-     * for example, deleting its associated spotlights from the database if that's the desired behavior.
-     * Note: `onCleared()` is called automatically by the ViewModelStore when the store itself is cleared (e.g., service onDestroy).
-     */
-    fun deleteState() {
-        Log.d(TAG, "deleteState() called for ViewModel instance. Implement DB cleanup logic if needed for this instance.")
-        // Example: If each ViewModel instance is tied to a specific set of spotlights
-        // that should be deleted when this instance is removed:
-        // val currentInstanceId = savedStateHandle.get<Int>(KEY_INSTANCE_ID) // Assuming you have access to instanceId
-        // if (currentInstanceId != null) {
-        //     viewModelScope.launch(Dispatchers.IO) {
-        //         try {
-        //             // spotlightDao.deleteAllSpotlightsForInstance(currentInstanceId) // Hypothetical DAO method
-        //             Log.d(TAG, "Deleted all DB entries for instance $currentInstanceId")
-        //         } catch (e: Exception) {
-        //             Log.e(TAG, "Error deleting DB entries for instance $currentInstanceId", e)
-        //         }
-        //     }
-        // }
-    }
-}
+            TODO: INCOMPLETE

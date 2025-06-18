@@ -239,7 +239,7 @@ Randomizers is a collection of four different randomization tools: Spin, Slots, 
 (9) ``SETTINGS BUTTON FOR ALL MODES``
 	(9.1) If a user taps the (4.1) settings button:
 		(9.1.1) its icon changes from (5.1) Default to (5.2) Active.
-		(9.1.2) When activated, a settings menu extends with a smooth transition animation from the settings button.
+		(9.1.2) When activated, a settings window opens with a smooth transition animation, as per the universal specifications.
 			(9.1.2.1) The settings button remains active while the settings window is open.
 			(9.1.2.2) The settings window is rows with text.
 				(9.1.2.2.1) Some settings also include an icon after the text, such as a toggle or an edit icon.
