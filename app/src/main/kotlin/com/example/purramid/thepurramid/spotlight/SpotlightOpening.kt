@@ -1,3 +1,4 @@
+// SpotlightOpening.kt
 package com.example.purramid.thepurramid.spotlight
 
 /**

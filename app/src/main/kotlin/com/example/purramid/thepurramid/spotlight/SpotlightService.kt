@@ -11,17 +11,12 @@ import android.content.SharedPreferences
 import android.graphics.PixelFormat
 import android.os.Build
 import android.os.Bundle
-import android.os.Handler
 import android.os.IBinder
-import android.os.Looper
-import android.util.DisplayMetrics
 import android.util.Log
 import android.view.Gravity
-import android.view.View
 import android.view.WindowManager
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.LifecycleService
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
@@ -32,89 +27,52 @@ import com.example.purramid.thepurramid.data.db.SpotlightDao
 import com.example.purramid.thepurramid.di.HiltViewModelFactory
 import com.example.purramid.thepurramid.di.SpotlightPrefs
 import com.example.purramid.thepurramid.instance.InstanceManager
-import com.example.purramid.thepurramid.spotlight.SpotlightUiState
+import com.example.purramid.thepurramid.spotlight.SpotlightOpening
 import com.example.purramid.thepurramid.spotlight.viewmodel.SpotlightViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.Dispatchers
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 
 // Define Actions
 const val ACTION_START_SPOTLIGHT_SERVICE = "com.example.purramid.spotlight.ACTION_START_SERVICE"
 const val ACTION_STOP_SPOTLIGHT_SERVICE = "com.example.purramid.spotlight.ACTION_STOP_SERVICE"
-const val ACTION_ADD_NEW_SPOTLIGHT_INSTANCE = "com.example.purramid.spotlight.ACTION_ADD_NEW_INSTANCE"
+const val ACTION_ADD_NEW_SPOTLIGHT_OPENING = "com.example.purramid.spotlight.ACTION_ADD_NEW_OPENING"
 
 @AndroidEntryPoint
 class SpotlightService : LifecycleService(), ViewModelStoreOwner {
 
     @Inject lateinit var windowManager: WindowManager
     @Inject lateinit var instanceManager: InstanceManager
-    @Inject lateinit var viewModelFactory: ViewModelProvider.Factory // Hilt provides default
-    @Inject lateinit var spotlightDao: SpotlightDao // For restoring state if needed
+    @Inject lateinit var viewModelFactory: ViewModelProvider.Factory
+    @Inject lateinit var spotlightDao: SpotlightDao
     @Inject @SpotlightPrefs lateinit var servicePrefs: SharedPreferences
 
     private val _viewModelStore = ViewModelStore()
-    override fun getViewModelStore(): ViewModelStore = _viewModelStore
+    override val viewModelStore: ViewModelStore = _viewModelStore
 
-    private val activeSpotlightViewModels = ConcurrentHashMap<Int, SpotlightViewModel>()
-    private val activeSpotlightViews = ConcurrentHashMap<Int, SpotlightView>()
-    private val spotlightLayoutParams = ConcurrentHashMap<Int, WindowManager.LayoutParams>()
-    private val stateObserverJobs = ConcurrentHashMap<Int, Job>()
-
+    private var instanceId: Int? = null
+    private var spotlightViewModel: SpotlightViewModel? = null
+    private var spotlightOverlayView: SpotlightView? = null
+    private var overlayLayoutParams: WindowManager.LayoutParams? = null
+    private var stateObserverJob: Job? = null
     private var isForeground = false
 
     companion object {
         private const val TAG = "SpotlightService"
-        private const val NOTIFICATION_ID = 3 // Was 3, ensure uniqueness
+        private const val NOTIFICATION_ID = 3
         private const val CHANNEL_ID = "SpotlightServiceChannel"
-        const val MAX_SPOTLIGHTS = 4
+        const val MAX_OPENINGS_PER_OVERLAY = 4
         const val KEY_INSTANCE_ID = "spotlight_instance_id"
         const val PREFS_NAME_FOR_ACTIVITY = "spotlight_service_prefs"
         const val KEY_ACTIVE_COUNT_FOR_ACTIVITY = "active_spotlight_count"
-        const val KEY_LAST_INSTANCE_ID = "last_spotlight_instance_id"
-        private const val PASS_THROUGH_DELAY_MS = 50L
     }
-
-    private val handler = Handler(Looper.getMainLooper())
-
 
     override fun onCreate() {
         super.onCreate()
         Log.d(TAG, "onCreate")
         createNotificationChannel()
-        loadAndRestoreSpotlightStates()
-    }
-
-    private fun updateActiveInstanceCountInPrefs() {
-        servicePrefs.edit().putInt(KEY_ACTIVE_COUNT_FOR_ACTIVITY, activeSpotlightViewModels.size).apply()
-        Log.d(TAG, "Updated active Spotlight count: ${activeSpotlightViewModels.size}")
-    }
-
-    private fun loadAndRestoreSpotlightStates() {
-        lifecycleScope.launch(Dispatchers.IO) {
-            val persistedStates = spotlightDao.getAllSpotlights()
-            if (persistedStates.isNotEmpty()) {
-                Log.d(TAG, "Found ${persistedStates.size} persisted spotlight states. Restoring...")
-                persistedStates.forEach { entity ->
-                    // Register the existing instance ID
-                    instanceManager.registerExistingInstance(InstanceManager.SPOTLIGHT, entity.instanceId)
-
-                    launch(Dispatchers.Main) {
-                        initializeViewModel(entity.instanceId, Bundle().apply {
-                            putInt(SpotlightViewModel.KEY_INSTANCE_ID, entity.instanceId)
-                        })
-                    }
-                }
-            }
-
-            if (activeSpotlightViewModels.isNotEmpty()) {
-                startForegroundServiceIfNeeded()
-            }
-        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -124,252 +82,193 @@ class SpotlightService : LifecycleService(), ViewModelStoreOwner {
 
         when (action) {
             ACTION_START_SPOTLIGHT_SERVICE -> {
-                startForegroundServiceIfNeeded()
-                if (activeSpotlightViewModels.isEmpty() && servicePrefs.getInt(KEY_ACTIVE_COUNT_FOR_ACTIVITY, 0) == 0) {
-                    Log.d(TAG, "No active spotlights, adding a new default one.")
-                    handleAddNewSpotlightInstance()
+                if (instanceId == null) {
+                    initializeService(intent)
                 }
             }
-            ACTION_ADD_NEW_SPOTLIGHT_INSTANCE -> {
-                startForegroundServiceIfNeeded()
-                handleAddNewSpotlightInstance()
+            ACTION_ADD_NEW_SPOTLIGHT_OPENING -> {
+                if (instanceId == null) {
+                    initializeService(intent)
+                } else {
+                    handleAddNewSpotlightOpening()
+                }
             }
             ACTION_STOP_SPOTLIGHT_SERVICE -> {
-                stopAllInstancesAndService()
+                stopService()
             }
         }
         return START_STICKY
     }
 
-    private fun handleAddNewSpotlightInstance() {
-        val activeCount = instanceManager.getActiveInstanceCount(InstanceManager.SPOTLIGHT)
-        if (activeCount >= MAX_SPOTLIGHTS) {
-            Log.w(TAG, "Maximum number of spotlights ($MAX_SPOTLIGHTS) reached.")
+    private fun initializeService(intent: Intent?) {
+        // Get or allocate instance ID
+        instanceId = intent?.getIntExtra(KEY_INSTANCE_ID, -1)?.takeIf { it > 0 }
+            ?: instanceManager.getNextInstanceId(InstanceManager.SPOTLIGHT)
+
+        if (instanceId == null) {
+            Log.e(TAG, "No available instance slots")
+            stopSelf()
             return
         }
 
-        val newInstanceId = instanceManager.getNextInstanceId(InstanceManager.SPOTLIGHT)
-        if (newInstanceId == null) {
-            Log.w(TAG, "No available instance slots for Spotlight")
-            return
+        Log.d(TAG, "Initializing service with instance ID: $instanceId")
+
+        // Get screen dimensions
+        val displayMetrics = resources.displayMetrics
+        val screenWidth = displayMetrics.widthPixels
+        val screenHeight = displayMetrics.heightPixels
+
+        // Initialize ViewModel with instance ID and screen dimensions
+        val args = Bundle().apply {
+            putInt(SpotlightViewModel.KEY_INSTANCE_ID, instanceId!!)
+            putInt("screen_width", screenWidth)
+            putInt("screen_height", screenHeight)
         }
 
-        Log.d(TAG, "Adding new spotlight instance with ID: $newInstanceId")
+        spotlightViewModel = ViewModelProvider(
+            this,
+            HiltViewModelFactory(this, args, viewModelFactory)
+        ).get(SpotlightViewModel::class.java)
 
-        // Initialize VM (it will create default state and save it via its init block)
-        val initialArgs = Bundle().apply { putInt(SpotlightViewModel.KEY_INSTANCE_ID, newInstanceId) }
-        initializeViewModel(newInstanceId, initialArgs)
-
-        updateActiveInstanceCountInPrefs()
+        // Create and attach overlay view
+        createOverlayView()
+        observeViewModelState()
         startForegroundServiceIfNeeded()
+        updateActiveInstanceCount()
     }
 
-    private fun initializeViewModel(id: Int, initialArgs: Bundle?): SpotlightViewModel {
-        return activeSpotlightViewModels.computeIfAbsent(id) {
-            Log.d(TAG, "Creating SpotlightViewModel for ID: $id")
-            ViewModelProvider(this, HiltViewModelFactory(this, initialArgs ?: Bundle().apply { putInt(SpotlightViewModel.KEY_INSTANCE_ID, id) }, viewModelFactory))
-                .get(SpotlightViewModel::class.java)
-                .also { vm ->
-                    observeViewModelState(id, vm)
-                }
+    private fun createOverlayView() {
+        if (spotlightOverlayView != null) {
+            Log.w(TAG, "Overlay view already exists")
+            return
         }
-    }
 
-    private fun observeViewModelState(instanceId: Int, viewModel: SpotlightViewModel) {
-        stateObserverJobs[instanceId]?.cancel()
-        stateObserverJobs[instanceId] = lifecycleScope.launch {
-            viewModel.uiState.collectLatest { state: SpotlightUiState ->
-                Log.d(TAG, "State update for Spotlight ID $instanceId: ${state.spotlights.size} items, Shape: ${state.globalShape}")
-                // A Spotlight overlay manages ALL spotlights data from its corresponding ViewModel.
-                // So, we pass the whole list from the state.
-                addOrUpdateSpotlightOverlayView(instanceId, state)
-            }
-        }
-        Log.d(TAG, "Started observing ViewModel for Spotlight ID $instanceId")
-    }
-
-    private fun addOrUpdateSpotlightOverlayView(instanceId: Int, state: SpotlightUiState) {
-        Handler(Looper.getMainLooper()).post {
-            var spotlightViewInstance = activeSpotlightViews[instanceId]
-            var params = spotlightLayoutParams[instanceId]
-
-            if (spotlightViewInstance == null) {
-                Log.d(TAG, "Creating new SpotlightView UI for ID: $instanceId")
-                params = createDefaultLayoutParams(state.spotlights.firstOrNull()) // Pass first spotlight for initial sizing
-                spotlightViewInstance = SpotlightView(this, null).apply {
-                    setLayerType(View.LAYER_TYPE_HARDWARE, null)
-                    this.interactionListener = createSpotlightInteractionListener(instanceId, this, params)
-                    tag = instanceId // Set tag for identification if needed
-                }
-                activeSpotlightViews[instanceId] = spotlightViewInstance
-                spotlightLayoutParams[instanceId] = params
-
-                try {
-                    if (!spotlightViewInstance.isAttachedToWindow) {
-                        windowManager.addView(spotlightViewInstance, params)
-                        Log.d(TAG, "Added SpotlightView ID $instanceId to WindowManager.")
-                    } else {
-                        Log.w(TAG, "Attempted to add SpotlightView ID $instanceId but it was already attached.")
-                    }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error adding SpotlightView ID $instanceId to WindowManager", e)
-                    // Cleanup if addView fails
-                    activeSpotlightViews.remove(instanceId)
-                    spotlightLayoutParams.remove(instanceId)
-                    stateObserverJobs[instanceId]?.cancel()
-                    activeSpotlightViewModels.remove(instanceId)
-                    updateActiveInstanceCountInPrefs()
-                    return@post
-                }
-            }
-
-            // The SpotlightView's updateSpotlights takes the list of data objects and the global shape
-            spotlightViewInstance.updateSpotlights(state.spotlights, state.globalShape)
-
-            // Update WindowManager.LayoutParams only for window moves (position)
-            // Size is MATCH_PARENT. Individual spotlight data (center, radius) is handled by the view itself.
-            val currentSpotlightData = state.spotlights.find { it.id == instanceId } // This model is if one view = one spotlight
-            // If one view shows ALL spotlights from its VM, then position is global for the window
-            // Let's assume one SpotlightView window per `instanceId` for now, showing one "set" of spotlights from its VM.
-            // Window position for Spotlight is typically 0,0 and MATCH_PARENT.
-            // If you allow moving the entire Spotlight overlay window:
-            // if (params!!.x != state.windowX || params.y != state.windowY) {
-            //    params.x = state.windowX
-            //    params.y = state.windowY
-            //    if (spotlightViewInstance.isAttachedToWindow) {
-            //        try { windowManager.updateViewLayout(spotlightViewInstance, params) }
-            //        catch (e: Exception) { Log.e(TAG, "Error updating WM layout for $instanceId", e) }
-            //    }
-            // }
-        }
-    }
-
-    private fun removeSpotlightInstance(instanceId: Int) {
-        Handler(Looper.getMainLooper()).post {
-            Log.d(TAG, "Removing Spotlight instance ID: $instanceId")
-
-            // Release the instance ID back to the manager
-            instanceManager.releaseInstanceId(InstanceManager.SPOTLIGHT, instanceId)
-
-            val spotlightView = activeSpotlightViews.remove(instanceId)
-            spotlightLayoutParams.remove(instanceId)
-            stateObserverJobs[instanceId]?.cancel()
-            stateObserverJobs.remove(instanceId)
-            val viewModel = activeSpotlightViewModels.remove(instanceId)
-
-            spotlightView?.let {
-                if (it.isAttachedToWindow) {
-                    try { windowManager.removeView(it) }
-                    catch (e: Exception) { Log.e(TAG, "Error removing SpotlightView ID $instanceId", e) }
-                }
-            }
-            viewModel?.deleteState()
-            updateActiveInstanceCountInPrefs()
-
-            if (activeSpotlightViewModels.isEmpty()) {
-                Log.d(TAG, "No active spotlights left, stopping service.")
-                stopService()
-            }
-        }
-    }
-
-    private fun createSpotlightInteractionListener(
-        instanceId: Int,
-        view: SpotlightView,
-        params: WindowManager.LayoutParams
-    ): SpotlightView.SpotlightInteractionListener {
-        return object : SpotlightView.SpotlightInteractionListener {
-            override fun requestWindowMove(deltaX: Float, deltaY: Float) {
-                params.x += deltaX.toInt()
-                params.y += deltaY.toInt()
-                try { if (view.isAttachedToWindow) windowManager.updateViewLayout(view, params) }
-                catch (e: Exception) { Log.e(TAG, "Error updating layout on move for Spotlight ID $instanceId", e)}
-            }
-            override fun requestWindowMoveFinished() {
-                // Persist window position if Spotlight windows are individually movable
-                // activeSpotlightViewModels[instanceId]?.updateWindowPosition(params.x, params.y)
-            }
-            override fun requestUpdateSpotlightState(updatedSpotlight: SpotlightView.Spotlight) {
-                activeSpotlightViewModels[instanceId]?.updateSpotlightState(updatedSpotlight)
-            }
-            override fun requestTapPassThrough() {
-                enableTapPassThrough(view, params)
-            }
-            override fun requestClose(spotlightIdToClose: Int) { // The view passes the ID of the spotlight data object
-                // For now, assume closing any spotlight within this instance closes the whole instance view
-                Log.d(TAG, "Close requested for Spotlight data ID $spotlightIdToClose within instance $instanceId")
-                activeSpotlightViewModels[instanceId]?.deleteSpotlight(spotlightIdToClose)
-                // If the VM's list of spotlights becomes empty, it could signal the service to remove this instance.
-                // Or, if each 'instanceId' maps to one SpotlightView which shows one spotlight, then:
-                // removeSpotlightInstance(instanceId)
-            }
-            override fun requestShapeChange() {
-                activeSpotlightViewModels[instanceId]?.cycleGlobalShape()
-            }
-            override fun requestAddNew() {
-                // This adds a new *spotlight data object* to the current SpotlightView's ViewModel
-                val displayMetrics = resources.displayMetrics
-                activeSpotlightViewModels[instanceId]?.addSpotlight(displayMetrics.widthPixels, displayMetrics.heightPixels)
-            }
-        }
-    }
-
-    // Params for the main SpotlightView window (usually fullscreen)
-    private fun createDefaultLayoutParams(firstSpotlightData: SpotlightView.Spotlight?): WindowManager.LayoutParams {
-        // Spotlight overlay usually covers the entire screen to create the "mask" effect
-        return WindowManager.LayoutParams(
+        // Create layout params for fullscreen overlay
+        overlayLayoutParams = WindowManager.LayoutParams(
             WindowManager.LayoutParams.MATCH_PARENT,
             WindowManager.LayoutParams.MATCH_PARENT,
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY else WindowManager.LayoutParams.TYPE_SYSTEM_ALERT,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+            } else {
+                WindowManager.LayoutParams.TYPE_SYSTEM_ALERT
+            },
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
             x = 0
             y = 0
         }
-    }
 
-    private fun enableTapPassThrough(view: SpotlightView, params: WindowManager.LayoutParams) {
-        if ((params.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE) == 0) {
-            params.flags = params.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
-            try { if (view.isAttachedToWindow) windowManager.updateViewLayout(view, params) }
-            catch (e: Exception) { Log.e(TAG, "Error enabling pass-through for $view", e) }
-            handler.postDelayed({ removeTapPassThroughFlag(view, params) }, PASS_THROUGH_DELAY_MS)
+        // Create the overlay view
+        spotlightOverlayView = SpotlightView(this, null).apply {
+            interactionListener = createInteractionListener()
+        }
+
+        try {
+            windowManager.addView(spotlightOverlayView, overlayLayoutParams)
+            Log.d(TAG, "Added overlay view to WindowManager")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error adding overlay view", e)
+            stopService()
         }
     }
 
-    private fun removeTapPassThroughFlag(view: SpotlightView, params: WindowManager.LayoutParams) {
-        if ((params.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE) != 0) {
-            params.flags = params.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
-            try { if (view.isAttachedToWindow) windowManager.updateViewLayout(view, params) }
-            catch (e: Exception) { Log.e(TAG, "Error disabling pass-through for $view", e) }
+    private fun observeViewModelState() {
+        stateObserverJob?.cancel()
+        stateObserverJob = lifecycleScope.launch {
+            spotlightViewModel?.uiState?.collectLatest { state ->
+                Log.d(TAG, "State update: ${state.openings.size} openings, showControls=${state.showControls}")
+                spotlightOverlayView?.updateState(state)
+            }
         }
     }
 
-    private fun stopAllInstancesAndService() {
-        Log.d(TAG, "Stopping all instances and Spotlight service.")
-        activeSpotlightViewModels.keys.toList().forEach { id -> removeSpotlightInstance(id) }
-        if (activeSpotlightViewModels.isEmpty()) { stopService() }
+    private fun createInteractionListener(): SpotlightView.SpotlightInteractionListener {
+        return object : SpotlightView.SpotlightInteractionListener {
+            override fun onOpeningMoved(openingId: Int, deltaX: Float, deltaY: Float) {
+                // Handle per-opening movement
+                spotlightViewModel?.updateOpeningFromDrag(openingId, deltaX, deltaY)
+            }
+
+            override fun onOpeningResized(opening: SpotlightOpening) {
+                spotlightViewModel?.updateOpeningFromResize(opening)
+            }
+
+            override fun onOpeningShapeToggled(openingId: Int) {
+                spotlightViewModel?.toggleOpeningShape(openingId)
+            }
+
+            override fun onOpeningLockToggled(openingId: Int) {
+                spotlightViewModel?.toggleOpeningLock(openingId)
+            }
+
+            override fun onAllLocksToggled() {
+                spotlightViewModel?.toggleAllLocks()
+            }
+
+            override fun onOpeningDeleted(openingId: Int) {
+                spotlightViewModel?.deleteOpening(openingId)
+            }
+
+            override fun onAddNewOpeningRequested() {
+                handleAddNewSpotlightOpening()
+            }
+
+            override fun onControlsToggled() {
+                val currentShowControls = spotlightViewModel?.uiState?.value?.showControls ?: true
+                spotlightViewModel?.setShowControls(!currentShowControls)
+            }
+
+            override fun onSettingsRequested() {
+                openSettingsActivity()
+            }
+        }
     }
 
-    private fun stopService() {
-        Log.d(TAG, "stopService called for Spotlight")
-        stopForeground(STOP_FOREGROUND_REMOVE)
-        stopSelf()
-        isForeground = false
+    private fun handleAddNewSpotlightOpening() {
+        val currentState = spotlightViewModel?.uiState?.value
+        if (currentState == null) {
+            Log.e(TAG, "ViewModel not initialized")
+            return
+        }
+
+        if (currentState.openings.size >= MAX_OPENINGS_PER_OVERLAY) {
+            Log.w(TAG, "Maximum openings reached")
+            // Could show a toast or notification here
+            return
+        }
+
+        val displayMetrics = resources.displayMetrics
+        spotlightViewModel?.addOpening(displayMetrics.widthPixels, displayMetrics.heightPixels)
+    }
+
+    private fun openSettingsActivity() {
+        val intent = Intent(this, SpotlightActivity::class.java).apply {
+            action = SpotlightActivity.ACTION_SHOW_SPOTLIGHT_SETTINGS
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            putExtra(KEY_INSTANCE_ID, instanceId)
+        }
+        startActivity(intent)
+    }
+
+    private fun updateActiveInstanceCount() {
+        val activeCount = instanceManager.getActiveInstanceCount(InstanceManager.SPOTLIGHT)
+        servicePrefs.edit().putInt(KEY_ACTIVE_COUNT_FOR_ACTIVITY, activeCount).apply()
     }
 
     private fun startForegroundServiceIfNeeded() {
         if (isForeground) return
-        // ... (createNotification code as before) ...
+
         val notification = createNotification()
         try {
             startForeground(NOTIFICATION_ID, notification)
             isForeground = true
-            Log.d(TAG, "SpotlightService started in foreground.")
+            Log.d(TAG, "Started foreground service")
         } catch (e: Exception) {
-            Log.e(TAG, "Error starting foreground service for Spotlight", e)
+            Log.e(TAG, "Error starting foreground service", e)
         }
     }
 
@@ -377,9 +276,10 @@ class SpotlightService : LifecycleService(), ViewModelStoreOwner {
         val notificationIntent = Intent(this, MainActivity::class.java)
         val pendingIntentFlags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         val pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, pendingIntentFlags)
+
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Spotlight Active")
-            .setContentText("Spotlight overlay is active.")
+            .setContentTitle(getString(R.string.spotlight_title))
+            .setContentText("Spotlight overlay is active")
             .setSmallIcon(R.drawable.ic_spotlight)
             .setContentIntent(pendingIntent)
             .setPriority(NotificationCompat.PRIORITY_LOW)
@@ -388,22 +288,58 @@ class SpotlightService : LifecycleService(), ViewModelStoreOwner {
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(CHANNEL_ID, "Spotlight Service Channel", NotificationManager.IMPORTANCE_LOW)
+            val channel = NotificationChannel(
+                CHANNEL_ID,
+                "Spotlight Service Channel",
+                NotificationManager.IMPORTANCE_LOW
+            )
             getSystemService(NotificationManager::class.java)?.createNotificationChannel(channel)
         }
     }
 
+    private fun stopService() {
+        Log.d(TAG, "Stopping service")
+
+        // Cancel state observation
+        stateObserverJob?.cancel()
+
+        // Remove overlay view
+        spotlightOverlayView?.let { view ->
+            if (view.isAttachedToWindow) {
+                try {
+                    windowManager.removeView(view)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error removing overlay view", e)
+                }
+            }
+        }
+        spotlightOverlayView = null
+
+        // Release instance ID
+        instanceId?.let {
+            instanceManager.releaseInstanceId(InstanceManager.SPOTLIGHT, it)
+            spotlightViewModel?.deactivateInstance()
+        }
+
+        // Update preferences
+        updateActiveInstanceCount()
+
+        // Stop foreground
+        if (isForeground) {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            isForeground = false
+        }
+
+        // Clear ViewModelStore
+        _viewModelStore.clear()
+
+        // Stop self
+        stopSelf()
+    }
+
     override fun onDestroy() {
         Log.d(TAG, "onDestroy")
-        stateObserverJobs.values.forEach { it.cancel() }
-        stateObserverJobs.clear()
-        activeSpotlightViews.keys.toList().forEach { id ->
-            val view = activeSpotlightViews.remove(id)
-            spotlightLayoutParams.remove(id)
-            view?.let { if (it.isAttachedToWindow) try { windowManager.removeView(it) } catch (e:Exception){ Log.e(TAG, "Error removing view $id on destroy")} }
-        }
-        activeSpotlightViewModels.clear()
-        _viewModelStore.clear()
+        stopService()
         super.onDestroy()
     }
 

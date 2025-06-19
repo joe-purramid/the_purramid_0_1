@@ -53,7 +53,7 @@ class SpotlightActivity : AppCompatActivity() {
             } else {
                 Log.d(TAG, "No active Spotlights for Purramid, requesting service to add a new one.")
                 val serviceIntent = Intent(this, SpotlightService::class.java).apply {
-                    action = ACTION_ADD_NEW_SPOTLIGHT_INSTANCE
+                    action = ACTION_ADD_NEW_SPOTLIGHT_OPENING
                 }
                 ContextCompat.startForegroundService(this, serviceIntent)
                 // It's generally better to finish the activity after starting the service

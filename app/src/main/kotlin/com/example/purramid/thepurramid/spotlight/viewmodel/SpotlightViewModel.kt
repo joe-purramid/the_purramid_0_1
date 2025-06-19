@@ -8,8 +8,8 @@ import androidx.lifecycle.viewModelScope
 import com.example.purramid.thepurramid.data.db.SpotlightDao
 import com.example.purramid.thepurramid.data.db.SpotlightInstanceEntity
 import com.example.purramid.thepurramid.data.db.SpotlightOpeningEntity
-import com.example.purramid.thepurramid.spotlight.SpotlightOpening
 import com.example.purramid.thepurramid.spotlight.SpotlightUiState
+import com.example.purramid.thepurramid.spotlight.SpotlightOpening
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
+import kotlin.math.maxOf
 
 @HiltViewModel
 class SpotlightViewModel @Inject constructor(
@@ -282,4 +283,105 @@ class SpotlightViewModel @Inject constructor(
                         _uiState.update { it.copy(error = "Cannot delete the last opening") }
                     }
                 }
-            TODO: INCOMPLETE
+            } catch (e: Exception) {
+                Log.e(TAG, "Error deleting opening", e)
+            }
+        }
+    }
+
+    fun updateOpeningFromDrag(openingId: Int, centerX: Float, centerY: Float) {
+        // Immediate UI update for smooth dragging
+        _uiState.update { currentState ->
+            currentState.copy(
+                openings = currentState.openings.map { opening ->
+                    if (opening.openingId == openingId) {
+                        opening.copy(centerX = centerX, centerY = centerY)
+                    } else {
+                        opening
+                    }
+                }
+            )
+        }
+
+        // Persist to database
+        updateOpeningPosition(openingId, centerX, centerY)
+    }
+
+    fun updateOpeningFromResize(opening: SpotlightOpening) {
+        // Immediate UI update for smooth resizing
+        _uiState.update { currentState ->
+            currentState.copy(
+                openings = currentState.openings.map { o ->
+                    if (o.openingId == opening.openingId) opening else o
+                }
+            )
+        }
+
+        // Persist to database
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val entity = mapOpeningToEntity(opening)
+                spotlightDao.updateOpening(entity)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error persisting resize", e)
+            }
+        }
+    }
+
+    fun setShowControls(show: Boolean) {
+        _uiState.update { it.copy(showControls = show) }
+    }
+
+    fun deactivateInstance() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                spotlightDao.deactivateInstance(instanceId)
+                Log.d(TAG, "Deactivated instance $instanceId")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error deactivating instance", e)
+            }
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        Log.d(TAG, "ViewModel cleared for instance $instanceId")
+    }
+
+    // ===== Mapping Functions =====
+
+    private fun mapEntityToOpening(entity: SpotlightOpeningEntity): SpotlightOpening {
+        return SpotlightOpening(
+            openingId = entity.openingId,
+            centerX = entity.centerX,
+            centerY = entity.centerY,
+            radius = entity.radius,
+            width = entity.width,
+            height = entity.height,
+            size = entity.size,
+            shape = try {
+                SpotlightOpening.Shape.valueOf(entity.shape)
+            } catch (e: Exception) {
+                SpotlightOpening.Shape.CIRCLE
+            },
+            isLocked = entity.isLocked,
+            displayOrder = entity.displayOrder
+        )
+    }
+
+    private fun mapOpeningToEntity(opening: SpotlightOpening): SpotlightOpeningEntity {
+        return SpotlightOpeningEntity(
+            openingId = opening.openingId,
+            instanceId = instanceId,
+            centerX = opening.centerX,
+            centerY = opening.centerY,
+            radius = opening.radius,
+            width = opening.width,
+            height = opening.height,
+            size = opening.size,
+            shape = opening.shape.name,
+            isLocked = opening.isLocked,
+            displayOrder = opening.displayOrder
+        )
+    }
+}

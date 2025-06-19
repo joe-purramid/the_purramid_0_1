@@ -10,544 +10,704 @@ import android.view.View
 import android.view.ViewConfiguration
 import androidx.core.content.ContextCompat
 import com.example.purramid.thepurramid.R
+import com.example.purramid.thepurramid.spotlight.SpotlightOpening
 import com.example.purramid.thepurramid.util.dpToPx
 import kotlin.math.absoluteValue
-import kotlin.math.atan2
 import kotlin.math.hypot
 import kotlin.math.min
-import kotlin.math.maxOf // Use maxOf for comparing multiple values
+import kotlin.math.maxOf
 
+/**
+ * Custom view that renders a semi-opaque overlay with multiple spotlight openings (holes).
+ * This is a single view that manages all openings for one service instance.
+ */
 class SpotlightView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
 
-    // --- Listener Interface (Modified) ---
+    // --- Listener Interface ---
     interface SpotlightInteractionListener {
-        fun requestWindowMove(deltaX: Float, deltaY: Float) // Request window move based on delta
-        fun requestWindowMoveFinished() // Notify window move finished
-        fun requestUpdateSpotlightState(updatedSpotlight: Spotlight) // Send full state on drag/resize end
-        fun requestTapPassThrough()
-        fun requestClose(spotlightId: Int) // Pass ID of the spotlight associated with the interaction
-        fun requestShapeChange()
-        fun requestAddNew()
+        fun onOpeningMoved(openingId: Int, newX: Float, newY: Float)
+        fun onOpeningResized(opening: SpotlightOpening)
+        fun onOpeningShapeToggled(openingId: Int)
+        fun onOpeningLockToggled(openingId: Int)
+        fun onAllLocksToggled()
+        fun onOpeningDeleted(openingId: Int)
+        fun onAddNewOpeningRequested()
+        fun onControlsToggled()
+        fun onSettingsRequested()
     }
+
     var interactionListener: SpotlightInteractionListener? = null
 
-    // --- Paints ---
-    private val maskColor = Color.argb(128, 0, 0, 0)
-    // private val maskPaint = Paint().apply { color = maskColor }
+    // --- Colors per Specification ---
+    private val maskColor = Color.parseColor("#36454F") // Charcoal
+    private val maskPaint = Paint().apply {
+        color = maskColor
+        alpha = 128 // 0.5 opacity = 128/255
+    }
+
     private val spotlightPaint = Paint().apply {
         xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR)
         isAntiAlias = true
     }
 
-    // --- Data Handling ---
-    private var spotlightsToDraw: List<Spotlight> = emptyList()
-    private var currentGlobalShape: Spotlight.Shape = Spotlight.Shape.CIRCLE
-    var showControls = true // Flag to control visibility, managed locally or by service if needed
-    private var canAddMoreSpotlights = true // Track if max is reached, updated by service
+    private val lockBorderPaint = Paint().apply {
+        color = Color.RED
+        style = Paint.Style.STROKE
+        strokeWidth = context.dpToPx(3).toFloat()
+        isAntiAlias = true
+    }
 
-    // --- Touch Handling State ---
+    // --- State Management ---
+    private var currentState: SpotlightUiState = SpotlightUiState()
+    private var openings: List<SpotlightOpening> = emptyList()
+    private var showControls = true
+    private var showSettingsMenu = false
+    private var selectedOpeningId: Int? = null
+
+    // --- Touch Handling ---
     private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop.toFloat()
     private val tapTimeout = ViewConfiguration.getTapTimeout().toLong()
-    private var isDraggingSpotlight = false
-    private var isDraggingWindow = false
-    private var isResizing = false
+    private var downTime: Long = 0
     private var downX = 0f
     private var downY = 0f
-    private var downTime: Long = 0
-    private var activePointerId = MotionEvent.INVALID_POINTER_ID
 
-    // State for dragging spotlight
-    private var currentDraggingSpotlight: Spotlight? = null
-    private var initialTouchX = 0f //
-    private var initialTouchY = 0f //
-    private var dragInitialSpotlightX = 0f // Store initial position for drag delta calc
-    private var dragInitialSpotlightY = 0f
+    // Interaction states
+    private var activeOpening: SpotlightOpening? = null
+    private var isDraggingOpening = false
+    private var isResizingOpening = false
+    private var dragStartX = 0f
+    private var dragStartY = 0f
+    private var openingStartX = 0f
+    private var openingStartY = 0f
 
-    // State for dragging window
-    private var initialRawX = 0f
-    private var initialRawY = 0f
+    // Visual feedback
+    private var visualFeedbackOpening: SpotlightOpening? = null
 
-    // State for resizing spotlight
-    private var pointerId1 = MotionEvent.INVALID_POINTER_ID
-    private var pointerId2 = MotionEvent.INVALID_POINTER_ID
-    private var initialDistance = 0f
-    private var initialAngle = 0f
-    private var resizingSpotlight: Spotlight? = null
-    // Store initial dimensions OF THE SPOTLIGHT being resized
-    private var resizeInitialSpotlightRadius = 0f
-    private var resizeInitialSpotlightSize = 0f
-    private var resizeInitialSpotlightWidth = 0f
-    private var resizeInitialSpotlightHeight = 0f
-    // Temporary spotlight object to hold visual feedback during resize/drag
-    private var visualFeedbackSpotlight: Spotlight? = null
-
-    private val ovalRect = RectF()
-
-    // --- UI Control Elements ---
+    // Control button definitions
     private val controlButtonSize = context.dpToPx(48)
     private val controlMargin = context.dpToPx(16)
-    private var addRect = Rect()
-    private var closeRect = Rect()
-    private var shapeRect = Rect()
-    private var addDrawable: Drawable? = null
-    private var closeDrawable: Drawable? = null
-    private var shapeDrawableCircle: Drawable? = null
-    private var shapeDrawableSquare: Drawable? = null
+    private val controlIconSize = context.dpToPx(24)
 
-    // Minimum size for spotlights
+    // Drawables for controls
+    private var moveDrawable: Drawable? = null
+    private var resizeDrawable: Drawable? = null
+    private var settingsDrawable: Drawable? = null
+    private var closeDrawable: Drawable? = null
+    private var shapeDrawable: Drawable? = null
+    private var lockDrawable: Drawable? = null
+    private var lockOpenDrawable: Drawable? = null
+    private var lockAllDrawable: Drawable? = null
+    private var lockAllOpenDrawable: Drawable? = null
+    private var addDrawable: Drawable? = null
+
+    // For drawing
+    private val ovalRect = RectF()
+    private val path = Path()
+
+    // Minimum size for openings
     private val minDimensionPx = context.dpToPx(50).toFloat()
 
-    // Data class to represent a spotlight (moved from outside)
-    data class Spotlight(
-        val id: Int,
-        var centerX: Float,
-        var centerY: Float,
-        var radius: Float,
-        var size: Float = radius * 2,
-        var width: Float = radius * 2,
-        var height: Float = radius * 2,
-        var shape: Shape
-    ) {
-        enum class Shape {
-            CIRCLE, OVAL, SQUARE, RECTANGLE
-        }
-    }
-
     init {
-        loadControlDrawables()
+        loadDrawables()
+        setLayerType(LAYER_TYPE_HARDWARE, null)
     }
 
-    private fun loadControlDrawables() {
-        addDrawable = ContextCompat.getDrawable(context, R.drawable.ic_add_circle)?.mutate()
+    private fun loadDrawables() {
+        moveDrawable = ContextCompat.getDrawable(context, R.drawable.ic_move)?.mutate()
+        resizeDrawable = ContextCompat.getDrawable(context, R.drawable.ic_resize_right_handle)?.mutate()
+        settingsDrawable = ContextCompat.getDrawable(context, R.drawable.ic_settings)?.mutate()
         closeDrawable = ContextCompat.getDrawable(context, R.drawable.ic_close)?.mutate()
-        shapeDrawableCircle = ContextCompat.getDrawable(context, R.drawable.ic_circle)?.mutate()
-        shapeDrawableSquare = ContextCompat.getDrawable(context, R.drawable.ic_square)?.mutate()
+        shapeDrawable = ContextCompat.getDrawable(context, R.drawable.ic_spotlight_shape)?.mutate()
+        lockDrawable = ContextCompat.getDrawable(context, R.drawable.ic_lock)?.mutate()
+        lockOpenDrawable = ContextCompat.getDrawable(context, R.drawable.ic_lock_open)?.mutate()
+        lockAllDrawable = ContextCompat.getDrawable(context, R.drawable.ic_lock_all)?.mutate()
+        lockAllOpenDrawable = ContextCompat.getDrawable(context, R.drawable.ic_lock_all_open)?.mutate()
+        addDrawable = ContextCompat.getDrawable(context, R.drawable.ic_add_circle)?.mutate()
     }
 
-    // Called by the service to update the view's data
-    fun updateSpotlights(newSpotlights: List<Spotlight>, globalShape: Spotlight.Shape) {
-        spotlightsToDraw = newSpotlights
-        currentGlobalShape = globalShape
-        updateCanAddSpotlights(newSpotlights.size < 4)
+    fun updateState(state: SpotlightUiState) {
+        currentState = state
+        openings = state.openings
+        showControls = state.showControls
         invalidate()
-    }
-
-    private fun updateCanAddSpotlights(canAdd: Boolean) {
-        if (canAddMoreSpotlights != canAdd) {
-            canAddMoreSpotlights = canAdd
-            invalidate() // Redraw controls if state changes
-        }
     }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        canvas.drawColor(maskColor)
 
-        // Determine which spotlights to draw (original or temporary feedback)
-        val listToDraw = if (isDraggingSpotlight || isResizing) {
-            spotlightsToDraw.mapNotNull { original ->
-                when {
-                    visualFeedbackSpotlight?.id == original.id -> visualFeedbackSpotlight // Draw the feedback version
-                    else -> original // Draw the original version
+        // Draw semi-opaque overlay
+        canvas.drawColor(maskColor)
+        canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), maskPaint)
+
+        // Create path for all openings
+        path.reset()
+
+        // Use visual feedback opening if actively interacting
+        val drawList = if (visualFeedbackOpening != null) {
+            openings.map { opening ->
+                if (opening.openingId == visualFeedbackOpening?.openingId) {
+                    visualFeedbackOpening!!
+                } else {
+                    opening
                 }
             }
         } else {
-            spotlightsToDraw // Draw the normal state list
+            openings
         }
 
-
-        listToDraw.forEach { spotlight ->
-            val paint = spotlightPaint // Can reuse paint if xfermode is the main property
-            when (spotlight.shape) {
-                Spotlight.Shape.CIRCLE -> canvas.drawCircle(spotlight.centerX, spotlight.centerY, spotlight.radius, paint)
-                Spotlight.Shape.OVAL -> {
-                    ovalRect.set(spotlight.centerX - spotlight.width / 2f, spotlight.centerY - spotlight.height / 2f, spotlight.centerX + spotlight.width / 2f, spotlight.centerY + spotlight.height / 2f)
-                    canvas.drawOval(ovalRect, paint)
+        // Add all openings to path
+        drawList.forEach { opening ->
+            when (opening.shape) {
+                SpotlightOpening.Shape.CIRCLE -> {
+                    path.addCircle(opening.centerX, opening.centerY, opening.radius, Path.Direction.CW)
                 }
-                Spotlight.Shape.SQUARE -> canvas.drawRect(spotlight.centerX - spotlight.size / 2f, spotlight.centerY - spotlight.size / 2f, spotlight.centerX + spotlight.size / 2f, spotlight.centerY + spotlight.size / 2f, paint)
-                Spotlight.Shape.RECTANGLE -> canvas.drawRect(spotlight.centerX - spotlight.width / 2f, spotlight.centerY - spotlight.height / 2f, spotlight.centerX + spotlight.width / 2f, spotlight.centerY + spotlight.height / 2f, paint)
+                SpotlightOpening.Shape.OVAL -> {
+                    ovalRect.set(
+                        opening.centerX - opening.width / 2f,
+                        opening.centerY - opening.height / 2f,
+                        opening.centerX + opening.width / 2f,
+                        opening.centerY + opening.height / 2f
+                    )
+                    path.addOval(ovalRect, Path.Direction.CW)
+                }
+                SpotlightOpening.Shape.SQUARE -> {
+                    val halfSize = opening.size / 2f
+                    path.addRect(
+                        opening.centerX - halfSize,
+                        opening.centerY - halfSize,
+                        opening.centerX + halfSize,
+                        opening.centerY + halfSize,
+                        Path.Direction.CW
+                    )
+                }
+                SpotlightOpening.Shape.RECTANGLE -> {
+                    path.addRect(
+                        opening.centerX - opening.width / 2f,
+                        opening.centerY - opening.height / 2f,
+                        opening.centerX + opening.width / 2f,
+                        opening.centerY + opening.height / 2f,
+                        Path.Direction.CW
+                    )
+                }
+            }
+
+            // Draw lock border if locked
+            if (opening.isLocked) {
+                drawLockBorder(canvas, opening)
             }
         }
 
+        // Clear all openings at once
+        canvas.drawPath(path, spotlightPaint)
+
+        // Draw controls for each opening if enabled
         if (showControls) {
-            drawControls(canvas)
+            openings.forEach { opening ->
+                drawControlsForOpening(canvas, opening)
+            }
         }
     }
 
-    private fun drawControls(canvas: Canvas) {
-        val bottomY = height - controlMargin - controlButtonSize / 2f
-        val totalWidthNeeded = controlButtonSize * 3 + controlMargin * 2
-        val startX = (width - totalWidthNeeded) / 2f
-        var currentX = startX
+    private fun drawLockBorder(canvas: Canvas, opening: SpotlightOpening) {
+        when (opening.shape) {
+            SpotlightOpening.Shape.CIRCLE -> {
+                canvas.drawCircle(
+                    opening.centerX,
+                    opening.centerY,
+                    opening.radius + lockBorderPaint.strokeWidth / 2,
+                    lockBorderPaint
+                )
+            }
+            SpotlightOpening.Shape.OVAL -> {
+                ovalRect.set(
+                    opening.centerX - opening.width / 2f - lockBorderPaint.strokeWidth / 2,
+                    opening.centerY - opening.height / 2f - lockBorderPaint.strokeWidth / 2,
+                    opening.centerX + opening.width / 2f + lockBorderPaint.strokeWidth / 2,
+                    opening.centerY + opening.height / 2f + lockBorderPaint.strokeWidth / 2
+                )
+                canvas.drawOval(ovalRect, lockBorderPaint)
+            }
+            SpotlightOpening.Shape.SQUARE -> {
+                val halfSize = opening.size / 2f + lockBorderPaint.strokeWidth / 2
+                canvas.drawRect(
+                    opening.centerX - halfSize,
+                    opening.centerY - halfSize,
+                    opening.centerX + halfSize,
+                    opening.centerY + halfSize,
+                    lockBorderPaint
+                )
+            }
+            SpotlightOpening.Shape.RECTANGLE -> {
+                canvas.drawRect(
+                    opening.centerX - opening.width / 2f - lockBorderPaint.strokeWidth / 2,
+                    opening.centerY - opening.height / 2f - lockBorderPaint.strokeWidth / 2,
+                    opening.centerX + opening.width / 2f + lockBorderPaint.strokeWidth / 2,
+                    opening.centerY + opening.height / 2f + lockBorderPaint.strokeWidth / 2,
+                    lockBorderPaint
+                )
+            }
+        }
+    }
 
-        // Add Button
-        addRect.set(currentX.toInt(), (bottomY - controlButtonSize / 2f).toInt(), (currentX + controlButtonSize).toInt(), (bottomY + controlButtonSize / 2f).toInt())
-        addDrawable?.bounds = addRect
-        addDrawable?.alpha = if (canAddMoreSpotlights) 255 else 128
-        addDrawable?.draw(canvas)
-        currentX += controlButtonSize + controlMargin
+    private fun drawControlsForOpening(canvas: Canvas, opening: SpotlightOpening) {
+        val bounds = getOpeningBounds(opening)
 
-        // Close Button
-        closeRect.set(currentX.toInt(), (bottomY - controlButtonSize / 2f).toInt(), (currentX + controlButtonSize).toInt(), (bottomY + controlButtonSize / 2f).toInt())
-        closeDrawable?.bounds = closeRect
-        closeDrawable?.draw(canvas)
-        currentX += controlButtonSize + controlMargin
+        // Position controls per specification
+        // Move handle - top left
+        val moveX = bounds.left - controlButtonSize / 2
+        val moveY = bounds.top - controlButtonSize / 2
+        drawControl(canvas, moveDrawable, moveX, moveY, opening.isLocked)
 
-        // Shape Button
-        shapeRect.set(currentX.toInt(), (bottomY - controlButtonSize / 2f).toInt(), (currentX + controlButtonSize).toInt(), (bottomY + controlButtonSize / 2f).toInt())
-        val shapeDrawable = if (currentGlobalShape == Spotlight.Shape.CIRCLE || currentGlobalShape == Spotlight.Shape.OVAL) shapeDrawableCircle else shapeDrawableSquare
-        shapeDrawable?.bounds = shapeRect
-        shapeDrawable?.draw(canvas)
+        // Close button - top right
+        val closeX = bounds.right - controlButtonSize / 2
+        val closeY = bounds.top - controlButtonSize / 2
+        drawControl(canvas, closeDrawable, closeX, closeY, opening.isLocked)
+
+        // Settings button - bottom left
+        val settingsX = bounds.left - controlButtonSize / 2
+        val settingsY = bounds.bottom - controlButtonSize / 2
+        drawControl(canvas, settingsDrawable, settingsX, settingsY, false)
+
+        // Resize handle - bottom right
+        val resizeX = bounds.right - controlButtonSize / 2
+        val resizeY = bounds.bottom - controlButtonSize / 2
+        if (opening.isLocked) {
+            // Draw inactive resize handle when locked
+            val inactiveResize = ContextCompat.getDrawable(context, R.drawable.ic_resize_right_handle)?.mutate()
+            inactiveResize?.alpha = 128
+            drawControl(canvas, inactiveResize, resizeX, resizeY, true)
+        } else {
+            drawControl(canvas, resizeDrawable, resizeX, resizeY, false)
+        }
+
+        // Only draw settings menu if this is the selected opening
+        if (selectedOpeningId == opening.openingId && showSettingsMenu) {
+            drawSettingsMenu(canvas, settingsX, settingsY, opening)
+        }
+    }
+
+    private fun drawControl(canvas: Canvas, drawable: Drawable?, centerX: Float, centerY: Float, disabled: Boolean = false) {
+        drawable?.let {
+            val halfSize = controlIconSize / 2
+            it.setBounds(
+                (centerX - halfSize).toInt(),
+                (centerY - halfSize).toInt(),
+                (centerX + halfSize).toInt(),
+                (centerY + halfSize).toInt()
+            )
+            if (disabled) {
+                it.alpha = 128
+            } else {
+                it.alpha = 255
+            }
+            it.draw(canvas)
+        }
+    }
+
+    private fun drawSettingsMenu(canvas: Canvas, anchorX: Float, anchorY: Float, opening: SpotlightOpening) {
+        // Settings menu extends upward from the settings button
+        val menuWidth = controlButtonSize
+        val menuItemHeight = controlButtonSize
+        val menuItemCount = 4 // Shape, Lock, Lock All, Add Another
+        val menuHeight = menuItemHeight * menuItemCount
+
+        // Background for menu (semi-transparent)
+        val menuPaint = Paint().apply {
+            color = Color.parseColor("#36454F")
+            alpha = 200
+        }
+
+        val menuLeft = anchorX - menuWidth / 2
+        val menuTop = anchorY - menuHeight - controlButtonSize / 2
+        val menuRight = menuLeft + menuWidth
+        val menuBottom = anchorY - controlButtonSize / 2
+
+        // Draw menu background
+        canvas.drawRect(menuLeft, menuTop, menuRight, menuBottom, menuPaint)
+
+        // Draw menu items from top to bottom
+        var currentY = menuTop + menuItemHeight / 2
+
+        // 1. Shape button
+        drawControl(canvas, shapeDrawable, anchorX, currentY, opening.isLocked)
+        currentY += menuItemHeight
+
+        // 2. Lock button
+        val lockIcon = if (opening.isLocked) lockDrawable else lockOpenDrawable
+        drawControl(canvas, lockIcon, anchorX, currentY, false)
+        currentY += menuItemHeight
+
+        // 3. Lock All button
+        val lockAllIcon = if (currentState.areAllLocked) lockAllDrawable else lockAllOpenDrawable
+        drawControl(canvas, lockAllIcon, anchorX, currentY, false)
+        currentY += menuItemHeight
+
+        // 4. Add Another button
+        drawControl(canvas, addDrawable, anchorX, currentY, !currentState.canAddMore)
+    }
+
+    private fun getOpeningBounds(opening: SpotlightOpening): RectF {
+        return when (opening.shape) {
+            SpotlightOpening.Shape.CIRCLE -> {
+                RectF(
+                    opening.centerX - opening.radius,
+                    opening.centerY - opening.radius,
+                    opening.centerX + opening.radius,
+                    opening.centerY + opening.radius
+                )
+            }
+            SpotlightOpening.Shape.OVAL -> {
+                RectF(
+                    opening.centerX - opening.width / 2f,
+                    opening.centerY - opening.height / 2f,
+                    opening.centerX + opening.width / 2f,
+                    opening.centerY + opening.height / 2f
+                )
+            }
+            SpotlightOpening.Shape.SQUARE -> {
+                val halfSize = opening.size / 2f
+                RectF(
+                    opening.centerX - halfSize,
+                    opening.centerY - halfSize,
+                    opening.centerX + halfSize,
+                    opening.centerY + halfSize
+                )
+            }
+            SpotlightOpening.Shape.RECTANGLE -> {
+                RectF(
+                    opening.centerX - opening.width / 2f,
+                    opening.centerY - opening.height / 2f,
+                    opening.centerX + opening.width / 2f,
+                    opening.centerY + opening.height / 2f
+                )
+            }
+        }
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        val action = event.actionMasked
-        val pointerIndex = event.actionIndex
-
-        when (action) {
+        when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
-                downX = event.x; downY = event.y
+                downX = event.x
+                downY = event.y
                 downTime = System.currentTimeMillis()
-                activePointerId = event.getPointerId(0)
-                initialTouchX = event.x
-                initialTouchY = event.y
-                initialRawX = event.rawX
-                initialRawY = event.rawY
 
-                isDraggingSpotlight = false
-                isDraggingWindow = false
-                isResizing = false
-                currentDraggingSpotlight = null
-                resizingSpotlight = null
-                visualFeedbackSpotlight = null // Clear feedback state
-                pointerId1 = MotionEvent.INVALID_POINTER_ID
-                pointerId2 = MotionEvent.INVALID_POINTER_ID
+                // Check what was touched
+                val touchedOpening = findOpeningAt(downX, downY)
+                val touchedControl = if (showControls) findControlAt(downX, downY) else null
 
-                if (showControls && handleControlTouch(downX, downY)) {
-                    return true // Consumed by control
+                if (touchedControl != null) {
+                    handleControlTouch(touchedControl)
+                    return true
                 }
 
-                currentDraggingSpotlight = findTouchedSpotlight(initialTouchX, initialTouchY)
-                if (currentDraggingSpotlight != null) {
-                    // Create a copy for visual feedback during drag
-                    visualFeedbackSpotlight = currentDraggingSpotlight?.copy()
-                    // Store initial position of the spotlight being dragged
-                    dragInitialSpotlightX = currentDraggingSpotlight!!.centerX
-                    dragInitialSpotlightY = currentDraggingSpotlight!!.centerY
+                if (touchedOpening != null) {
+                    activeOpening = touchedOpening
+                    dragStartX = downX
+                    dragStartY = downY
+                    openingStartX = touchedOpening.centerX
+                    openingStartY = touchedOpening.centerY
+                    return true
                 }
-                return true // Consume event
-            }
 
-            MotionEvent.ACTION_POINTER_DOWN -> {
-                if (event.pointerCount == 2 && !isResizing && !isDraggingSpotlight && !isDraggingWindow) {
-                    val index1 = event.findPointerIndex(event.getPointerId(0))
-                    val index2 = event.findPointerIndex(pointerIndex) // Use actionIndex for the new pointer
-                    if (index1 != -1 && index2 != -1) {
-                        val x1 = event.getX(index1); val y1 = event.getY(index1)
-                        val x2 = event.getX(index2); val y2 = event.getY(index2)
-                        val midX = (x1 + x2) / 2f
-                        val midY = (y1 + y2) / 2f
-                        resizingSpotlight = findTouchedSpotlight(midX, midY)
-
-                        if (resizingSpotlight != null) {
-                            isResizing = true
-                            currentDraggingSpotlight = null // Stop potential single-finger drag
-                            isDraggingSpotlight = false
-                            visualFeedbackSpotlight = resizingSpotlight?.copy() // Create copy for resize feedback
-
-                            pointerId1 = event.getPointerId(0)
-                            pointerId2 = event.getPointerId(pointerIndex)
-                            initialDistance = hypot(x2 - x1, y2 - y1)
-                            initialAngle = atan2(y2 - y1, x2 - x1)
-                            // Capture initial dimensions from the ORIGINAL spotlight data
-                            resizingSpotlight?.let {
-                                resizeInitialSpotlightRadius = it.radius
-                                resizeInitialSpotlightSize = it.size
-                                resizeInitialSpotlightWidth = it.width
-                                resizeInitialSpotlightHeight = it.height
-                            }
-                        }
-                    }
-                }
                 return true
             }
 
             MotionEvent.ACTION_MOVE -> {
-                // Handle Resize
-                if (isResizing && resizingSpotlight != null && event.pointerCount >= 2) {
-                    val idx1 = event.findPointerIndex(pointerId1)
-                    val idx2 = event.findPointerIndex(pointerId2)
-                    if (idx1 != -1 && idx2 != -1) {
-                        val x1 = event.getX(idx1); val y1 = event.getY(idx1)
-                        val x2 = event.getX(idx2); val y2 = event.getY(idx2)
-                        val currentDistance = hypot(x2 - x1, y2 - y1)
+                activeOpening?.let { opening ->
+                    if (!opening.isLocked) {
+                        val deltaX = event.x - dragStartX
+                        val deltaY = event.y - dragStartY
 
-                        if (initialDistance > 0) {
-                            val scale = currentDistance / initialDistance
-                            // Apply resize to the temporary feedback object
-                            visualFeedbackSpotlight?.let { applyResize(it, scale) }
-                            invalidate() // Redraw with temporary size
+                        if (!isDraggingOpening && hypot(deltaX, deltaY) > touchSlop) {
+                            isDraggingOpening = true
+                            visualFeedbackOpening = opening.copy()
+                        }
+
+                        if (isDraggingOpening) {
+                            visualFeedbackOpening?.let {
+                                it.centerX = openingStartX + deltaX
+                                it.centerY = openingStartY + deltaY
+
+                                // Constrain to screen bounds
+                                val bounds = getOpeningBounds(it)
+                                if (bounds.left < 0) it.centerX -= bounds.left
+                                if (bounds.top < 0) it.centerY -= bounds.top
+                                if (bounds.right > width) it.centerX -= (bounds.right - width)
+                                if (bounds.bottom > height) it.centerY -= (bounds.bottom - height)
+                            }
+                            invalidate()
                         }
                     }
-                    return true // Consume resize move
                 }
-
-                // Handle Spotlight Drag (only if NOT resizing)
-                val primaryPointerIndex = event.findPointerIndex(activePointerId)
-                if (!isResizing && currentDraggingSpotlight != null && primaryPointerIndex != -1) {
-                    val currentTouchX = event.getX(primaryPointerIndex)
-                    val currentTouchY = event.getY(primaryPointerIndex)
-                    val deltaX = currentTouchX - initialTouchX
-                    val deltaY = currentTouchY - initialTouchY
-
-                    if (!isDraggingSpotlight && hypot(deltaX, deltaY) > touchSlop) {
-                        isDraggingSpotlight = true
-                    }
-                    if (isDraggingSpotlight) {
-                        // Update the temporary feedback object's position
-                        visualFeedbackSpotlight?.centerX = dragInitialSpotlightX + deltaX
-                        visualFeedbackSpotlight?.centerY = dragInitialSpotlightY + deltaY
-                        invalidate() // Redraw with temporary position
-                    }
-                    return true // Consume spotlight drag move
-                }
-
-                // Handle Window Drag (only if not resizing or dragging a spotlight)
-                if (!isResizing && currentDraggingSpotlight == null && primaryPointerIndex != -1) {
-                    val currentRawX = event.getRawX(primaryPointerIndex) // Use index with getRawX
-                    val currentRawY = event.getRawY(primaryPointerIndex) // Use index with getRawY
-                    val deltaRawX = currentRawX - initialRawX
-                    val deltaRawY = currentRawY - initialRawY
-
-                    if (!isDraggingWindow && hypot(deltaRawX, deltaRawY) > touchSlop) {
-                        isDraggingWindow = true
-                    }
-                    if (isDraggingWindow) {
-                        interactionListener?.requestWindowMove(deltaRawX, deltaRawY)
-                        initialRawX = currentRawX // Update base for next delta
-                        initialRawY = currentRawY
-                    }
-                    return true // Consume window drag move
-                }
-            }
-
-            MotionEvent.ACTION_POINTER_UP -> {
-                val upPointerId = event.getPointerId(pointerIndex)
-                if (isResizing && (upPointerId == pointerId1 || upPointerId == pointerId2)) {
-                    // One resizing finger lifted, end resize and report final state
-                    visualFeedbackSpotlight?.let {
-                        interactionListener?.requestUpdateSpotlightState(it)
-                    }
-                    isResizing = false
-                    resizingSpotlight = null
-                    visualFeedbackSpotlight = null // Clear feedback state
-                    pointerId1 = MotionEvent.INVALID_POINTER_ID
-                    pointerId2 = MotionEvent.INVALID_POINTER_ID
-                }
-                // Update activePointerId if the primary one lifted? Not strictly necessary here.
                 return true
             }
 
             MotionEvent.ACTION_UP -> {
                 val upTime = System.currentTimeMillis()
-                val wasDraggingSpotlight = isDraggingSpotlight
-                val wasDraggingWindow = isDraggingWindow
-                val wasResizing = isResizing // Should be false if POINTER_UP already handled it
+                val deltaTime = upTime - downTime
+                val deltaX = (event.x - downX).absoluteValue
+                val deltaY = (event.y - downY).absoluteValue
 
-                // Report final state if interaction was in progress and not already reported by POINTER_UP
-                if (wasDraggingSpotlight && currentDraggingSpotlight != null) {
-                    // Calculate final position and report
-                    val finalX = dragInitialSpotlightX + (event.x - initialTouchX)
-                    val finalY = dragInitialSpotlightY + (event.y - initialTouchY)
-                    visualFeedbackSpotlight?.let {
-                        it.centerX = finalX
-                        it.centerY = finalY
-                        interactionListener?.requestUpdateSpotlightState(it)
+                // Handle drag completion
+                if (isDraggingOpening) {
+                    visualFeedbackOpening?.let {
+                        interactionListener?.onOpeningMoved(it.openingId, it.centerX, it.centerY)
+                    }
+                    isDraggingOpening = false
+                    visualFeedbackOpening = null
+                    activeOpening = null
+                    invalidate()
+                    return true
+                }
+
+                // Handle tap
+                if (deltaTime < tapTimeout && deltaX < touchSlop && deltaY < touchSlop) {
+                    val tappedOpening = findOpeningAt(downX, downY)
+                    if (tappedOpening == null && !showControls) {
+                        // Tapped on mask area - toggle controls
+                        interactionListener?.onControlsToggled()
+                    } else if (showSettingsMenu) {
+                        // Close settings menu if tapping outside
+                        showSettingsMenu = false
+                        selectedOpeningId = null
+                        invalidate()
                     }
                 }
-                // Resize state should have been reported on POINTER_UP mostly,
-                // but handle case where both fingers lift simultaneously.
-                if (wasResizing && resizingSpotlight != null) {
-                    visualFeedbackSpotlight?.let { interactionListener?.requestUpdateSpotlightState(it) }
-                }
-                if (wasDraggingWindow) {
-                    interactionListener?.requestWindowMoveFinished()
-                }
 
-                // Reset flags
-                isDraggingSpotlight = false
-                isDraggingWindow = false
-                isResizing = false
-                activePointerId = MotionEvent.INVALID_POINTER_ID
-                pointerId1 = MotionEvent.INVALID_POINTER_ID
-                pointerId2 = MotionEvent.INVALID_POINTER_ID
-                currentDraggingSpotlight = null
-                resizingSpotlight = null
-                visualFeedbackSpotlight = null
-
-                // Check for TAP
-                if (!wasDraggingSpotlight && !wasDraggingWindow && !wasResizing) {
-                    val deltaTime = upTime - downTime
-                    val deltaX = (event.x - downX).absoluteValue
-                    val deltaY = (event.y - downY).absoluteValue
-
-                    if (deltaTime < tapTimeout && deltaX < touchSlop && deltaY < touchSlop) {
-                        performClick() // Accessibility
-                        if (showControls && handleControlTouch(downX, downY, isTap = true)) {
-                            // Tap handled by controls
-                        } else {
-                            val tappedSpotlight = findTouchedSpotlight(downX, downY)
-                            if (tappedSpotlight != null) {
-                                interactionListener?.requestTapPassThrough()
-                            } else {
-                                showControls = !showControls // Toggle controls on mask tap
-                                invalidate()
-                            }
-                        }
-                        return true // Tap handled
-                    }
-                }
-                // Redraw to ensure final state without feedback object is shown
-                invalidate()
-                return true // Consume UP after drag/resize
+                activeOpening = null
+                return true
             }
 
             MotionEvent.ACTION_CANCEL -> {
-                // Reset everything on cancel
-                isDraggingSpotlight = false
-                isDraggingWindow = false
-                isResizing = false
-                activePointerId = MotionEvent.INVALID_POINTER_ID
-                pointerId1 = MotionEvent.INVALID_POINTER_ID
-                pointerId2 = MotionEvent.INVALID_POINTER_ID
-                currentDraggingSpotlight = null
-                resizingSpotlight = null
-                visualFeedbackSpotlight = null
-                invalidate() // Redraw in normal state
+                isDraggingOpening = false
+                isResizingOpening = false
+                visualFeedbackOpening = null
+                activeOpening = null
+                invalidate()
                 return true
             }
         }
+
         return super.onTouchEvent(event)
     }
 
-
-    // Helper to apply resize scaling to the visualFeedbackSpotlight
-    private fun applyResize(spotlightToModify: Spotlight, scale: Float) {
-        val maxDimension = maxOf(width, height).toFloat().coerceAtLeast(minDimensionPx * 2) // Ensure maxDimension is reasonable
-
-        // Get the shape from the original spotlight being resized
-        val originalShape = resizingSpotlight?.shape ?: return // Safety check
-
-        when (originalShape) {
-            Spotlight.Shape.CIRCLE -> {
-                spotlightToModify.radius = (resizeInitialSpotlightRadius * scale).coerceIn(minDimensionPx / 2f, maxDimension / 2f)
-                spotlightToModify.width = spotlightToModify.radius * 2
-                spotlightToModify.height = spotlightToModify.radius * 2
-                spotlightToModify.size = spotlightToModify.radius * 2
-            }
-            Spotlight.Shape.SQUARE -> {
-                spotlightToModify.size = (resizeInitialSpotlightSize * scale).coerceIn(minDimensionPx, maxDimension)
-                spotlightToModify.width = spotlightToModify.size
-                spotlightToModify.height = spotlightToModify.size
-                spotlightToModify.radius = spotlightToModify.size / 2f
-            }
-            Spotlight.Shape.OVAL, Spotlight.Shape.RECTANGLE -> {
-                val aspectRatio = if (resizeInitialSpotlightHeight > 0) resizeInitialSpotlightWidth / resizeInitialSpotlightHeight else 1f
-                var newWidth = (resizeInitialSpotlightWidth * scale)
-                var newHeight = (resizeInitialSpotlightHeight * scale)
-
-                // Apply min constraints while trying to maintain aspect ratio
-                if (newWidth < minDimensionPx || newHeight < minDimensionPx) {
-                    if (aspectRatio >= 1) { // Wider or square
-                        newHeight = minDimensionPx
-                        newWidth = maxOf(minDimensionPx, newHeight * aspectRatio)
-                    } else { // Taller
-                        newWidth = minDimensionPx
-                        newHeight = maxOf(minDimensionPx, newWidth / aspectRatio)
-                    }
-                }
-                // Apply max constraints
-                if (newWidth > maxDimension || newHeight > maxDimension) {
-                    if (aspectRatio >= 1) { // Wider or square
-                        newWidth = maxDimension
-                        newHeight = min(maxDimension, newWidth / aspectRatio)
-                    } else { // Taller
-                        newHeight = maxDimension
-                        newWidth = min(maxDimension, newHeight * aspectRatio)
-                    }
-                }
-
-                spotlightToModify.width = newWidth
-                spotlightToModify.height = newHeight
-                spotlightToModify.size = maxOf(newWidth, newHeight)
-                spotlightToModify.radius = maxOf(newWidth, newHeight) / 2f
-            }
+    private fun findOpeningAt(x: Float, y: Float): SpotlightOpening? {
+        // Check in reverse order so top-most is found first
+        return openings.reversed().firstOrNull { opening ->
+            isPointInOpening(x, y, opening)
         }
-        // Ensure shape remains consistent during visual feedback
-        spotlightToModify.shape = originalShape
     }
 
+    private fun isPointInOpening(x: Float, y: Float, opening: SpotlightOpening): Boolean {
+        return when (opening.shape) {
+            SpotlightOpening.Shape.CIRCLE -> {
+                hypot(x - opening.centerX, y - opening.centerY) <= opening.radius
+            }
+            SpotlightOpening.Shape.OVAL -> {
+                val a = opening.width / 2f
+                val b = opening.height / 2f
+                if (a > 0 && b > 0) {
+                    val dx = (x - opening.centerX) / a
+                    val dy = (y - opening.centerY) / b
+                    (dx * dx + dy * dy) <= 1
+                } else false
+            }
+            SpotlightOpening.Shape.SQUARE -> {
+                val halfSize = opening.size / 2f
+                x >= opening.centerX - halfSize && x <= opening.centerX + halfSize &&
+                        y >= opening.centerY - halfSize && y <= opening.centerY + halfSize
+            }
+            SpotlightOpening.Shape.RECTANGLE -> {
+                val halfWidth = opening.width / 2f
+                val halfHeight = opening.height / 2f
+                x >= opening.centerX - halfWidth && x <= opening.centerX + halfWidth &&
+                        y >= opening.centerY - halfHeight && y <= opening.centerY + halfHeight
+            }
+        }
+    }
 
-    // Helper to check and handle taps on control buttons
-    private fun handleControlTouch(x: Float, y: Float, isTap: Boolean = false): Boolean {
-        if (!showControls) return false
+    private data class ControlInfo(
+        val opening: SpotlightOpening,
+        val type: ControlType,
+        val bounds: RectF
+    )
 
-        if (addRect.contains(x.toInt(), y.toInt())) {
-            if (isTap && canAddMoreSpotlights) interactionListener?.requestAddNew()
-            return true
+    private enum class ControlType {
+        MOVE, RESIZE, SETTINGS, CLOSE, SHAPE, LOCK, LOCK_ALL, ADD
+    }
+
+    private fun findControlAt(x: Float, y: Float): ControlInfo? {
+        val touchRadius = controlButtonSize / 2f
+
+        // First check if settings menu is open
+        if (showSettingsMenu && selectedOpeningId != null) {
+            val selectedOpening = openings.find { it.openingId == selectedOpeningId }
+            selectedOpening?.let { opening ->
+                val bounds = getOpeningBounds(opening)
+                val settingsX = bounds.left - controlButtonSize / 2
+                val settingsY = bounds.bottom - controlButtonSize / 2
+
+                // Check settings menu items
+                val menuLeft = settingsX - touchRadius
+                val menuRight = settingsX + touchRadius
+                var menuY = settingsY - controlButtonSize * 4.5f // Start from top of menu
+
+                // Shape button
+                if (x >= menuLeft && x <= menuRight && y >= menuY && y <= menuY + controlButtonSize) {
+                    return ControlInfo(opening, ControlType.SHAPE, RectF(menuLeft, menuY, menuRight, menuY + controlButtonSize))
+                }
+                menuY += controlButtonSize
+
+                // Lock button
+                if (x >= menuLeft && x <= menuRight && y >= menuY && y <= menuY + controlButtonSize) {
+                    return ControlInfo(opening, ControlType.LOCK, RectF(menuLeft, menuY, menuRight, menuY + controlButtonSize))
+                }
+                menuY += controlButtonSize
+
+                // Lock All button
+                if (x >= menuLeft && x <= menuRight && y >= menuY && y <= menuY + controlButtonSize) {
+                    return ControlInfo(opening, ControlType.LOCK_ALL, RectF(menuLeft, menuY, menuRight, menuY + controlButtonSize))
+                }
+                menuY += controlButtonSize
+
+                // Add Another button
+                if (x >= menuLeft && x <= menuRight && y >= menuY && y <= menuY + controlButtonSize) {
+                    return ControlInfo(opening, ControlType.ADD, RectF(menuLeft, menuY, menuRight, menuY + controlButtonSize))
+                }
+            }
         }
-        // Use the ID of the *first* spotlight for the close action, assuming controls are global
-        val spotlightIdToClose = spotlightsToDraw.firstOrNull()?.id ?: -1
-        if (closeRect.contains(x.toInt(), y.toInt())) {
-            if (isTap && spotlightIdToClose != -1) interactionListener?.requestClose(spotlightIdToClose)
-            return true
+
+        // Then check regular controls
+        openings.forEach { opening ->
+            val bounds = getOpeningBounds(opening)
+
+            // Check each control position
+            val controls = listOf(
+                // Move - top left
+                ControlInfo(
+                    opening,
+                    ControlType.MOVE,
+                    RectF(
+                        bounds.left - touchRadius,
+                        bounds.top - touchRadius,
+                        bounds.left + touchRadius,
+                        bounds.top + touchRadius
+                    )
+                ),
+                // Close - top right
+                ControlInfo(
+                    opening,
+                    ControlType.CLOSE,
+                    RectF(
+                        bounds.right - touchRadius,
+                        bounds.top - touchRadius,
+                        bounds.right + touchRadius,
+                        bounds.top + touchRadius
+                    )
+                ),
+                // Settings - bottom left
+                ControlInfo(
+                    opening,
+                    ControlType.SETTINGS,
+                    RectF(
+                        bounds.left - touchRadius,
+                        bounds.bottom - touchRadius,
+                        bounds.left + touchRadius,
+                        bounds.bottom + touchRadius
+                    )
+                ),
+                // Resize - bottom right
+                ControlInfo(
+                    opening,
+                    ControlType.RESIZE,
+                    RectF(
+                        bounds.right - touchRadius,
+                        bounds.bottom - touchRadius,
+                        bounds.right + touchRadius,
+                        bounds.bottom + touchRadius
+                    )
+                )
+            )
+
+            controls.forEach { control ->
+                if (control.bounds.contains(x, y)) {
+                    return control
+                }
+            }
         }
-        if (shapeRect.contains(x.toInt(), y.toInt())) {
-            if (isTap) interactionListener?.requestShapeChange()
-            return true
+
+        return null
+    }
+
+    private fun handleControlTouch(control: ControlInfo) {
+        when (control.type) {
+            ControlType.MOVE -> {
+                if (!control.opening.isLocked) {
+                    activeOpening = control.opening
+                    isDraggingOpening = true
+                    visualFeedbackOpening = control.opening.copy()
+                }
+            }
+            ControlType.RESIZE -> {
+                if (!control.opening.isLocked) {
+                    // TODO: Implement resize functionality
+                }
+            }
+            ControlType.SETTINGS -> {
+                // Toggle settings menu for this opening
+                if (selectedOpeningId == control.opening.openingId && showSettingsMenu) {
+                    // Close menu if clicking on same settings button
+                    showSettingsMenu = false
+                    selectedOpeningId = null
+                } else {
+                    // Open menu for this opening
+                    showSettingsMenu = true
+                    selectedOpeningId = control.opening.openingId
+                }
+                invalidate()
+            }
+            ControlType.CLOSE -> {
+                if (!control.opening.isLocked) {
+                    interactionListener?.onOpeningDeleted(control.opening.openingId)
+                }
+            }
+            ControlType.SHAPE -> {
+                if (!control.opening.isLocked) {
+                    interactionListener?.onOpeningShapeToggled(control.opening.openingId)
+                    // Close settings menu after action
+                    showSettingsMenu = false
+                    selectedOpeningId = null
+                    invalidate()
+                }
+            }
+            ControlType.LOCK -> {
+                interactionListener?.onOpeningLockToggled(control.opening.openingId)
+                // Close settings menu after action
+                showSettingsMenu = false
+                selectedOpeningId = null
+                invalidate()
+            }
+            ControlType.LOCK_ALL -> {
+                interactionListener?.onAllLocksToggled()
+                // Close settings menu after action
+                showSettingsMenu = false
+                selectedOpeningId = null
+                invalidate()
+            }
+            ControlType.ADD -> {
+                if (currentState.canAddMore) {
+                    interactionListener?.onAddNewOpeningRequested()
+                    // Close settings menu after action
+                    showSettingsMenu = false
+                    selectedOpeningId = null
+                    invalidate()
+                }
+            }
         }
-        return false
     }
 
     override fun performClick(): Boolean {
         super.performClick()
         return true
-    }
-
-    // Find spotlight based on touch coordinates
-    private fun findTouchedSpotlight(x: Float, y: Float): Spotlight? {
-        // Check in reverse order so top-most is found first
-        for (spotlight in spotlightsToDraw.reversed()) { // Use the data received from service
-            val found = when (spotlight.shape) {
-                Spotlight.Shape.CIRCLE -> hypot(x - spotlight.centerX, y - spotlight.centerY) < spotlight.radius
-                Spotlight.Shape.OVAL -> {
-                    val a = spotlight.width / 2f
-                    val b = spotlight.height / 2f
-                    if (a > 0 && b > 0) {
-                        (((x - spotlight.centerX) / a).pow(2) + ((y - spotlight.centerY) / b).pow(2)) <= 1
-                    } else false
-                }
-                Spotlight.Shape.SQUARE -> {
-                    val halfSize = spotlight.size / 2f
-                    x >= spotlight.centerX - halfSize && x <= spotlight.centerX + halfSize &&
-                            y >= spotlight.centerY - halfSize && y <= spotlight.centerY + halfSize
-                }
-                Spotlight.Shape.RECTANGLE -> {
-                    val halfWidth = spotlight.width / 2f
-                    val halfHeight = spotlight.height / 2f
-                    x >= spotlight.centerX - halfWidth && x <= spotlight.centerX + halfWidth &&
-                            y >= spotlight.centerY - halfHeight && y <= spotlight.centerY + halfHeight
-                }
-            }
-            if (found) return spotlight
-        }
-        return null
-    }
-
-    // Simple power function for Float
-    private fun Float.pow(exp: Int): Float {
-        var result = 1.0f
-        repeat(exp) { result *= this }
-        return result
     }
 }
