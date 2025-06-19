@@ -1,5 +1,30 @@
 # The Purramid - Implementation Decisions
 
+## All App-Intents
+- **Reviewed**: 14 June 2025
+- **Architecture**: Instance management
+- **Key Decisions**:
+  - Do not use AtomicInteger for instance numbering
+  - Use thepurramid.instance.InstanceManager.kt
+
+ - **Reviewed**: 15 June 2025
+- **Architecture**: Settings Window Implementation
+- **Key Decisions**:
+  - Settings should open at the center of the screen
+  - Use an explosion animation
+  - Future efforts may revise this implemenation to have settings open from the settings button in the app-intent window
+ 
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+
 ## MainActivity
 - **Reviewed**: [Date]
 - **Architecture**: Activity without ViewModel

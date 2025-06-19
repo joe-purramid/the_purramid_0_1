@@ -35,6 +35,7 @@ import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.lifecycleScope
 import com.caverock.androidsvg.SVGImageView
+import com.example.purramid.thepurramid.instance.InstanceManager
 import com.example.purramid.thepurramid.MainActivity
 import com.example.purramid.thepurramid.R
 import com.example.purramid.thepurramid.data.db.ClockDao // Keep for restoration logic if needed directly
@@ -74,6 +75,7 @@ const val EXTRA_NEST_STATE = "nest_state"
 class ClockOverlayService : LifecycleService(), ViewModelStoreOwner {
 
     @Inject lateinit var windowManager: WindowManager
+    @Inject lateinit var instanceManager: InstanceManager
     @Inject lateinit var viewModelFactory: ViewModelProvider.Factory
     @Inject lateinit var clockDao: ClockDao // For restoring states
     @Inject @ClockPrefs lateinit var servicePrefs: SharedPreferences
@@ -88,7 +90,6 @@ class ClockOverlayService : LifecycleService(), ViewModelStoreOwner {
     private val clockLayoutParams = ConcurrentHashMap<Int, WindowManager.LayoutParams>()
     private val stateObserverJobs = ConcurrentHashMap<Int, Job>()
 
-    private val clockIdCounter = AtomicInteger(0)
     private var isForeground = false
 
     companion object {
@@ -106,19 +107,7 @@ class ClockOverlayService : LifecycleService(), ViewModelStoreOwner {
         super.onCreate()
         Log.d(TAG, "onCreate")
         createNotificationChannel()
-        loadLastInstanceId()
         loadAndRestoreClockStates()
-    }
-
-    private fun loadLastInstanceId() {
-        val lastId = servicePrefs.getInt(KEY_LAST_INSTANCE_ID, 0)
-        clockIdCounter.set(lastId)
-        Log.d(TAG, "Loaded last instance ID for Clock: $lastId")
-    }
-
-    private fun saveLastInstanceId() {
-        servicePrefs.edit().putInt(KEY_LAST_INSTANCE_ID, clockIdCounter.get()).apply()
-        Log.d(TAG, "Saved last instance ID for Clock: ${clockIdCounter.get()}")
     }
 
     private fun updateActiveInstanceCountInPrefs() {
@@ -131,17 +120,19 @@ class ClockOverlayService : LifecycleService(), ViewModelStoreOwner {
             val persistedStates = clockDao.getAllStates()
             if (persistedStates.isNotEmpty()) {
                 Log.d(TAG, "Found ${persistedStates.size} persisted clock states. Restoring...")
-                var maxId = clockIdCounter.get()
                 persistedStates.forEach { entity ->
-                    maxId = max(maxId, entity.clockId)
+                    // Register the existing instance ID
+                    instanceManager.registerExistingInstance(InstanceManager.CLOCK, entity.instanceId)
+
                     launch(Dispatchers.Main) {
-                        initializeViewModel(entity.clockId, Bundle().apply { putInt(ClockViewModel.KEY_CLOCK_ID, entity.clockId) })
+                        initializeViewModel(entity.instanceId, Bundle().apply {
+                            putInt(ClockViewModel.KEY_CLOCK_ID, entity.instanceId)
+                        })
                     }
                 }
-                clockIdCounter.set(maxId) // Ensure counter is beyond highest loaded ID
             }
-            // Ensure service is in foreground if any clocks were restored
-            if (clockViewModels.isNotEmpty()) {
+
+            if (activeClockModels.isNotEmpty()) {
                 startForegroundServiceIfNeeded()
             }
         }
@@ -201,7 +192,6 @@ class ClockOverlayService : LifecycleService(), ViewModelStoreOwner {
         val initialArgs = Bundle().apply { putInt(ClockViewModel.KEY_CLOCK_ID, newClockId) }
         initializeViewModel(newClockId, initialArgs) // VM loads/creates default state & saves
 
-        saveLastInstanceId()
         updateActiveInstanceCountInPrefs()
         startForegroundServiceIfNeeded()
     }
@@ -319,16 +309,19 @@ class ClockOverlayService : LifecycleService(), ViewModelStoreOwner {
     }
 
     private fun removeClockInstance(instanceId: Int) {
-        handler.post {
+        Handler(Looper.getMainLooper()).post {
             Log.d(TAG, "Removing Clock instance ID: $instanceId")
-            val rootView = activeClockViews.remove(instanceId)
-            clockViewInstances.remove(instanceId)
+
+            // Release the instance ID back to the manager
+            instanceManager.releaseInstanceId(InstanceManager.CLOCK, instanceId)
+
+            val clockView = activeClockViews.remove(instanceId)
             clockLayoutParams.remove(instanceId)
             stateObserverJobs[instanceId]?.cancel()
             stateObserverJobs.remove(instanceId)
             val viewModel = clockViewModels.remove(instanceId)
 
-            rootView?.let {
+            clockView?.let {
                 if (it.isAttachedToWindow) {
                     try { windowManager.removeView(it) }
                     catch (e: Exception) { Log.e(TAG, "Error removing ClockView ID $instanceId", e) }
@@ -570,7 +563,6 @@ class ClockOverlayService : LifecycleService(), ViewModelStoreOwner {
             view?.let { if (it.isAttachedToWindow) try {windowManager.removeView(it)}catch(e:Exception){/*ignore*/} }
         }
         clockViewModels.clear()
-        saveLastInstanceId()
         _viewModelStore.clear()
         super.onDestroy()
     }

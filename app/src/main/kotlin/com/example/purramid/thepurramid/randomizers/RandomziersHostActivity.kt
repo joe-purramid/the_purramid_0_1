@@ -15,6 +15,7 @@ import com.example.purramid.thepurramid.data.db.RandomizerDao
 import com.example.purramid.thepurramid.data.db.RandomizerInstanceEntity
 import com.example.purramid.thepurramid.data.db.SpinSettingsEntity
 import com.example.purramid.thepurramid.databinding.ActivityRandomizersHostBinding
+import com.example.purramid.thepurramid.instance.InstanceManager
 import com.example.purramid.thepurramid.randomizers.viewmodel.RandomizerSettingsViewModel // Changed import
 import com.example.purramid.thepurramid.randomizers.viewmodel.RandomizerViewModel // Keep for EXTRA_INSTANCE_ID
 import dagger.hilt.android.AndroidEntryPoint
@@ -34,8 +35,8 @@ class RandomizersHostActivity : AppCompatActivity() {
     // Use RandomizerSettingsViewModel to observe mode changes
     private val settingsViewModel: RandomizerSettingsViewModel by viewModels()
 
-    @Inject
-    lateinit var randomizerDao: RandomizerDao
+    @Inject lateinit var randomizerDao: RandomizerDao
+    @Inject lateinit var instanceManager: InstanceManager
 
     companion object {
         private const val TAG = "RandomizersHostActivity"

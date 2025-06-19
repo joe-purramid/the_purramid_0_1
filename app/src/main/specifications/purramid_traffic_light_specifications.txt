@@ -91,7 +91,7 @@ The traffic light is a vector image of a common traffic light with three colored
  --- USER EXPERIENCE ---
 (7) ``SETTINGS SUMMARY``
 	(7.1) When a user touches the settings button, its icon changes from (5.1) Default to (5.2) Active.
-	(7.2) When activated, a settings menu extends with a smooth transition animation from the settings button.
+	(7.2) When activated, a settings window opens with a smooth transition animation, as per the universal specifications.
 		(7.2.1) The settings button remains active while the settings window is open.
 		(7.2.2) The settings window is rows of strings and an icon:
 			(7.2.2.1) "Mode"

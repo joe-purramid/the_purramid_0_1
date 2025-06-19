@@ -31,6 +31,7 @@ import com.example.purramid.thepurramid.R
 import com.example.purramid.thepurramid.data.db.SpotlightDao
 import com.example.purramid.thepurramid.di.HiltViewModelFactory
 import com.example.purramid.thepurramid.di.SpotlightPrefs
+import com.example.purramid.thepurramid.instance.InstanceManager
 import com.example.purramid.thepurramid.spotlight.SpotlightUiState
 import com.example.purramid.thepurramid.spotlight.viewmodel.SpotlightViewModel
 import dagger.hilt.android.AndroidEntryPoint
@@ -51,6 +52,7 @@ const val ACTION_ADD_NEW_SPOTLIGHT_INSTANCE = "com.example.purramid.spotlight.AC
 class SpotlightService : LifecycleService(), ViewModelStoreOwner {
 
     @Inject lateinit var windowManager: WindowManager
+    @Inject lateinit var instanceManager: InstanceManager
     @Inject lateinit var viewModelFactory: ViewModelProvider.Factory // Hilt provides default
     @Inject lateinit var spotlightDao: SpotlightDao // For restoring state if needed
     @Inject @SpotlightPrefs lateinit var servicePrefs: SharedPreferences
@@ -63,7 +65,6 @@ class SpotlightService : LifecycleService(), ViewModelStoreOwner {
     private val spotlightLayoutParams = ConcurrentHashMap<Int, WindowManager.LayoutParams>()
     private val stateObserverJobs = ConcurrentHashMap<Int, Job>()
 
-    private val instanceIdCounter = AtomicInteger(0)
     private var isForeground = false
 
     companion object {
@@ -85,19 +86,7 @@ class SpotlightService : LifecycleService(), ViewModelStoreOwner {
         super.onCreate()
         Log.d(TAG, "onCreate")
         createNotificationChannel()
-        loadLastInstanceId()
         loadAndRestoreSpotlightStates()
-    }
-
-    private fun loadLastInstanceId() {
-        val lastId = servicePrefs.getInt(KEY_LAST_INSTANCE_ID, 0)
-        instanceIdCounter.set(lastId)
-        Log.d(TAG, "Loaded last instance ID for Spotlight: $lastId")
-    }
-
-    private fun saveLastInstanceId() {
-        servicePrefs.edit().putInt(KEY_LAST_INSTANCE_ID, instanceIdCounter.get()).apply()
-        Log.d(TAG, "Saved last instance ID for Spotlight: ${instanceIdCounter.get()}")
     }
 
     private fun updateActiveInstanceCountInPrefs() {
@@ -107,18 +96,21 @@ class SpotlightService : LifecycleService(), ViewModelStoreOwner {
 
     private fun loadAndRestoreSpotlightStates() {
         lifecycleScope.launch(Dispatchers.IO) {
-            val persistedStates = spotlightDao.getAllSpotlights() // Assuming getAllSpotlights exists
+            val persistedStates = spotlightDao.getAllSpotlights()
             if (persistedStates.isNotEmpty()) {
                 Log.d(TAG, "Found ${persistedStates.size} persisted spotlight states. Restoring...")
-                var maxId = instanceIdCounter.get()
                 persistedStates.forEach { entity ->
-                    maxId = maxOf(maxId, entity.id)
+                    // Register the existing instance ID
+                    instanceManager.registerExistingInstance(InstanceManager.SPOTLIGHT, entity.instanceId)
+
                     launch(Dispatchers.Main) {
-                        initializeViewModel(entity.id, Bundle().apply { putInt(SpotlightViewModel.KEY_INSTANCE_ID, entity.id) })
+                        initializeViewModel(entity.instanceId, Bundle().apply {
+                            putInt(SpotlightViewModel.KEY_INSTANCE_ID, entity.instanceId)
+                        })
                     }
                 }
-                instanceIdCounter.set(maxId)
             }
+
             if (activeSpotlightViewModels.isNotEmpty()) {
                 startForegroundServiceIfNeeded()
             }
@@ -150,19 +142,24 @@ class SpotlightService : LifecycleService(), ViewModelStoreOwner {
     }
 
     private fun handleAddNewSpotlightInstance() {
-        if (activeSpotlightViewModels.size >= MAX_SPOTLIGHTS) {
+        val activeCount = instanceManager.getActiveInstanceCount(InstanceManager.SPOTLIGHT)
+        if (activeCount >= MAX_SPOTLIGHTS) {
             Log.w(TAG, "Maximum number of spotlights ($MAX_SPOTLIGHTS) reached.")
-            // Inform UI via settings screen (Snackbar)
             return
         }
-        val newInstanceId = instanceIdCounter.incrementAndGet()
+
+        val newInstanceId = instanceManager.getNextInstanceId(InstanceManager.SPOTLIGHT)
+        if (newInstanceId == null) {
+            Log.w(TAG, "No available instance slots for Spotlight")
+            return
+        }
+
         Log.d(TAG, "Adding new spotlight instance with ID: $newInstanceId")
 
+        // Initialize VM (it will create default state and save it via its init block)
         val initialArgs = Bundle().apply { putInt(SpotlightViewModel.KEY_INSTANCE_ID, newInstanceId) }
         initializeViewModel(newInstanceId, initialArgs)
-        // View creation handled by observer
 
-        saveLastInstanceId()
         updateActiveInstanceCountInPrefs()
         startForegroundServiceIfNeeded()
     }
@@ -250,6 +247,10 @@ class SpotlightService : LifecycleService(), ViewModelStoreOwner {
     private fun removeSpotlightInstance(instanceId: Int) {
         Handler(Looper.getMainLooper()).post {
             Log.d(TAG, "Removing Spotlight instance ID: $instanceId")
+
+            // Release the instance ID back to the manager
+            instanceManager.releaseInstanceId(InstanceManager.SPOTLIGHT, instanceId)
+
             val spotlightView = activeSpotlightViews.remove(instanceId)
             spotlightLayoutParams.remove(instanceId)
             stateObserverJobs[instanceId]?.cancel()
@@ -262,7 +263,7 @@ class SpotlightService : LifecycleService(), ViewModelStoreOwner {
                     catch (e: Exception) { Log.e(TAG, "Error removing SpotlightView ID $instanceId", e) }
                 }
             }
-            viewModel?.deleteState() // Tell VM to delete from DB
+            viewModel?.deleteState()
             updateActiveInstanceCountInPrefs()
 
             if (activeSpotlightViewModels.isEmpty()) {
@@ -402,7 +403,6 @@ class SpotlightService : LifecycleService(), ViewModelStoreOwner {
             view?.let { if (it.isAttachedToWindow) try { windowManager.removeView(it) } catch (e:Exception){ Log.e(TAG, "Error removing view $id on destroy")} }
         }
         activeSpotlightViewModels.clear()
-        saveLastInstanceId()
         _viewModelStore.clear()
         super.onDestroy()
     }

@@ -109,7 +109,7 @@ Spotlight applies a semi-opaque overlay to the entire screen, with an opening in
 
 (15) ``SETTINGS``
 	(15.1) When a user touches the settings button, its icon changes from (10.1) Default to (10.2) Active.
-	(15.2) When activated, a settings menu extends with a smooth transition animation from the settings button.
+	(15.2) When activated, a settings window opens with a smooth transition animation, as per the universal specifications.
 		(15.2.1) The settings button remains active while the settings window is open.
 		(15.2.2) The settings window is a collection of icons ordered from top down as follows:
 			(15.2.2.1) "Shape"

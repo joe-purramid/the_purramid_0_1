@@ -32,10 +32,12 @@ import com.example.purramid.thepurramid.R
 import com.example.purramid.thepurramid.data.db.TrafficLightDao
 import com.example.purramid.thepurramid.di.HiltViewModelFactory
 import com.example.purramid.thepurramid.di.TrafficLightPrefs
+import com.example.purramid.thepurramid.instance.InstanceManager
 import com.example.purramid.thepurramid.traffic_light.viewmodel.LightColor
 import com.example.purramid.thepurramid.traffic_light.viewmodel.TrafficLightState
 import com.example.purramid.thepurramid.traffic_light.viewmodel.TrafficLightViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -48,11 +50,13 @@ const val ACTION_START_TRAFFIC_LIGHT_SERVICE = "com.example.purramid.traffic_lig
 const val ACTION_STOP_TRAFFIC_LIGHT_SERVICE = "com.example.purramid.traffic_light.ACTION_STOP_SERVICE"
 const val ACTION_ADD_NEW_TRAFFIC_LIGHT_INSTANCE = "com.example.purramid.traffic_light.ACTION_ADD_NEW_INSTANCE"
 const val EXTRA_TRAFFIC_LIGHT_INSTANCE_ID = TrafficLightViewModel.KEY_INSTANCE_ID
+const val PREFS_NAME = "com.example.purramid.thepurramid.traffic_light.APP_PREFERENCES"
 
 @AndroidEntryPoint
 class TrafficLightService : LifecycleService(), ViewModelStoreOwner {
 
     @Inject lateinit var windowManager: WindowManager
+    @Inject lateinit var instanceManager: InstanceManager
     @Inject lateinit var viewModelFactory: ViewModelProvider.Factory
     @Inject lateinit var trafficLightDao: TrafficLightDao
     @Inject @TrafficLightPrefs lateinit var servicePrefs: SharedPreferences
@@ -65,7 +69,6 @@ class TrafficLightService : LifecycleService(), ViewModelStoreOwner {
     private val trafficLightLayoutParams = ConcurrentHashMap<Int, WindowManager.LayoutParams>()
     private val stateObserverJobs = ConcurrentHashMap<Int, Job>()
 
-    private val instanceIdCounter = AtomicInteger(0)
     private var isForeground = false
 
     companion object {
@@ -83,19 +86,7 @@ class TrafficLightService : LifecycleService(), ViewModelStoreOwner {
         super.onCreate()
         Log.d(TAG, "onCreate")
         createNotificationChannel()
-        loadLastInstanceId()
         loadAndRestoreStates()
-    }
-
-    private fun loadLastInstanceId() {
-        val lastId = servicePrefs.getInt(KEY_LAST_INSTANCE_ID, 0)
-        instanceIdCounter.set(lastId)
-        Log.d(TAG, "Loaded last instance ID for TrafficLight: $lastId")
-    }
-
-    private fun saveLastInstanceId() {
-        servicePrefs.edit().putInt(KEY_LAST_INSTANCE_ID, instanceIdCounter.get()).apply()
-        Log.d(TAG, "Saved last instance ID for TrafficLight: ${instanceIdCounter.get()}")
     }
 
     private fun updateActiveInstanceCountInPrefs() {
@@ -108,16 +99,19 @@ class TrafficLightService : LifecycleService(), ViewModelStoreOwner {
             val persistedStates = trafficLightDao.getAllStates()
             if (persistedStates.isNotEmpty()) {
                 Log.d(TAG, "Found ${persistedStates.size} persisted traffic light states. Restoring...")
-                var maxId = instanceIdCounter.get()
                 persistedStates.forEach { entity ->
-                    maxId = maxOf(maxId, entity.instanceId)
+                    // Register the existing instance ID
+                    instanceManager.registerExistingInstance(InstanceManager.TRAFFIC_LIGHT, entity.instanceId)
+
                     launch(Dispatchers.Main) {
-                        initializeViewModel(entity.instanceId, Bundle().apply { putInt(TrafficLightViewModel.KEY_INSTANCE_ID, entity.instanceId) })
+                        initializeViewModel(entity.instanceId, Bundle().apply {
+                            putInt(TrafficLightViewModel.KEY_INSTANCE_ID, entity.instanceId)
+                        })
                     }
                 }
-                instanceIdCounter.set(maxId) // Ensure counter is beyond highest loaded ID
             }
-            if (activeTrafficLightViewModels.isNotEmpty()) { // Check after potential restorations
+
+            if (activeTrafficLightViewModels.isNotEmpty()) {
                 startForegroundServiceIfNeeded()
             }
         }
@@ -148,18 +142,24 @@ class TrafficLightService : LifecycleService(), ViewModelStoreOwner {
     }
 
     private fun handleAddNewTrafficLightInstance() {
-        if (activeTrafficLightViewModels.size >= MAX_TRAFFIC_LIGHTS) {
+        val activeCount = instanceManager.getActiveInstanceCount(InstanceManager.TRAFFIC_LIGHT)
+        if (activeCount >= MAX_TRAFFIC_LIGHTS) {
             Log.w(TAG, "Maximum number of traffic lights ($MAX_TRAFFIC_LIGHTS) reached.")
-            // Settings UI should show Snackbar
             return
         }
-        val newInstanceId = instanceIdCounter.incrementAndGet()
+
+        val newInstanceId = instanceManager.getNextInstanceId(InstanceManager.TRAFFIC_LIGHT)
+        if (newInstanceId == null) {
+            Log.w(TAG, "No available instance slots for Traffic Light")
+            return
+        }
+
         Log.d(TAG, "Adding new traffic light instance with ID: $newInstanceId")
 
+        // Initialize VM (it will create default state and save it via its init block)
         val initialArgs = Bundle().apply { putInt(TrafficLightViewModel.KEY_INSTANCE_ID, newInstanceId) }
-        initializeViewModel(newInstanceId, initialArgs) // VM loads/creates default state
+        initializeViewModel(newInstanceId, initialArgs)
 
-        saveLastInstanceId()
         updateActiveInstanceCountInPrefs()
         startForegroundServiceIfNeeded()
     }
@@ -238,22 +238,25 @@ class TrafficLightService : LifecycleService(), ViewModelStoreOwner {
     }
 
     private fun removeTrafficLightInstance(instanceId: Int) {
-        handler.post {
-            Log.d(TAG, "Removing TrafficLight instance ID: $instanceId")
-            val view = activeTrafficLightViews.remove(instanceId)
+        Handler(Looper.getMainLooper()).post {
+            Log.d(TAG, "Removing Traffic Light instance ID: $instanceId")
+
+            // Release the instance ID back to the manager
+            instanceManager.releaseInstanceId(InstanceManager.TRAFFIC_LIGHT, instanceId)
+
+            val trafficLightView = activeTrafficLightViews.remove(instanceId)
             trafficLightLayoutParams.remove(instanceId)
             stateObserverJobs[instanceId]?.cancel()
             stateObserverJobs.remove(instanceId)
             val viewModel = activeTrafficLightViewModels.remove(instanceId)
 
-            view?.let {
+            trafficLightView?.let {
                 if (it.isAttachedToWindow) {
                     try { windowManager.removeView(it) }
                     catch (e: Exception) { Log.e(TAG, "Error removing TrafficLightView ID $instanceId", e) }
                 }
             }
-            // viewModel?.deleteState() // Assuming ViewModel handles its own state deletion if needed
-
+            viewModel?.deleteState()
             updateActiveInstanceCountInPrefs()
 
             if (activeTrafficLightViewModels.isEmpty()) {
@@ -380,7 +383,6 @@ class TrafficLightService : LifecycleService(), ViewModelStoreOwner {
             view?.let { if (it.isAttachedToWindow) try { windowManager.removeView(it) } catch (e:Exception){/*ignore*/} }
         }
         activeTrafficLightViewModels.clear()
-        saveLastInstanceId()
         _viewModelStore.clear()
         super.onDestroy()
     }
