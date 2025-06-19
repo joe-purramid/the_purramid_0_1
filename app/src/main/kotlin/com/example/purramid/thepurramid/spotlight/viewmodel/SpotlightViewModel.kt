@@ -8,8 +8,8 @@ import androidx.lifecycle.viewModelScope
 import com.example.purramid.thepurramid.data.db.SpotlightDao
 import com.example.purramid.thepurramid.data.db.SpotlightInstanceEntity
 import com.example.purramid.thepurramid.data.db.SpotlightOpeningEntity
+import com.example.purramid.thepurramid.spotlight.SpotlightOpening
 import com.example.purramid.thepurramid.spotlight.SpotlightUiState
-import com.example.purramid.thepurramid.spotlight.model.SpotlightOpening
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,7 +19,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
-import kotlin.math.maxOf
 
 @HiltViewModel
 class SpotlightViewModel @Inject constructor(

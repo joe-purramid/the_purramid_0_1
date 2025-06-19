@@ -1,5 +1,4 @@
-// SpotlightOpening.kt
-package com.example.purramid.thepurramid.spotlight.viewmodel
+package com.example.purramid.thepurramid.spotlight
 
 /**
  * Data class representing a spotlight opening (hole) in the overlay.
@@ -20,7 +19,7 @@ data class SpotlightOpening(
     enum class Shape {
         CIRCLE, OVAL, SQUARE, RECTANGLE
     }
-    
+
     companion object {
         /**
          * Creates a default circular opening at the specified position

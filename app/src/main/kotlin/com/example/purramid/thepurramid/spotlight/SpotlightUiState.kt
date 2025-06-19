@@ -1,8 +1,6 @@
 // SpotlightUiState.kt
 package com.example.purramid.thepurramid.spotlight
 
-import com.example.purramid.thepurramid.spotlight.viewmodel.SpotlightOpening
-
 /**
  * Represents the UI state for the Spotlight overlay.
  * A single overlay can contain multiple openings (holes).
