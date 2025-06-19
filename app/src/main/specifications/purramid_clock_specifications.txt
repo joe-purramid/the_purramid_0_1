@@ -9,9 +9,9 @@ Clock is a collection of timekeeping services that allows teachers to demonstrat
 - Window tracking: UUID per clock window
 - Shares single service: Yes
 - Requires permissions:
-  - SYSTEM_ALERT_WINDOW (for overlay)
-  - FOREGROUND_SERVICE
-  - POST_NOTIFICATIONS
+  - SYSTEM_ALERT_WINDOW (for overlay - requested on first launch)
+  - FOREGROUND_SERVICE (automatic)
+  - POST_NOTIFICATIONS (Android 13+ - requested when creating first window)
   - INTERNET (music access for Alarm)
   - WAKE_LOCK
   - RECEIVE_BOOT_COMPLETED
