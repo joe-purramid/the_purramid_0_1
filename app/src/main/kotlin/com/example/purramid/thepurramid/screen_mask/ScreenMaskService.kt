@@ -297,14 +297,19 @@ class ScreenMaskService : LifecycleService(), ViewModelStoreOwner, SavedStateReg
             Log.d(TAG, "Creating ScreenMaskViewModel for ID: $id")
 
             // Create a unique key for each instance
-            val key = "ScreenMaskViewModel_$id"
+            val key = "screen_mask_$id"
 
-            // Directly use the ViewModelProvider with the intended HiltViewModelFactory.
-            ViewModelProvider(this, HiltViewModelFactory(this, initialArgs ?: Bundle().apply { putInt(ScreenMaskViewModel.KEY_INSTANCE_ID, id) }, viewModelFactory))
-                .get(ScreenMaskViewModel::class.java)
-                .also { vm ->
-                    observeViewModelState(id, vm)
-                }
+            // Use standard ViewModelProvider with factory (not HiltViewModelFactory)
+            val viewModel = ViewModelProvider(
+                this,
+                viewModelFactory  // Use the injected factory directly
+            ).get(key, ScreenMaskViewModel::class.java)
+
+            // Initialize the ViewModel with the instance ID
+            viewModel.initialize(id)
+
+            observeViewModelState(id, viewModel)
+            viewModel
         }
     }
 

@@ -30,21 +30,25 @@ class ScreenMaskViewModel @Inject constructor(
         private const val TAG = "ScreenMaskViewModel"
     }
 
-    private val instanceId: Int = savedStateHandle[KEY_INSTANCE_ID] ?: 0
+    private val instanceId: Int = 0
 
-    private val _uiState = MutableStateFlow(ScreenMaskState(instanceId = instanceId))
-    val uiState: StateFlow<ScreenMaskState> = _uiState.asStateFlow()
+    fun initialize(id: Int) {
+        if (instanceId != 0) {
+            Log.w(TAG, "ViewModel already initialized with ID $instanceId, ignoring new ID $id")
+            return
+        }
 
-    init {
+        instanceId = id
+        savedStateHandle[KEY_INSTANCE_ID] = id
+
         Log.d(TAG, "Initializing ViewModel for instanceId: $instanceId")
         if (instanceId != 0) {
             loadState()
-        } else {
-            // This case should ideally not happen if Service always provides a valid ID
-            Log.e(TAG, "Invalid instanceId (0) received. Using default unpersisted state.")
-            // _uiState.update { it.copy( /* set some defaults if necessary */ ) }
         }
     }
+
+    private val _uiState = MutableStateFlow(ScreenMaskState(instanceId = instanceId))
+    val uiState: StateFlow<ScreenMaskState> = _uiState.asStateFlow()
 
     private fun loadState() {
         viewModelScope.launch(Dispatchers.IO) {

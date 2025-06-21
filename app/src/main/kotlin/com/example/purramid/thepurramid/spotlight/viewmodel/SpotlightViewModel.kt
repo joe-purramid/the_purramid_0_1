@@ -33,12 +33,20 @@ class SpotlightViewModel @Inject constructor(
         private const val DEFAULT_RADIUS = 125f // 250px diameter as per spec
     }
 
-    private val instanceId: Int = savedStateHandle.get<Int>(KEY_INSTANCE_ID) ?: 1
+    private var instanceId: Int = 1 // Default, will be set via setter
 
     private val _uiState = MutableStateFlow(SpotlightUiState(instanceId = instanceId, isLoading = true))
     val uiState: StateFlow<SpotlightUiState> = _uiState.asStateFlow()
 
-    init {
+    // Call this immediately after creation to set the instance ID
+    fun initialize(instanceId: Int, screenWidth: Int, screenHeight: Int) {
+        this.instanceId = instanceId
+        _uiState.update { it.copy(instanceId = instanceId) }
+
+        // Store screen dimensions for later use
+        savedStateHandle["screen_width"] = screenWidth
+        savedStateHandle["screen_height"] = screenHeight
+
         initializeInstance()
         observeOpenings()
     }

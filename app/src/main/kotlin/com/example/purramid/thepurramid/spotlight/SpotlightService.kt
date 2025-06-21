@@ -24,15 +24,16 @@ import androidx.lifecycle.lifecycleScope
 import com.example.purramid.thepurramid.MainActivity
 import com.example.purramid.thepurramid.R
 import com.example.purramid.thepurramid.data.db.SpotlightDao
-import com.example.purramid.thepurramid.di.HiltViewModelFactory
 import com.example.purramid.thepurramid.di.SpotlightPrefs
 import com.example.purramid.thepurramid.instance.InstanceManager
 import com.example.purramid.thepurramid.spotlight.SpotlightOpening
 import com.example.purramid.thepurramid.spotlight.viewmodel.SpotlightViewModel
+import com.example.purramid.thepurramid.spotlight.util.SpotlightMigrationHelper
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
 import javax.inject.Inject
 
 // Define Actions
@@ -48,6 +49,7 @@ class SpotlightService : LifecycleService(), ViewModelStoreOwner {
     @Inject lateinit var viewModelFactory: ViewModelProvider.Factory
     @Inject lateinit var spotlightDao: SpotlightDao
     @Inject @SpotlightPrefs lateinit var servicePrefs: SharedPreferences
+    @Inject lateinit var migrationHelper: SpotlightMigrationHelper
 
     private val _viewModelStore = ViewModelStore()
     override val viewModelStore: ViewModelStore = _viewModelStore
@@ -73,6 +75,11 @@ class SpotlightService : LifecycleService(), ViewModelStoreOwner {
         super.onCreate()
         Log.d(TAG, "onCreate")
         createNotificationChannel()
+
+        // Run migration check on service creation
+        lifecycleScope.launch(Dispatchers.IO) {
+            migrationHelper.migrateIfNeeded()
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -83,7 +90,15 @@ class SpotlightService : LifecycleService(), ViewModelStoreOwner {
         when (action) {
             ACTION_START_SPOTLIGHT_SERVICE -> {
                 if (instanceId == null) {
-                    initializeService(intent)
+                    // Check if we should restore an existing instance
+                    val existingInstanceId = intent?.getIntExtra(KEY_INSTANCE_ID, -1)?.takeIf { it > 0 }
+                    if (existingInstanceId != null) {
+                        // Restoring existing instance
+                        restoreExistingInstance(existingInstanceId)
+                    } else {
+                        // Create new instance
+                        initializeService(intent)
+                    }
                 }
             }
             ACTION_ADD_NEW_SPOTLIGHT_OPENING -> {
@@ -119,16 +134,55 @@ class SpotlightService : LifecycleService(), ViewModelStoreOwner {
         val screenHeight = displayMetrics.heightPixels
 
         // Initialize ViewModel with instance ID and screen dimensions
-        val args = Bundle().apply {
-            putInt(SpotlightViewModel.KEY_INSTANCE_ID, instanceId!!)
-            putInt("screen_width", screenWidth)
-            putInt("screen_height", screenHeight)
-        }
-
         spotlightViewModel = ViewModelProvider(
             this,
-            HiltViewModelFactory(this, args, viewModelFactory)
-        ).get(SpotlightViewModel::class.java)
+            viewModelFactory
+        ).get("spotlight_$instanceId", SpotlightViewModel::class.java)
+
+        // Initialize the ViewModel with the instance data
+        spotlightViewModel?.initialize(instanceId!!, screenWidth, screenHeight)
+
+        // Create and attach overlay view
+        createOverlayView()
+        observeViewModelState()
+        startForegroundServiceIfNeeded()
+        updateActiveInstanceCount()
+    }
+
+    private fun restoreExistingInstance(existingInstanceId: Int) {
+        // Check if instance is already tracked by InstanceManager
+        val isTracked = instanceManager.getActiveInstanceIds(InstanceManager.SPOTLIGHT)
+            .contains(existingInstanceId)
+
+        if (!isTracked) {
+            // Re-register with instance manager
+            val registered = instanceManager.registerExistingInstance(
+                InstanceManager.SPOTLIGHT,
+                existingInstanceId
+            )
+            if (!registered) {
+                Log.e(TAG, "Failed to register existing instance $existingInstanceId")
+                stopSelf()
+                return
+            }
+        }
+
+        instanceId = existingInstanceId
+        Log.d(TAG, "Restoring existing instance ID: $instanceId")
+
+        // Get screen dimensions
+        val displayMetrics = resources.displayMetrics
+        val screenWidth = displayMetrics.widthPixels
+        val screenHeight = displayMetrics.heightPixels
+
+        // Initialize ViewModel with restored instance ID
+        spotlightViewModel = ViewModelProvider(
+            this,
+            viewModelFactory
+        ).get("spotlight_$instanceId", SpotlightViewModel::class.java)
+
+        // Initialize the ViewModel with the instance data
+        spotlightViewModel?.initialize(instanceId!!, screenWidth, screenHeight)
 
         // Create and attach overlay view
         createOverlayView()

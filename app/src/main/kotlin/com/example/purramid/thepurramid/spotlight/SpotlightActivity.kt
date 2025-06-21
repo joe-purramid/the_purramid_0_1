@@ -1,4 +1,3 @@
-// SpotlightActivity.kt
 package com.example.purramid.thepurramid.spotlight
 
 import android.content.Context
@@ -8,20 +7,28 @@ import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.example.purramid.thepurramid.R
-import com.example.purramid.thepurramid.databinding.ActivitySpotlightBinding // To host fragment
-import com.example.purramid.thepurramid.spotlight.SpotlightService
+import com.example.purramid.thepurramid.databinding.ActivitySpotlightBinding
+import com.example.purramid.thepurramid.instance.InstanceManager
 import com.example.purramid.thepurramid.spotlight.ui.SpotlightSettingsFragment
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class SpotlightActivity : AppCompatActivity() {
 
+    @Inject lateinit var instanceManager: InstanceManager
+
     private lateinit var binding: ActivitySpotlightBinding
+    private val activityScope = CoroutineScope(Dispatchers.Main)
 
     companion object {
         private const val TAG = "SpotlightActivity"
         const val ACTION_SHOW_SPOTLIGHT_SETTINGS = "com.example.purramid.spotlight.ACTION_SHOW_SETTINGS"
-   }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -43,21 +50,48 @@ class SpotlightActivity : AppCompatActivity() {
             showSettingsFragment()
         } else {
             // Default launch path if not showing settings
-            // Reference the constants directly from SpotlightService's companion object
-            val prefs = getSharedPreferences(SpotlightService.PREFS_NAME_FOR_ACTIVITY, Context.MODE_PRIVATE)
-            val activeCount = prefs.getInt(SpotlightService.KEY_ACTIVE_COUNT_FOR_ACTIVITY, 0)
+            activityScope.launch {
+                handleDefaultLaunch()
+            }
+        }
+    }
 
-            if (activeCount > 0) {
-                Log.d(TAG, "Spotlights active ($activeCount) for Purramid, launching settings fragment.")
-                showSettingsFragment()
-            } else {
-                Log.d(TAG, "No active Spotlights for Purramid, requesting service to add a new one.")
-                val serviceIntent = Intent(this, SpotlightService::class.java).apply {
-                    action = ACTION_ADD_NEW_SPOTLIGHT_OPENING
+    private suspend fun handleDefaultLaunch() = withContext(Dispatchers.IO) {
+        try {
+            // Check for active instances
+            val activeInstanceIds = instanceManager.getActiveInstanceIds(InstanceManager.SPOTLIGHT)
+
+            withContext(Dispatchers.Main) {
+                when {
+                    activeInstanceIds.isNotEmpty() -> {
+                        // There are active instances, show settings
+                        Log.d(TAG, "Found ${activeInstanceIds.size} active Spotlight instances")
+                        showSettingsFragment()
+                    }
+                    else -> {
+                        // No active instances, check if we can create one
+                        val nextInstanceId = instanceManager.getNextInstanceId(InstanceManager.SPOTLIGHT)
+                        if (nextInstanceId != null) {
+                            // Release the ID since the service will request it
+                            instanceManager.releaseInstanceId(InstanceManager.SPOTLIGHT, nextInstanceId)
+
+                            Log.d(TAG, "No active Spotlights, starting new service")
+                            val serviceIntent = Intent(this@SpotlightActivity, SpotlightService::class.java).apply {
+                                action = ACTION_START_SPOTLIGHT_SERVICE
+                            }
+                            ContextCompat.startForegroundService(this@SpotlightActivity, serviceIntent)
+                            finish()
+                        } else {
+                            Log.w(TAG, "Maximum Spotlight instances reached")
+                            // Could show a toast or dialog here
+                            finish()
+                        }
+                    }
                 }
-                ContextCompat.startForegroundService(this, serviceIntent)
-                // It's generally better to finish the activity after starting the service
-                // if the activity's only purpose was to trigger this.
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error in handleDefaultLaunch", e)
+            withContext(Dispatchers.Main) {
                 finish()
             }
         }
@@ -67,7 +101,7 @@ class SpotlightActivity : AppCompatActivity() {
         if (supportFragmentManager.findFragmentByTag(SpotlightSettingsFragment.TAG) == null) {
             Log.d(TAG, "Showing Spotlight settings fragment.")
             supportFragmentManager.beginTransaction()
-                .replace(R.id.spotlight_fragment_container, SpotlightSettingsFragment.newInstance())
+                .replace(R.id.spotlight_fragment_container, SpotlightSettingsFragment.newInstance(), SpotlightSettingsFragment.TAG)
                 .commit()
         }
     }
@@ -75,8 +109,8 @@ class SpotlightActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        Log.d(TAG, "onNewIntent - Action: ${intent?.action}")
-        if (intent?.action == ACTION_SHOW_SPOTLIGHT_SETTINGS) {
+        Log.d(TAG, "onNewIntent - Action: ${intent.action}")
+        if (intent.action == ACTION_SHOW_SPOTLIGHT_SETTINGS) {
             showSettingsFragment()
         }
     }
