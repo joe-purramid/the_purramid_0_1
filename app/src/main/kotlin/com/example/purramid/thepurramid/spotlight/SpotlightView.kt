@@ -67,18 +67,37 @@ class SpotlightView(context: Context, attrs: AttributeSet?) : View(context, attr
     // --- Touch Handling ---
     private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop.toFloat()
     private val tapTimeout = ViewConfiguration.getTapTimeout().toLong()
-    private var downTime: Long = 0
+    private var isDraggingOpening = false
+    private var isResizingOpening = false
     private var downX = 0f
     private var downY = 0f
+    private var downTime: Long = 0
+    private var activePointerId = MotionEvent.INVALID_POINTER_ID  // Keep this if used
 
     // Interaction states
     private var activeOpening: SpotlightOpening? = null
-    private var isDraggingOpening = false
-    private var isResizingOpening = false
+    private var currentDraggingSpotlight: SpotlightOpening? = null
+    private var initialTouchX = 0f
+    private var initialTouchY = 0f
     private var dragStartX = 0f
     private var dragStartY = 0f
     private var openingStartX = 0f
     private var openingStartY = 0f
+    private var dragInitialSpotlightX = 0f
+    private var dragInitialSpotlightY = 0f
+
+    // State for resizing opening
+    private var resizingOpening: SpotlightOpening? = null
+    private var initialDistance = 0f
+    private var initialOpeningRadius = 0f
+    private var initialOpeningWidth = 0f
+    private var initialOpeningHeight = 0f
+    private var resizeAnchorX = 0f
+    private var resizeAnchorY = 0f
+
+    // Pointer tracking for pinch gestures
+    private var pointerId1 = MotionEvent.INVALID_POINTER_ID
+    private var pointerId2 = MotionEvent.INVALID_POINTER_ID
 
     // Visual feedback
     private var visualFeedbackOpening: SpotlightOpening? = null
@@ -390,6 +409,7 @@ class SpotlightView(context: Context, attrs: AttributeSet?) : View(context, attr
                 downX = event.x
                 downY = event.y
                 downTime = System.currentTimeMillis()
+                pointerId1 = event.getPointerId(0)
 
                 // Check what was touched
                 val touchedOpening = findOpeningAt(downX, downY)
@@ -412,9 +432,70 @@ class SpotlightView(context: Context, attrs: AttributeSet?) : View(context, attr
                 return true
             }
 
+            MotionEvent.ACTION_POINTER_DOWN -> {
+                // Second finger down - check for resize
+                if (event.pointerCount == 2 && !isDraggingOpening && !isResizingOpening) {
+                    pointerId2 = event.getPointerId(event.actionIndex)
+
+                    val index1 = event.findPointerIndex(pointerId1)
+                    val index2 = event.findPointerIndex(pointerId2)
+
+                    if (index1 != -1 && index2 != -1) {
+                        val x1 = event.getX(index1)
+                        val y1 = event.getY(index1)
+                        val x2 = event.getX(index2)
+                        val y2 = event.getY(index2)
+
+                        // Check if we're touching a resize handle
+                        val resizeControl = findControlAt(x1, y1)
+                        if (resizeControl?.type == ControlType.RESIZE && resizeControl.opening.isLocked == false) {
+                            // Start resize with resize handle as anchor
+                            startResize(resizeControl.opening, x1, y1, x2, y2, useHandleAsAnchor = true)
+                        } else {
+                            // Check if both fingers are on the same opening
+                            val midX = (x1 + x2) / 2f
+                            val midY = (y1 + y2) / 2f
+                            val touchedOpening = findOpeningAt(midX, midY)
+
+                            if (touchedOpening != null && !touchedOpening.isLocked) {
+                                // Start resize with opening center as anchor
+                                startResize(touchedOpening, x1, y1, x2, y2, useHandleAsAnchor = false)
+                            }
+                        }
+                    }
+                }
+                return true
+            }
+
             MotionEvent.ACTION_MOVE -> {
+                // Handle resize
+                if (isResizingOpening && resizingOpening != null && event.pointerCount >= 2) {
+                    val index1 = event.findPointerIndex(pointerId1)
+                    val index2 = event.findPointerIndex(pointerId2)
+
+                    if (index1 != -1 && index2 != -1) {
+                        val x1 = event.getX(index1)
+                        val y1 = event.getY(index1)
+                        val x2 = event.getX(index2)
+                        val y2 = event.getY(index2)
+
+                        val currentDistance = hypot(x2 - x1, y2 - y1)
+                        if (initialDistance > 0) {
+                            val scale = currentDistance / initialDistance
+
+                            // Update visual feedback
+                            visualFeedbackOpening?.let { feedback ->
+                                applyResize(feedback, scale)
+                            }
+                            invalidate()
+                        }
+                    }
+                    return true
+                }
+
+                // Handle drag (existing code)
                 activeOpening?.let { opening ->
-                    if (!opening.isLocked) {
+                    if (!opening.isLocked && !isResizingOpening) {
                         val deltaX = event.x - dragStartX
                         val deltaY = event.y - dragStartY
 
@@ -438,6 +519,18 @@ class SpotlightView(context: Context, attrs: AttributeSet?) : View(context, attr
                             invalidate()
                         }
                     }
+                }
+                return true
+            }
+
+            MotionEvent.ACTION_POINTER_UP -> {
+                val upPointerId = event.getPointerId(event.actionIndex)
+                if (isResizingOpening && (upPointerId == pointerId1 || upPointerId == pointerId2)) {
+                    // Finish resize
+                    visualFeedbackOpening?.let {
+                        interactionListener?.onOpeningResized(it)
+                    }
+                    endResize()
                 }
                 return true
             }
@@ -483,6 +576,9 @@ class SpotlightView(context: Context, attrs: AttributeSet?) : View(context, attr
                 isResizingOpening = false
                 visualFeedbackOpening = null
                 activeOpening = null
+                resizingOpening = null
+                pointerId1 = MotionEvent.INVALID_POINTER_ID
+                pointerId2 = MotionEvent.INVALID_POINTER_ID
                 invalidate()
                 return true
             }
@@ -639,6 +735,82 @@ class SpotlightView(context: Context, attrs: AttributeSet?) : View(context, attr
         return null
     }
 
+    private fun startResize(
+        opening: SpotlightOpening,
+        x1: Float, y1: Float,
+        x2: Float, y2: Float,
+        useHandleAsAnchor: Boolean
+    ) {
+        isResizingOpening = true
+        resizingOpening = opening
+        visualFeedbackOpening = opening.copy()
+        initialDistance = hypot(x2 - x1, y2 - y1)
+
+        // Store initial dimensions
+        initialOpeningRadius = opening.radius
+        initialOpeningWidth = opening.width
+        initialOpeningHeight = opening.height
+
+        // Set anchor point
+        if (useHandleAsAnchor) {
+            // Use the move handle (top-left) as anchor when resizing from resize handle
+            val bounds = getOpeningBounds(opening)
+            resizeAnchorX = bounds.left
+            resizeAnchorY = bounds.top
+        } else {
+            // Use center as anchor for pinch gesture
+            resizeAnchorX = opening.centerX
+            resizeAnchorY = opening.centerY
+        }
+
+        activeOpening = null // Cancel any drag
+        isDraggingOpening = false
+    }
+
+    private fun applyResize(opening: SpotlightOpening, scale: Float) {
+        val minSize = minDimensionPx
+        val maxSize = minOf(width, height).toFloat()
+
+        when (opening.shape) {
+            SpotlightOpening.Shape.CIRCLE -> {
+                opening.radius = (initialOpeningRadius * scale).coerceIn(minSize / 2f, maxSize / 2f)
+                opening.width = opening.radius * 2
+                opening.height = opening.radius * 2
+                opening.size = opening.radius * 2
+            }
+            SpotlightOpening.Shape.SQUARE -> {
+                val newSize = (opening.size * scale).coerceIn(minSize, maxSize)
+                opening.size = newSize
+                opening.width = newSize
+                opening.height = newSize
+                opening.radius = newSize / 2f
+            }
+            SpotlightOpening.Shape.OVAL, SpotlightOpening.Shape.RECTANGLE -> {
+                opening.width = (initialOpeningWidth * scale).coerceIn(minSize, maxSize)
+                opening.height = (initialOpeningHeight * scale).coerceIn(minSize, maxSize)
+                opening.radius = maxOf(opening.width, opening.height) / 2f
+                opening.size = maxOf(opening.width, opening.height)
+            }
+        }
+
+        // Adjust position if using handle as anchor
+        if (resizeAnchorX != opening.centerX || resizeAnchorY != opening.centerY) {
+            // Keep the anchor point fixed
+            val bounds = getOpeningBounds(opening)
+            val deltaX = resizeAnchorX - bounds.left
+            val deltaY = resizeAnchorY - bounds.top
+            opening.centerX = resizeAnchorX + deltaX
+            opening.centerY = resizeAnchorY + deltaY
+        }
+    }
+
+    private fun endResize() {
+        isResizingOpening = false
+        resizingOpening = null
+        pointerId1 = MotionEvent.INVALID_POINTER_ID
+        pointerId2 = MotionEvent.INVALID_POINTER_ID
+    }
+
     private fun handleControlTouch(control: ControlInfo) {
         when (control.type) {
             ControlType.MOVE -> {
@@ -650,7 +822,9 @@ class SpotlightView(context: Context, attrs: AttributeSet?) : View(context, attr
             }
             ControlType.RESIZE -> {
                 if (!control.opening.isLocked) {
-                    // TODO: Implement resize functionality
+                    // Resize will be handled by ACTION_POINTER_DOWN
+                    // Just store that we're touching the resize handle
+                    activeOpening = control.opening
                 }
             }
             ControlType.SETTINGS -> {

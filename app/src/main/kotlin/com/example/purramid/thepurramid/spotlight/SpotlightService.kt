@@ -40,6 +40,7 @@ import javax.inject.Inject
 const val ACTION_START_SPOTLIGHT_SERVICE = "com.example.purramid.spotlight.ACTION_START_SERVICE"
 const val ACTION_STOP_SPOTLIGHT_SERVICE = "com.example.purramid.spotlight.ACTION_STOP_SERVICE"
 const val ACTION_ADD_NEW_SPOTLIGHT_OPENING = "com.example.purramid.spotlight.ACTION_ADD_NEW_OPENING"
+const val ACTION_CLOSE_INSTANCE = "com.example.purramid.spotlight.ACTION_CLOSE_INSTANCE"
 
 @AndroidEntryPoint
 class SpotlightService : LifecycleService(), ViewModelStoreOwner {
@@ -108,11 +109,17 @@ class SpotlightService : LifecycleService(), ViewModelStoreOwner {
                     handleAddNewSpotlightOpening()
                 }
             }
+            ACTION_CLOSE_INSTANCE -> {
+                val targetInstanceId = intent?.getIntExtra(KEY_INSTANCE_ID, -1)
+                if (targetInstanceId == instanceId) {
+                    stopService()
+                }
+            }
             ACTION_STOP_SPOTLIGHT_SERVICE -> {
                 stopService()
             }
         }
-        return START_STICKY
+        return START_STICKY // Ensures service restarts after being killed
     }
 
     private fun initializeService(intent: Intent?) {
@@ -264,7 +271,18 @@ class SpotlightService : LifecycleService(), ViewModelStoreOwner {
             }
 
             override fun onOpeningDeleted(openingId: Int) {
-                spotlightViewModel?.deleteOpening(openingId)
+                lifecycleScope.launch {
+                    val currentOpenings = spotlightViewModel?.uiState?.value?.openings ?: emptyList()
+
+                    if (currentOpenings.size <= 1) {
+                        // This is the last opening, close the entire service
+                        Log.d(TAG, "Last opening deleted, stopping service")
+                        stopService()
+                    } else {
+                        // Just delete this opening
+                        spotlightViewModel?.deleteOpening(openingId)
+                    }
+                }
             }
 
             override fun onAddNewOpeningRequested() {

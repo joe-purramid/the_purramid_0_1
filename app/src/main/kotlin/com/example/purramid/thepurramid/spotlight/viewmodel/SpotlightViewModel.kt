@@ -38,6 +38,18 @@ class SpotlightViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(SpotlightUiState(instanceId = instanceId, isLoading = true))
     val uiState: StateFlow<SpotlightUiState> = _uiState.asStateFlow()
 
+    override fun onCreate() {
+        super.onCreate()
+        Log.d(TAG, "onCreate")
+        createNotificationChannel()
+
+        // Run migration check on service creation
+        lifecycleScope.launch(Dispatchers.IO) {
+            migrationHelper.migrateIfNeeded()
+            handleServiceRecovery()
+        }
+    }
+
     // Call this immediately after creation to set the instance ID
     fun initialize(instanceId: Int, screenWidth: Int, screenHeight: Int) {
         this.instanceId = instanceId
@@ -351,6 +363,35 @@ class SpotlightViewModel @Inject constructor(
         }
     }
 
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        Log.d(TAG, "onTaskRemoved - saving state")
+        // Save state when app is swiped away
+        spotlightViewModel?.saveInstanceState()
+        super.onTaskRemoved(rootIntent)
+    }
+
+    private fun handleServiceRecovery() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                // Check for orphaned instances
+                val activeInstances = spotlightDao.getActiveInstances()
+                for (instance in activeInstances) {
+                    if (!instanceManager.getActiveInstanceIds(InstanceManager.SPOTLIGHT)
+                            .contains(instance.instanceId)) {
+                        // Found orphaned instance, re-register it
+                        Log.d(TAG, "Re-registering orphaned instance ${instance.instanceId}")
+                        instanceManager.registerExistingInstance(
+                            InstanceManager.SPOTLIGHT,
+                            instance.instanceId
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error in service recovery", e)
+            }
+        }
+    }
+
     override fun onCleared() {
         super.onCleared()
         Log.d(TAG, "ViewModel cleared for instance $instanceId")
@@ -391,5 +432,60 @@ class SpotlightViewModel @Inject constructor(
             isLocked = opening.isLocked,
             displayOrder = opening.displayOrder
         )
+    }
+
+    private fun stopService() {
+        Log.d(TAG, "Stopping service for instance $instanceId")
+
+        // Cancel state observation
+        stateObserverJob?.cancel()
+
+        // Save final state before stopping
+        spotlightViewModel?.saveInstanceState()
+
+        // Remove overlay view
+        spotlightOverlayView?.let { view ->
+            if (view.isAttachedToWindow) {
+                try {
+                    windowManager.removeView(view)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error removing overlay view", e)
+                }
+            }
+        }
+        spotlightOverlayView = null
+
+        // Check if this is the last instance
+        val shouldClearData = instanceId?.let { id ->
+            val remainingCount = instanceManager.getActiveInstanceCount(InstanceManager.SPOTLIGHT)
+            remainingCount <= 1 // This is the last or only instance
+        } ?: false
+
+        // Release instance ID
+        instanceId?.let {
+            instanceManager.releaseInstanceId(InstanceManager.SPOTLIGHT, it)
+            if (shouldClearData) {
+                // Mark as inactive but keep data for next launch
+                spotlightViewModel?.markInstanceInactive()
+            } else {
+                // Not the last instance, can clear this instance's data
+                spotlightViewModel?.deactivateInstance()
+            }
+        }
+
+        // Update preferences
+        updateActiveInstanceCount()
+
+        // Stop foreground
+        if (isForeground) {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            isForeground = false
+        }
+
+        // Clear ViewModelStore
+        _viewModelStore.clear()
+
+        // Stop self
+        stopSelf()
     }
 }
