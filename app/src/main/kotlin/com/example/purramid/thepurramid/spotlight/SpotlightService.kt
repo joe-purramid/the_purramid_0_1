@@ -80,6 +80,7 @@ class SpotlightService : LifecycleService(), ViewModelStoreOwner {
         // Run migration check on service creation
         lifecycleScope.launch(Dispatchers.IO) {
             migrationHelper.migrateIfNeeded()
+            handleServiceRecovery()
         }
     }
 
@@ -154,6 +155,28 @@ class SpotlightService : LifecycleService(), ViewModelStoreOwner {
         observeViewModelState()
         startForegroundServiceIfNeeded()
         updateActiveInstanceCount()
+    }
+
+    private fun handleServiceRecovery() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                // Check for orphaned instances
+                val activeInstances = spotlightDao.getActiveInstances()
+                for (instance in activeInstances) {
+                    if (!instanceManager.getActiveInstanceIds(InstanceManager.SPOTLIGHT)
+                            .contains(instance.instanceId)) {
+                        // Found orphaned instance, re-register it
+                        Log.d(TAG, "Re-registering orphaned instance ${instance.instanceId}")
+                        instanceManager.registerExistingInstance(
+                            InstanceManager.SPOTLIGHT,
+                            instance.instanceId
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error in service recovery", e)
+            }
+        }
     }
 
     private fun restoreExistingInstance(existingInstanceId: Int) {
@@ -249,9 +272,9 @@ class SpotlightService : LifecycleService(), ViewModelStoreOwner {
 
     private fun createInteractionListener(): SpotlightView.SpotlightInteractionListener {
         return object : SpotlightView.SpotlightInteractionListener {
-            override fun onOpeningMoved(openingId: Int, deltaX: Float, deltaY: Float) {
+            override fun onOpeningMoved(openingId: Int, newX: Float, newY: Float) {
                 // Handle per-opening movement
-                spotlightViewModel?.updateOpeningFromDrag(openingId, deltaX, deltaY)
+                spotlightViewModel?.updateOpeningFromDrag(openingId, newX, newY)
             }
 
             override fun onOpeningResized(opening: SpotlightOpening) {
@@ -407,6 +430,12 @@ class SpotlightService : LifecycleService(), ViewModelStoreOwner {
 
         // Stop self
         stopSelf()
+    }
+
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        Log.d(TAG, "onTaskRemoved - instance will be preserved")
+        // State is automatically saved via Room, no action needed
+        super.onTaskRemoved(rootIntent)
     }
 
     override fun onDestroy() {

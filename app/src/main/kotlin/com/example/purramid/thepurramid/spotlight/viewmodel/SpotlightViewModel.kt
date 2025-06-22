@@ -33,22 +33,13 @@ class SpotlightViewModel @Inject constructor(
         private const val DEFAULT_RADIUS = 125f // 250px diameter as per spec
     }
 
-    private var instanceId: Int = 1 // Default, will be set via setter
+    private var instanceId: Int = 1 // Default, will be set via initialize()
 
     private val _uiState = MutableStateFlow(SpotlightUiState(instanceId = instanceId, isLoading = true))
     val uiState: StateFlow<SpotlightUiState> = _uiState.asStateFlow()
 
-    override fun onCreate() {
-        super.onCreate()
-        Log.d(TAG, "onCreate")
-        createNotificationChannel()
-
-        // Run migration check on service creation
-        lifecycleScope.launch(Dispatchers.IO) {
-            migrationHelper.migrateIfNeeded()
-            handleServiceRecovery()
-        }
-    }
+    private var isLockAllActive = false
+    private val individuallyLockedOpenings = mutableSetOf<Int>()
 
     // Call this immediately after creation to set the instance ID
     fun initialize(instanceId: Int, screenWidth: Int, screenHeight: Int) {
@@ -187,25 +178,6 @@ class SpotlightViewModel @Inject constructor(
         }
     }
 
-    fun updateOpeningSize(openingId: Int, newRadius: Float? = null, newWidth: Float? = null, newHeight: Float? = null) {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val opening = spotlightDao.getOpeningById(openingId)
-                if (opening != null && !opening.isLocked) {
-                    val updated = opening.copy(
-                        radius = newRadius ?: opening.radius,
-                        width = newWidth ?: opening.width,
-                        height = newHeight ?: opening.height,
-                        size = maxOf(newWidth ?: opening.width, newHeight ?: opening.height)
-                    )
-                    spotlightDao.updateOpening(updated)
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error updating opening size", e)
-            }
-        }
-    }
-
     fun toggleOpeningShape(openingId: Int) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -270,7 +242,16 @@ class SpotlightViewModel @Inject constructor(
             try {
                 val opening = spotlightDao.getOpeningById(openingId)
                 if (opening != null) {
-                    spotlightDao.updateOpeningLockState(openingId, !opening.isLocked)
+                    val newLockState = !opening.isLocked
+
+                    // Track individually locked openings
+                    if (newLockState && !isLockAllActive) {
+                        individuallyLockedOpenings.add(openingId)
+                    } else if (!newLockState && opening.isLocked && !isLockAllActive) {
+                        individuallyLockedOpenings.remove(openingId)
+                    }
+
+                    spotlightDao.updateOpeningLockState(openingId, newLockState)
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error toggling lock", e)
@@ -281,8 +262,20 @@ class SpotlightViewModel @Inject constructor(
     fun toggleAllLocks() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val areAllLocked = _uiState.value.areAllLocked
-                spotlightDao.updateAllOpeningsLockState(instanceId, !areAllLocked)
+                isLockAllActive = !isLockAllActive
+
+                if (isLockAllActive) {
+                    // Lock all openings
+                    spotlightDao.updateAllOpeningsLockState(instanceId, true)
+                } else {
+                    // Unlock only openings that weren't individually locked
+                    val allOpenings = spotlightDao.getOpeningsForInstance(instanceId)
+                    allOpenings.forEach { opening ->
+                        if (!individuallyLockedOpenings.contains(opening.openingId)) {
+                            spotlightDao.updateOpeningLockState(opening.openingId, false)
+                        }
+                    }
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "Error toggling all locks", e)
             }
@@ -363,35 +356,6 @@ class SpotlightViewModel @Inject constructor(
         }
     }
 
-    override fun onTaskRemoved(rootIntent: Intent?) {
-        Log.d(TAG, "onTaskRemoved - saving state")
-        // Save state when app is swiped away
-        spotlightViewModel?.saveInstanceState()
-        super.onTaskRemoved(rootIntent)
-    }
-
-    private fun handleServiceRecovery() {
-        lifecycleScope.launch(Dispatchers.IO) {
-            try {
-                // Check for orphaned instances
-                val activeInstances = spotlightDao.getActiveInstances()
-                for (instance in activeInstances) {
-                    if (!instanceManager.getActiveInstanceIds(InstanceManager.SPOTLIGHT)
-                            .contains(instance.instanceId)) {
-                        // Found orphaned instance, re-register it
-                        Log.d(TAG, "Re-registering orphaned instance ${instance.instanceId}")
-                        instanceManager.registerExistingInstance(
-                            InstanceManager.SPOTLIGHT,
-                            instance.instanceId
-                        )
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error in service recovery", e)
-            }
-        }
-    }
-
     override fun onCleared() {
         super.onCleared()
         Log.d(TAG, "ViewModel cleared for instance $instanceId")
@@ -432,60 +396,5 @@ class SpotlightViewModel @Inject constructor(
             isLocked = opening.isLocked,
             displayOrder = opening.displayOrder
         )
-    }
-
-    private fun stopService() {
-        Log.d(TAG, "Stopping service for instance $instanceId")
-
-        // Cancel state observation
-        stateObserverJob?.cancel()
-
-        // Save final state before stopping
-        spotlightViewModel?.saveInstanceState()
-
-        // Remove overlay view
-        spotlightOverlayView?.let { view ->
-            if (view.isAttachedToWindow) {
-                try {
-                    windowManager.removeView(view)
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error removing overlay view", e)
-                }
-            }
-        }
-        spotlightOverlayView = null
-
-        // Check if this is the last instance
-        val shouldClearData = instanceId?.let { id ->
-            val remainingCount = instanceManager.getActiveInstanceCount(InstanceManager.SPOTLIGHT)
-            remainingCount <= 1 // This is the last or only instance
-        } ?: false
-
-        // Release instance ID
-        instanceId?.let {
-            instanceManager.releaseInstanceId(InstanceManager.SPOTLIGHT, it)
-            if (shouldClearData) {
-                // Mark as inactive but keep data for next launch
-                spotlightViewModel?.markInstanceInactive()
-            } else {
-                // Not the last instance, can clear this instance's data
-                spotlightViewModel?.deactivateInstance()
-            }
-        }
-
-        // Update preferences
-        updateActiveInstanceCount()
-
-        // Stop foreground
-        if (isForeground) {
-            stopForeground(STOP_FOREGROUND_REMOVE)
-            isForeground = false
-        }
-
-        // Clear ViewModelStore
-        _viewModelStore.clear()
-
-        // Stop self
-        stopSelf()
     }
 }
