@@ -1,6 +1,7 @@
 // TimersSettingsFragment.kt
 package com.example.purramid.thepurramid.timers.ui
 
+import android.content.Intent
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
@@ -8,52 +9,48 @@ import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
 import android.util.Log
-import android.util.TypedValue // Add
+import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.Toast
+import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.DialogFragment
-import androidx.fragment.app.activityViewModels // Use activityViewModels to share with TimersService
+import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.example.purramid.thepurramid.R
 import com.example.purramid.thepurramid.databinding.FragmentTimersSettingsBinding
+import com.example.purramid.thepurramid.instance.InstanceManager
 import com.example.purramid.thepurramid.timers.TimerType
+import com.example.purramid.thepurramid.timers.TimersActivity
+import com.example.purramid.thepurramid.timers.TimersService
 import com.example.purramid.thepurramid.timers.viewmodel.TimersViewModel
 import com.example.purramid.thepurramid.ui.PurramidPalette
 import com.example.purramid.thepurramid.util.dpToPx
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class TimersSettingsFragment : DialogFragment() {
 
+    @Inject lateinit var instanceManager: InstanceManager
+
     private var _binding: FragmentTimersSettingsBinding? = null
     private val binding get() = _binding!!
 
-    // Get the ViewModel scoped to the Service (or a shared parent if this Fragment
-    // is launched by an Activity that also manages the Service's ViewModel instance via ID)
-    // For simplicity, let's assume it's shared via the hosting Activity/Service context.
-    // This requires the TimersService and this fragment to share the same ViewModelStoreOwner
-    // or for the ViewModel to be scoped to a NavGraph that both can access.
-    // Given TimersService uses its own ViewModelStoreOwner, this settings fragment needs
-    // a way to get the correct TimersViewModel instance, usually by passing the timerId.
-    // For now, we'll assume TimersActivity will host this and provide the VM.
-    // Let's simplify and assume this fragment is hosted by TimersActivity which can give us the VM.
-    private val viewModel: TimersViewModel by activityViewModels() // This assumes TimersActivity owns the VM or can provide it.
+    private val viewModel: TimersViewModel by activityViewModels()
 
-    private var blockListeners = false // To prevent listener loops
-
+    private var blockListeners = false
     private var selectedTimerColor: Int = PurramidPalette.WHITE.colorInt
     private var selectedTimerColorView: View? = null
-
-    val marginInPx = requireContext().dpToPx(16)
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -66,29 +63,43 @@ class TimersSettingsFragment : DialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         dialog?.setTitle(R.string.timer_settings_title)
-        setupTimerColorPalette()
 
+        setupTimerColorPalette()
         setupListeners()
-        observeViewModel(updateTimerColorSelectionInUI)
+        observeViewModel()
     }
 
     private fun setupTimerColorPalette() {
         binding.timerColorPalette.removeAllViews()
+        val marginInPx = requireContext().dpToPx(8)
+
         PurramidPalette.appStandardPalette.forEach { namedColor ->
             val colorValue = namedColor.colorInt
             val colorView = View(requireContext()).apply {
-                // ... (similar setup as in ClockSettingsActivity for size, margins, background, click listener) ...
-                // On click:
-                // this.selectedTimerColor = colorValue
-                // updateTimerColorSelectionInUI(this)
-                // viewModel.updateTimerColor(colorValue) // ViewModel needs this method
+                layoutParams = LinearLayout.LayoutParams(
+                    requireContext().dpToPx(40),
+                    requireContext().dpToPx(40)
+                ).apply {
+                    setMargins(marginInPx, 0, marginInPx, 0)
+                }
+
+                val drawable = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadius = requireContext().dpToPx(4).toFloat()
+                    setColor(colorValue)
+                    val strokeColor = if (Color.luminance(colorValue) > 0.5) Color.BLACK else Color.WHITE
+                    setStroke(requireContext().dpToPx(1), strokeColor)
+                }
+                background = drawable
+                tag = colorValue
+
+                setOnClickListener {
+                    selectedTimerColor = colorValue
+                    updateTimerColorSelectionInUI(colorValue)
+                    viewModel.updateOverlayColor(colorValue)
+                }
             }
             binding.timerColorPalette.addView(colorView)
-            // Initial selection based on viewModel.uiState.value.color
-            // if (colorValue == viewModel.uiState.value.color) { // Assuming color is in TimerState
-            //    updateTimerColorSelectionInUI(colorView)
-            //    this.selectedTimerColor = colorValue
-            // }
         }
     }
 
@@ -99,10 +110,9 @@ class TimersSettingsFragment : DialogFragment() {
             val drawable = childView.background as? GradientDrawable
 
             if (viewColor == activeColor) {
-                drawable?.setStroke(requireContext().dpToPx(3), Color.CYAN) // Highlight selected
-                selectedOverlayColorView = childView // Track currently highlighted
+                drawable?.setStroke(requireContext().dpToPx(3), Color.CYAN)
+                selectedTimerColorView = childView
             } else {
-                // Reset others to normal stroke
                 val outline = if (Color.luminance(viewColor) > 0.5) Color.BLACK else Color.WHITE
                 drawable?.setStroke(requireContext().dpToPx(1), outline)
             }
@@ -111,44 +121,41 @@ class TimersSettingsFragment : DialogFragment() {
 
     private fun setupListeners() {
         binding.buttonCloseSettings.setOnClickListener {
-            // Before dismissing, ensure duration is processed if countdown is selected
             if (viewModel.uiState.value.type == TimerType.COUNTDOWN) {
                 saveDurationFromInput()
             }
             dismiss()
         }
 
-        binding.buttonAddAnotherTimer.setOnClickListener { handleAddAnotherTimer() }
+        binding.layoutAddAnother.setOnClickListener {
+            handleAddAnotherTimer()
+        }
 
         binding.radioGroupTimerType.setOnCheckedChangeListener { _, checkedId ->
             if (blockListeners) return@setOnCheckedChangeListener
             val newType = when (checkedId) {
                 R.id.radioStopwatch -> TimerType.STOPWATCH
                 R.id.radioCountdown -> TimerType.COUNTDOWN
-                else -> viewModel.uiState.value.type // Should not happen
+                else -> viewModel.uiState.value.type
             }
-            // If switching to countdown, process current duration input before setting type
             if (newType == TimerType.STOPWATCH && viewModel.uiState.value.type == TimerType.COUNTDOWN) {
                 saveDurationFromInput()
             }
             viewModel.setTimerType(newType)
         }
 
-        // Duration input listeners for countdown
+        // Duration input listeners
         val durationTextWatcher = object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: Editable?) {
                 if (blockListeners || viewModel.uiState.value.type != TimerType.COUNTDOWN) return
-                // Live update can be tricky; for now, we save on close/type change
-                // Or, you could add a "Set Duration" button
             }
         }
         binding.editTextHours.addTextChangedListener(durationTextWatcher)
         binding.editTextMinutes.addTextChangedListener(durationTextWatcher)
         binding.editTextSeconds.addTextChangedListener(durationTextWatcher)
 
-        // Focus change listener to save duration when focus leaves any duration field
         val durationFocusListener = View.OnFocusChangeListener { _, hasFocus ->
             if (!hasFocus && !blockListeners && viewModel.uiState.value.type == TimerType.COUNTDOWN) {
                 saveDurationFromInput()
@@ -157,7 +164,6 @@ class TimersSettingsFragment : DialogFragment() {
         binding.editTextHours.onFocusChangeListener = durationFocusListener
         binding.editTextMinutes.onFocusChangeListener = durationFocusListener
         binding.editTextSeconds.onFocusChangeListener = durationFocusListener
-
 
         binding.switchPlaySoundOnEnd.setOnCheckedChangeListener { _, isChecked ->
             if (blockListeners) return@setOnCheckedChangeListener
@@ -168,14 +174,31 @@ class TimersSettingsFragment : DialogFragment() {
             if (blockListeners) return@setOnCheckedChangeListener
             viewModel.setShowCentiseconds(isChecked)
         }
+
+        // Stopwatch specific
+        binding.switchLapTime.setOnCheckedChangeListener { _, isChecked ->
+            if (blockListeners) return@setOnCheckedChangeListener
+            viewModel.setShowLapTimes(isChecked)
+        }
+
+        binding.switchSounds.setOnCheckedChangeListener { _, isChecked ->
+            if (blockListeners) return@setOnCheckedChangeListener
+            viewModel.setSoundsEnabled(isChecked)
+        }
+
+        // Countdown specific
+        binding.switchNestTimer.setOnCheckedChangeListener { _, isChecked ->
+            if (blockListeners) return@setOnCheckedChangeListener
+            viewModel.setNested(isChecked)
+        }
     }
 
     private fun observeViewModel() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.uiState.collect { state ->
-                    Log.d("TimerSettingsFrag", "Observed state: $state")
-                    blockListeners = true // Prevent listeners while updating UI
+                    Log.d(TAG, "Observed state: $state")
+                    blockListeners = true
 
                     // Update Timer Type RadioGroup
                     val radioIdToCheck = when (state.type) {
@@ -186,22 +209,37 @@ class TimersSettingsFragment : DialogFragment() {
                         binding.radioGroupTimerType.check(radioIdToCheck)
                     }
 
-                    // Update Countdown specific UI
+                    // Update visibility based on timer type
                     binding.layoutCountdownSettings.isVisible = state.type == TimerType.COUNTDOWN
+                    binding.layoutStopwatchSettings.isVisible = state.type == TimerType.STOPWATCH
+                    binding.switchNestTimer.isVisible = state.type == TimerType.COUNTDOWN
+
+                    // Update Countdown specific UI
                     if (state.type == TimerType.COUNTDOWN) {
-                        // Populate duration fields only if not currently focused to avoid disrupting user input
                         if (!binding.editTextHours.hasFocus() && !binding.editTextMinutes.hasFocus() && !binding.editTextSeconds.hasFocus()) {
                             populateDurationFields(state.initialDurationMillis)
                         }
                         binding.switchPlaySoundOnEnd.isChecked = state.playSoundOnEnd
+                        binding.switchNestTimer.isChecked = state.isNested
+                    }
+
+                    // Update Stopwatch specific UI
+                    if (state.type == TimerType.STOPWATCH) {
+                        binding.switchLapTime.isChecked = state.showLapTimes
+                        binding.switchSounds.isChecked = state.soundsEnabled
                     }
 
                     // Update Common Settings
                     binding.switchShowCentiseconds.isChecked = state.showCentiseconds
 
                     // Update color palette selection
-                    selectedOverlayColor = state.overlayColor
-                    updateTimerColorSelectionInUI(selectedOverlayColor)
+                    selectedTimerColor = state.overlayColor
+                    updateTimerColorSelectionInUI(selectedTimerColor)
+
+                    // Update Add Another button state
+                    val activeCount = instanceManager.getActiveInstanceCount(InstanceManager.TIMERS)
+                    binding.layoutAddAnother.isEnabled = activeCount < 4
+                    binding.iconAddAnother.alpha = if (activeCount < 4) 1.0f else 0.5f
 
                     blockListeners = false
                 }
@@ -231,34 +269,72 @@ class TimersSettingsFragment : DialogFragment() {
         val seconds = binding.editTextSeconds.text.toString().toLongOrNull() ?: 0L
 
         if (hours < 0 || minutes < 0 || seconds < 0 || minutes >= 60 || seconds >= 60) {
-            // Basic validation, can be improved
-            Log.w("TimerSettingsFrag", "Invalid duration input.")
-            // Optionally show a Toast to the user
-             android.widget.Toast.makeText(requireContext(), "Invalid duration values", android.widget.Toast.LENGTH_SHORT).show()
-            // Re-populate with current VM state to correct invalid input
+            Log.w(TAG, "Invalid duration input.")
+            Toast.makeText(requireContext(), getString(R.string.invalid_duration), Toast.LENGTH_SHORT).show()
             populateDurationFields(viewModel.uiState.value.initialDurationMillis)
             return
         }
 
+        // Check max time limit (99:59:59)
+        if (hours > 99) {
+            Toast.makeText(requireContext(), getString(R.string.max_duration_exceeded), Toast.LENGTH_SHORT).show()
+            binding.editTextHours.setText("99")
+            return
+        }
+
         val totalMillis = TimeUnit.HOURS.toMillis(hours) +
-                          TimeUnit.MINUTES.toMillis(minutes) +
-                          TimeUnit.SECONDS.toMillis(seconds)
+                TimeUnit.MINUTES.toMillis(minutes) +
+                TimeUnit.SECONDS.toMillis(seconds)
         viewModel.setInitialDuration(totalMillis)
-        Log.d("TimerSettingsFrag", "Saved duration: $totalMillis ms")
+        Log.d(TAG, "Saved duration: $totalMillis ms")
+    }
+
+    private fun handleAddAnotherTimer() {
+        val activeCount = instanceManager.getActiveInstanceCount(InstanceManager.TIMERS)
+        if (activeCount >= 4) {
+            Toast.makeText(
+                requireContext(),
+                getString(R.string.max_timers_reached),
+                Toast.LENGTH_LONG
+            ).show()
+            return
+        }
+
+        // Save current settings
+        if (viewModel.uiState.value.type == TimerType.COUNTDOWN) {
+            saveDurationFromInput()
+        }
+
+        // Launch new timer with current settings
+        val currentState = viewModel.uiState.value
+        val intent = Intent(requireContext(), TimersService::class.java).apply {
+            action = if (currentState.type == TimerType.COUNTDOWN) {
+                com.example.purramid.thepurramid.timers.ACTION_START_COUNTDOWN
+            } else {
+                com.example.purramid.thepurramid.timers.ACTION_START_STOPWATCH
+            }
+            if (currentState.type == TimerType.COUNTDOWN) {
+                putExtra(com.example.purramid.thepurramid.timers.EXTRA_DURATION_MS, currentState.initialDurationMillis)
+            }
+        }
+        ContextCompat.startForegroundService(requireContext(), intent)
+
+        // Dismiss settings
+        dismiss()
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
-        _binding = null // Avoid memory leaks
+        _binding = null
     }
 
     companion object {
         const val TAG = "TimersSettingsFragment"
-        // Factory method if you need to pass timerId to the fragment arguments
+
         fun newInstance(timerId: Int): TimersSettingsFragment {
             val fragment = TimersSettingsFragment()
             val args = Bundle()
-            args.putInt(TimersViewModel.KEY_TIMER_ID, timerId) // Assuming ViewModel uses this key
+            args.putInt(TimersViewModel.KEY_TIMER_ID, timerId)
             fragment.arguments = args
             return fragment
         }

@@ -25,13 +25,12 @@ import androidx.room.TypeConverters
         SpinItemEntity::class,
         SpinListEntity::class,
         SpinSettingsEntity::class,
-        // SpotlightStateEntity::class,
         SpotlightInstanceEntity::class,
         SpotlightOpeningEntity::class,
         TimerStateEntity::class,
         TrafficLightStateEntity::class
     ],
-    version = 13, // Added Spotlight instance management
+    version = 14, // Added nested timer and sound fields to timer_state
     exportSchema = false // Set to true if you want to export the schema to a file for version control (recommended for production apps)
 )
 @TypeConverters(Converters::class) // Register the TypeConverters class
@@ -55,11 +54,17 @@ abstract class PurramidDatabase : RoomDatabase() {
         private var INSTANCE: PurramidDatabase? = null
 
         // Migration from 11 to 12: Add UUID to screen_mask_state
-        private val MIGRATION_11_12 = object : Migration(11, 12) {
+        private val MIGRATION_13_14 = object : Migration(13, 14) {
             override fun migrate(database: SupportSQLiteDatabase) {
-                database.execSQL(
-                    "ALTER TABLE screen_mask_state ADD COLUMN uuid TEXT NOT NULL DEFAULT '${UUID.randomUUID()}'"
-                )
+                database.execSQL("ALTER TABLE screen_mask_state ADD COLUMN uuid TEXT NOT NULL DEFAULT '${UUID.randomUUID()}'")
+                database.execSQL("ALTER TABLE timer_state ADD COLUMN isNested INTEGER NOT NULL DEFAULT 0")
+                database.execSQL("ALTER TABLE timer_state ADD COLUMN nestedX INTEGER NOT NULL DEFAULT -1")
+                database.execSQL("ALTER TABLE timer_state ADD COLUMN nestedY INTEGER NOT NULL DEFAULT -1")
+                database.execSQL("ALTER TABLE timer_state ADD COLUMN soundsEnabled INTEGER NOT NULL DEFAULT 0")
+                database.execSQL("ALTER TABLE timer_state ADD COLUMN selectedSoundUri TEXT DEFAULT NULL")
+                database.execSQL("ALTER TABLE timer_state ADD COLUMN musicUrl TEXT DEFAULT NULL")
+                database.execSQL("ALTER TABLE timer_state ADD COLUMN recentMusicUrlsJson TEXT NOT NULL DEFAULT '[]'")
+                database.execSQL("ALTER TABLE timer_state ADD COLUMN showLapTimes INTEGER NOT NULL DEFAULT 0")
             }
         }
 
@@ -75,7 +80,9 @@ abstract class PurramidDatabase : RoomDatabase() {
                     "purramid_database"
                 )
                     .addMigrations(
-                        MIGRATION_11_12
+                        MIGRATION_11_12,
+                        MIGRATION_12_13,
+                        Migration_13_14
                         // Add future migrations here: MIGRATION_12_13, MIGRATION_13_14, etc.
                     )
                     .fallbackToDestructiveMigrationOnDowngrade() // Only destroy on downgrade

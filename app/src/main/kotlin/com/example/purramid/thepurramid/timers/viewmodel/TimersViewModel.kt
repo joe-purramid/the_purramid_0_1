@@ -16,6 +16,7 @@ import com.google.gson.reflect.TypeToken
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
@@ -28,17 +29,18 @@ class TimersViewModel @Inject constructor(
     companion object {
         const val KEY_TIMER_ID = "timerId"
         private const val TAG = "TimersViewModel"
-        private const val TICK_INTERVAL_MS = 50L // Update interval for smoother display
+        private const val TICK_INTERVAL_MS = 50L
+        private const val MAX_LAPS = 10 // As per specification
     }
 
-    // Get timerId passed via Intent/Args through SavedStateHandle
-    private val timerId: Int = savedStateHandle[KEY_TIMER_ID] ?: 0 // Default to 0 or handle error
+    // Get timerId passed via SavedStateHandle
+    private val timerId: Int = savedStateHandle[KEY_TIMER_ID] ?: 0
 
     private val _uiState = MutableStateFlow(TimerState(timerId = timerId))
     val uiState: StateFlow<TimerState> = _uiState.asStateFlow()
 
     private var tickerJob: Job? = null
-    private val gson = Gson() // For laps persistence
+    private val gson = Gson()
 
     init {
         Log.d(TAG, "Initializing ViewModel for timerId: $timerId")
@@ -46,26 +48,38 @@ class TimersViewModel @Inject constructor(
             loadInitialState(timerId)
         } else {
             Log.e(TAG, "Invalid timerId (0), using default state without persistence.")
-            // Maybe generate a temporary ID if needed for non-persistent operation?
         }
     }
 
     private fun loadInitialState(id: Int) {
         viewModelScope.launch(Dispatchers.IO) {
-            val entity = timerDao.getById(id)
-            withContext(Dispatchers.Main) {
-                if (entity != null) {
-                    Log.d(TAG, "Loaded state from DB for timer $id")
-                    _uiState.value = mapEntityToState(entity)
-                    // If it was running when saved, potentially resume ticking
-                    if (_uiState.value.isRunning) {
-                        startTicker()
+            try {
+                val entity = timerDao.getById(id)
+                withContext(Dispatchers.Main) {
+                    if (entity != null) {
+                        Log.d(TAG, "Loaded state from DB for timer $id")
+                        _uiState.value = mapEntityToState(entity)
+                        if (_uiState.value.isRunning) {
+                            startTicker()
+                        }
+                    } else {
+                        Log.d(TAG, "No saved state for timer $id, using defaults.")
+                        val defaultState = TimerState(
+                            timerId = id,
+                            uuid = UUID.randomUUID() // Generate new UUID
+                        )
+                        _uiState.value = defaultState
+                        saveState(defaultState)
                     }
-                } else {
-                    Log.d(TAG, "No saved state for timer $id, using defaults.")
-                    val defaultState = TimerState(timerId = id) // Ensure ID is set
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error loading initial state for timer $id", e)
+                withContext(Dispatchers.Main) {
+                    val defaultState = TimerState(
+                        timerId = id,
+                        uuid = UUID.randomUUID()
+                    )
                     _uiState.value = defaultState
-                    saveState(defaultState) // Save initial default state
                 }
             }
         }
@@ -106,8 +120,14 @@ class TimersViewModel @Inject constructor(
         val currentState = _uiState.value
         if (currentState.type != TimerType.STOPWATCH || !currentState.isRunning) return
 
+        // Check max laps limit from specification
+        if (currentState.laps.size >= MAX_LAPS) {
+            Log.d(TAG, "Maximum number of laps ($MAX_LAPS) reached")
+            return
+        }
+
         val currentLaps = currentState.laps.toMutableList()
-        currentLaps.add(currentState.currentMillis) // Add current elapsed time as lap
+        currentLaps.add(currentState.currentMillis)
         _uiState.update { it.copy(laps = currentLaps) }
         saveState(_uiState.value)
     }
@@ -119,7 +139,7 @@ class TimersViewModel @Inject constructor(
         val startTime = SystemClock.elapsedRealtime()
         val initialMillis = _uiState.value.currentMillis
 
-        tickerJob = viewModelScope.launch(Dispatchers.Default) { // Use Default for timing
+        tickerJob = viewModelScope.launch(Dispatchers.Default) {
             while (isActive && _uiState.value.isRunning) {
                 val elapsed = SystemClock.elapsedRealtime() - startTime
                 val newMillis = when (_uiState.value.type) {
@@ -127,21 +147,20 @@ class TimersViewModel @Inject constructor(
                     TimerType.COUNTDOWN -> (initialMillis - elapsed).coerceAtLeast(0L)
                 }
 
-                withContext(Dispatchers.Main.immediate) { // Update UI state on Main
-                     _uiState.update { it.copy(currentMillis = newMillis) }
+                withContext(Dispatchers.Main.immediate) {
+                    _uiState.update { it.copy(currentMillis = newMillis) }
                 }
-
 
                 if (_uiState.value.type == TimerType.COUNTDOWN && newMillis <= 0L) {
                     handleCountdownFinish()
-                    break // Stop ticker
+                    break
                 }
 
                 delay(TICK_INTERVAL_MS)
             }
             Log.d(TAG, "Ticker coroutine ended for timer $timerId")
         }
-         Log.d(TAG, "Ticker starting for timer $timerId...")
+        Log.d(TAG, "Ticker starting for timer $timerId...")
     }
 
     private fun stopTicker() {
@@ -152,53 +171,67 @@ class TimersViewModel @Inject constructor(
 
     private fun handleCountdownFinish() {
         stopTicker()
-        // Update state on main thread
         viewModelScope.launch(Dispatchers.Main) {
             _uiState.update { it.copy(isRunning = false, currentMillis = 0) }
             if (_uiState.value.playSoundOnEnd) {
-                // TODO: Implement sound playing logic (e.g., via service or activity)
-                Log.d(TAG, "Timer $timerId finished - Play Sound!")
-            } else {
-                 Log.d(TAG, "Timer $timerId finished.")
+                playFinishSound()
             }
-            saveState(_uiState.value) // Save finished state
+            saveState(_uiState.value)
         }
     }
 
-     // --- Settings Updates --- TODO: Implement fully in Settings screen later
-     fun setInitialDuration(durationMillis: Long) {
-         if (_uiState.value.type == TimerType.COUNTDOWN && !_uiState.value.isRunning) {
+    private fun playFinishSound() {
+        try {
+            // Use saved sound URI if available, otherwise use default
+            val soundUri = _uiState.value.selectedSoundUri
+            if (soundUri != null) {
+                // TODO: Implement playing custom sound URI
+                Log.d(TAG, "Timer $timerId finished - Play custom sound: $soundUri")
+            } else if (_uiState.value.musicUrl != null) {
+                // TODO: Implement playing music URL
+                Log.d(TAG, "Timer $timerId finished - Play music URL: ${_uiState.value.musicUrl}")
+            } else {
+                // Play default notification sound
+                Log.d(TAG, "Timer $timerId finished - Play default sound")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error playing finish sound", e)
+        }
+    }
+
+    // --- Settings Updates ---
+    fun setInitialDuration(durationMillis: Long) {
+        if (_uiState.value.type == TimerType.COUNTDOWN && !_uiState.value.isRunning) {
             _uiState.update { it.copy(initialDurationMillis = durationMillis, currentMillis = durationMillis) }
-             saveState(_uiState.value)
-         }
-     }
+            saveState(_uiState.value)
+        }
+    }
 
-     fun setShowCentiseconds(show: Boolean) {
+    fun setShowCentiseconds(show: Boolean) {
         if (_uiState.value.showCentiseconds == show) return
-         _uiState.update { it.copy(showCentiseconds = show) }
-         saveState(_uiState.value)
-     }
+        _uiState.update { it.copy(showCentiseconds = show) }
+        saveState(_uiState.value)
+    }
 
-     fun setPlaySoundOnEnd(play: Boolean) {
+    fun setPlaySoundOnEnd(play: Boolean) {
         if (_uiState.value.playSoundOnEnd == play) return
-         _uiState.update { it.copy(playSoundOnEnd = play) }
-         saveState(_uiState.value)
-     }
+        _uiState.update { it.copy(playSoundOnEnd = play) }
+        saveState(_uiState.value)
+    }
 
-     fun setTimerType(type: TimerType) {
+    fun setTimerType(type: TimerType) {
         if (_uiState.value.type == type) return
-         stopTicker() // Stop ticker when changing type
-         _uiState.update {
-             it.copy(
-                 type = type,
-                 isRunning = false,
-                 // Reset time based on new type
-                 currentMillis = if (type == TimerType.COUNTDOWN) it.initialDurationMillis else 0L,
-                 laps = emptyList() // Clear laps when switching
-             )
-         }
-         saveState(_uiState.value)
-     }
+        stopTicker()
+        _uiState.update {
+            it.copy(
+                type = type,
+                isRunning = false,
+                currentMillis = if (type == TimerType.COUNTDOWN) it.initialDurationMillis else 0L,
+                laps = emptyList()
+            )
+        }
+        saveState(_uiState.value)
+    }
 
     fun updateOverlayColor(newColor: Int) {
         if (_uiState.value.overlayColor == newColor) return
@@ -218,6 +251,65 @@ class TimersViewModel @Inject constructor(
         saveState(_uiState.value)
     }
 
+    // --- New Feature Methods ---
+    fun setNested(nested: Boolean) {
+        if (_uiState.value.isNested == nested) return
+        _uiState.update {
+            it.copy(
+                isNested = nested,
+                // Reset nested position when toggling off
+                nestedX = if (nested) it.nestedX else -1,
+                nestedY = if (nested) it.nestedY else -1
+            )
+        }
+        saveState(_uiState.value)
+    }
+
+    fun updateNestedPosition(x: Int, y: Int) {
+        if (_uiState.value.nestedX == x && _uiState.value.nestedY == y) return
+        _uiState.update { it.copy(nestedX = x, nestedY = y) }
+        saveState(_uiState.value)
+    }
+
+    fun setSoundsEnabled(enabled: Boolean) {
+        if (_uiState.value.soundsEnabled == enabled) return
+        _uiState.update { it.copy(soundsEnabled = enabled) }
+        saveState(_uiState.value)
+    }
+
+    fun setShowLapTimes(show: Boolean) {
+        if (_uiState.value.showLapTimes == show) return
+        _uiState.update { it.copy(showLapTimes = show) }
+        saveState(_uiState.value)
+    }
+
+    fun setSelectedSound(uri: String?) {
+        if (_uiState.value.selectedSoundUri == uri) return
+        _uiState.update { it.copy(selectedSoundUri = uri) }
+        saveState(_uiState.value)
+    }
+
+    fun setMusicUrl(url: String?) {
+        if (_uiState.value.musicUrl == url) return
+
+        // Update recent URLs list
+        val recentUrls = _uiState.value.recentMusicUrls.toMutableList()
+        url?.let {
+            recentUrls.remove(it) // Remove if already exists
+            recentUrls.add(0, it) // Add to beginning
+            if (recentUrls.size > 3) {
+                recentUrls.removeAt(3) // Keep only last 3
+            }
+        }
+
+        _uiState.update {
+            it.copy(
+                musicUrl = url,
+                recentMusicUrls = recentUrls
+            )
+        }
+        saveState(_uiState.value)
+    }
 
     // --- Persistence ---
     private fun saveState(state: TimerState) {
@@ -236,19 +328,18 @@ class TimersViewModel @Inject constructor(
         }
     }
 
-     fun deleteState() {
-         if (timerId <= 0) return
-         stopTicker()
-         viewModelScope.launch(Dispatchers.IO) {
-             try {
-                 timerDao.deleteById(timerId)
-                 Log.d(TAG, "Deleted state for timer $timerId")
-             } catch (e: Exception) {
-                 Log.e(TAG, "Failed to delete state for timer $timerId", e)
-             }
-         }
-     }
-
+    fun deleteState() {
+        if (timerId <= 0) return
+        stopTicker()
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                timerDao.deleteById(timerId)
+                Log.d(TAG, "Deleted state for timer $timerId")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to delete state for timer $timerId", e)
+            }
+        }
+    }
 
     // --- Mappers ---
     private fun mapEntityToState(entity: TimerStateEntity): TimerState {
@@ -260,13 +351,30 @@ class TimersViewModel @Inject constructor(
             emptyList()
         }
 
+        val recentUrlsList = try {
+            val typeToken = object : TypeToken<List<String>>() {}.type
+            gson.fromJson<List<String>>(entity.recentMusicUrlsJson, typeToken) ?: emptyList()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to parse recent URLs JSON, using empty list.", e)
+            emptyList()
+        }
+
         return TimerState(
             timerId = entity.timerId,
-            type = try { TimerType.valueOf(entity.type) } catch (e: Exception) { TimerType.STOPWATCH },
+            uuid = try {
+                UUID.fromString(entity.uuid)
+            } catch (e: Exception) {
+                Log.e(TAG, "Invalid UUID in entity, generating new one", e)
+                UUID.randomUUID()
+            },
+            type = try {
+                TimerType.valueOf(entity.type)
+            } catch (e: Exception) {
+                TimerType.STOPWATCH
+            },
             initialDurationMillis = entity.initialDurationMillis,
-            // Load currentMillis - if it was running, this might be stale, ticker should adjust
             currentMillis = entity.currentMillis,
-            isRunning = entity.isRunning, // Reflect if it was running when saved
+            isRunning = entity.isRunning,
             laps = lapsList,
             showCentiseconds = entity.showCentiseconds,
             playSoundOnEnd = entity.playSoundOnEnd,
@@ -274,14 +382,25 @@ class TimersViewModel @Inject constructor(
             windowX = entity.windowX,
             windowY = entity.windowY,
             windowWidth = entity.windowWidth,
-            windowHeight = entity.windowHeight
+            windowHeight = entity.windowHeight,
+            isNested = entity.isNested,
+            nestedX = entity.nestedX,
+            nestedY = entity.nestedY,
+            soundsEnabled = entity.soundsEnabled,
+            selectedSoundUri = entity.selectedSoundUri,
+            musicUrl = entity.musicUrl,
+            recentMusicUrls = recentUrlsList,
+            showLapTimes = entity.showLapTimes
         )
     }
 
     private fun mapStateToEntity(state: TimerState): TimerStateEntity {
         val lapsJson = gson.toJson(state.laps)
+        val recentUrlsJson = gson.toJson(state.recentMusicUrls)
+
         return TimerStateEntity(
             timerId = state.timerId,
+            uuid = state.uuid.toString(),
             type = state.type.name,
             initialDurationMillis = state.initialDurationMillis,
             currentMillis = state.currentMillis,
@@ -293,7 +412,15 @@ class TimersViewModel @Inject constructor(
             windowX = state.windowX,
             windowY = state.windowY,
             windowWidth = state.windowWidth,
-            windowHeight = state.windowHeight
+            windowHeight = state.windowHeight,
+            isNested = state.isNested,
+            nestedX = state.nestedX,
+            nestedY = state.nestedY,
+            soundsEnabled = state.soundsEnabled,
+            selectedSoundUri = state.selectedSoundUri,
+            musicUrl = state.musicUrl,
+            recentMusicUrlsJson = recentUrlsJson,
+            showLapTimes = state.showLapTimes
         )
     }
 
@@ -301,8 +428,6 @@ class TimersViewModel @Inject constructor(
     override fun onCleared() {
         Log.d(TAG, "ViewModel cleared for timerId: $timerId")
         stopTicker()
-        // Save final state? Usually done on change, but consider edge cases.
-        // if (timerId > 0) saveState(_uiState.value)
         super.onCleared()
     }
 }
