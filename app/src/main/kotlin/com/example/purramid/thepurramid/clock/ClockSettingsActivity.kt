@@ -175,11 +175,10 @@ class ClockSettingsActivity : AppCompatActivity() {
         }
 
         binding.setAlarmButton.setOnClickListener {
-            try { startActivity(Intent(AlarmClock.ACTION_SET_ALARM)) }
-            catch (e: Exception) {
-                Toast.makeText(this, "Could not open alarm app", Toast.LENGTH_SHORT).show()
-                Log.e(TAG, "Error starting alarm intent", e)
+            val alarmIntent = Intent(this, ClockAlarmActivity::class.java).apply {
+                putExtra(ClockAlarmActivity.EXTRA_CLOCK_ID, currentClockIdForConfig)
             }
+            startActivity(alarmIntent)
         }
 
         binding.nestToggleButton.setOnCheckedChangeListener { _, isChecked ->
