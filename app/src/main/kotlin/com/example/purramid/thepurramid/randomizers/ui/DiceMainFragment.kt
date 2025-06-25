@@ -897,13 +897,12 @@ class DiceMainFragment : Fragment() {
         }
     }
 
-    private fun navigateToSettings(instanceId: UUID) {
+    private fun navigateToSettings(instanceId: Int) {
         try {
-            val action = DiceMainFragmentDirections.actionDiceMainFragmentToRandomizerSettingsFragment(instanceId.toString())
+            val action = DiceMainFragmentDirections.actionDiceMainFragmentToRandomizerSettingsFragment(instanceId)
             findNavController().navigate(action)
-        } catch (e: Exception) { // Catch more general exceptions for navigation
+        } catch (e: Exception) {
             Log.e("DiceMainFragment", "Navigation to Settings failed.", e)
-            showErrorSnackbar(getString(R.string.cannot_open_settings))
         }
     }
 

@@ -40,11 +40,14 @@ class CoinPoolDialogFragment : DialogFragment() {
     private var isUpdatingEditTextProgrammatically = false
 
     companion object {
-        const val TAG = "CoinPoolDialog"
-        fun newInstance(instanceId: UUID?): CoinPoolDialogFragment { // instanceId might be needed if VM isn't shared via activityViewModels
-            val fragment = CoinPoolDialogFragment()
-            // Args can be set here if needed
-            return fragment
+        const val TAG = "CoinPoolDialogFragment"
+
+        fun newInstance(instanceId: Int?): CoinPoolDialogFragment {
+            return CoinPoolDialogFragment().apply {
+                arguments = Bundle().apply {
+                    putInt("instanceId", instanceId ?: 0)
+                }
+            }
         }
     }
 

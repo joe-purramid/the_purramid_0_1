@@ -44,6 +44,7 @@
     <string name="back">Back</string>
     <string name="cancel">Cancel</string>
     <string name="delete">Delete</string>
+    <string name="optimize">Optimize</string>
 
     <!-- `` CLOCK APP `` -->
     <string name="clock_settings_title">Clock Settings</string>
@@ -463,7 +464,6 @@
     <string name="pick_color_for_die">Pick Color for %s</string>
     <string name="dice_label_d10_tens" translatable="false">d% (00-90)</string>
     <string name="dice_label_d10_units" translatable="false">d% (0-9)</string>
-    <string name="error_settings_not_loaded_cant_save">Settings not loaded, cannot save changes.</string>
     <string name="die_face_image">Die face image</string>
     <string name="setting_dice_sum_results_label">Rolled sum</string>
     <string name="setting_dice_configure_modifiers">Dice Modifiers</string>
@@ -564,7 +564,10 @@
     <string name="lock_unlock_all">Lock/Unlock All</string>
     <string name="billboard">Billboard</string>
     <string name="cannot_open_image_picker">Cannot open image picker</string>
-
+    <string name="image_too_large_title">Image Too Large</string>
+    <string name="image_too_large_message">The image is too large to be uploaded. You may optimize it or select a different image.</string>
+    <string name="compression_failed">Failed to compress image</string>
+    <string name="unlock_mask_to_close">Unlock the screen mask to close</string>
 
     <!-- `` SPOTLIGHT APP `` -->
     <string name="spotlight_settings_title">Spotlight Settings</string>
@@ -587,7 +590,8 @@
     <string name="hundredths">Hundredths</string>
     <string name="play_music">Play music</string>
     <string name="play_sound_on_finish">Play Sound on Finish</string>
-    <string name="lap">Lap times</string>
+    <string name="nest_timer">Nest Timer</string>
+    <string name="lap">Lap Times</string>
     <string name="no_laps_recorded">No laps recorded</string>
     <string name="sounds">Stopwatch sounds</string>
 

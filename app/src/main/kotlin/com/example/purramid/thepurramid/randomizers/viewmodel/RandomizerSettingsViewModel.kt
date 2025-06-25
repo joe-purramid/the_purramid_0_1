@@ -21,7 +21,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.util.UUID
 import javax.inject.Inject
 
 @HiltViewModel
@@ -35,9 +34,7 @@ class RandomizerSettingsViewModel @Inject constructor(
         private const val TAG = "SettingsViewModel"
     }
 
-    private val instanceId: UUID? = savedStateHandle.get<String>(KEY_INSTANCE_ID)?.let {
-        try { UUID.fromString(it) } catch (e: IllegalArgumentException) { null }
-    }
+    private val instanceId: Int = savedStateHandle.get<Int>(KEY_INSTANCE_ID) ?: 0
 
     private val _settings = MutableLiveData<SpinSettingsEntity?>()
     val settings: LiveData<SpinSettingsEntity?> = _settings
@@ -46,16 +43,16 @@ class RandomizerSettingsViewModel @Inject constructor(
     val errorEvent: LiveData<Event<Int>> = _errorEvent
 
     init {
-        if (instanceId != null) {
+        if (instanceId > 0) {
             loadSettings(instanceId)
         } else {
-            Log.e(TAG, "Critical Error: Instance ID is null in SavedStateHandle.")
+            Log.e(TAG, "Critical Error: Instance ID is invalid: $instanceId")
             _errorEvent.postValue(Event(R.string.error_settings_instance_id_failed))
             _settings.postValue(null)
         }
     }
 
-    private fun loadSettings(id: UUID) {
+    private fun loadSettings(id: Int) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val loadedSettings = randomizerDao.getSettingsForInstance(id)
@@ -301,8 +298,8 @@ class RandomizerSettingsViewModel @Inject constructor(
     }
 
     private fun saveSettings(settingsToSave: SpinSettingsEntity) {
-        if (instanceId == null) {
-            Log.e(TAG, "Instance ID is null during saveSettings. This should not happen.")
+        if (instanceId == 0) {
+            Log.e(TAG, "Instance ID is invalid during saveSettings. This should not happen.")
             _errorEvent.postValue(Event(R.string.error_settings_instance_id_failed))
             return
         }

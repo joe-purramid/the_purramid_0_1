@@ -1,5 +1,5 @@
 // TimersService.kt
-package com.example.purramid.thepurramid.timers
+package com.example.purramid.thepurramid.timers.service
 
 import android.annotation.SuppressLint
 import android.app.Notification
@@ -7,43 +7,53 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Intent
+import android.graphics.Color
 import android.graphics.PixelFormat
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
 import android.os.Build
-import android.os.Bundle // Needed for SavedStateViewModelFactory args
+import android.os.Bundle
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.util.Log
+import android.util.TypedValue
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewConfiguration
 import android.view.WindowManager
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
-import android.widget.Toast // For Settings placeholder
+import android.widget.Toast
 import androidx.core.app.NotificationCompat
+import androidx.core.graphics.ColorUtils
 import androidx.lifecycle.*
+import com.example.purramid.thepurramid.di.HiltViewModelFactory
+import com.example.purramid.thepurramid.instance.InstanceManager
 import com.example.purramid.thepurramid.MainActivity
 import com.example.purramid.thepurramid.R
 import com.example.purramid.thepurramid.timers.TimerState
 import com.example.purramid.thepurramid.timers.TimerType
 import com.example.purramid.thepurramid.timers.viewmodel.TimersViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import kotlin.math.abs
 
-// Service Actions (Ensure these are defined or imported)
+// Service Actions
 const val ACTION_START_STOPWATCH = "com.example.purramid.timers.ACTION_START_STOPWATCH"
 const val ACTION_START_COUNTDOWN = "com.example.purramid.timers.ACTION_START_COUNTDOWN"
-const val ACTION_STOP_TIMER_SERVICE = "com.example.purramid.timers.ACTION_STOP_TIMER_SERVICE" // Renamed for clarity
+const val ACTION_STOP_TIMER_SERVICE = "com.example.purramid.timers.ACTION_STOP_TIMER_SERVICE"
 const val EXTRA_TIMER_ID = TimersViewModel.KEY_TIMER_ID
 const val EXTRA_DURATION_MS = "com.example.purramid.timers.EXTRA_DURATION_MS"
 
@@ -51,8 +61,9 @@ const val EXTRA_DURATION_MS = "com.example.purramid.timers.EXTRA_DURATION_MS"
 class TimersService : LifecycleService(), ViewModelStoreOwner {
 
     @Inject lateinit var windowManager: WindowManager
-    // Inject Hilt's factory; no need for custom factory if using SavedStateViewModelFactory
-    // @Inject lateinit var viewModelFactory: ViewModelProvider.Factory
+    @Inject lateinit var instanceManager: InstanceManager
+    @Inject lateinit var viewModelFactory: ViewModelProvider.Factory
+    @Inject lateinit var notificationManager: NotificationManager
 
     private val viewModelStore = ViewModelStore()
     override fun getViewModelStore(): ViewModelStore = viewModelStore
@@ -63,7 +74,7 @@ class TimersService : LifecycleService(), ViewModelStoreOwner {
     private var layoutParams: WindowManager.LayoutParams? = null
     private var isViewAdded = false
     private var stateObserverJob: Job? = null
-    private var currentInflatedLayoutId: Int = 0 // Track which layout is inflated
+    private var currentInflatedLayoutId: Int = 0
 
     // --- Cached Views (Common and Specific) ---
     // Common
@@ -73,9 +84,9 @@ class TimersService : LifecycleService(), ViewModelStoreOwner {
     private var closeButton: TextView? = null
     // Countdown Specific
     private var centisecondsTextView: TextView? = null
-    private var resetButtonCountdown: ImageView? = null // Renamed for clarity
+    private var resetButtonCountdown: ImageView? = null
     // Stopwatch Specific
-    private var lapResetButtonStopwatch: Button? = null // Renamed for clarity
+    private var lapResetButtonStopwatch: Button? = null
     private var lapTimesLayout: LinearLayout? = null
     private var lapTimeTextViews = mutableListOf<TextView>()
     private var noLapsTextView: TextView? = null
@@ -87,18 +98,25 @@ class TimersService : LifecycleService(), ViewModelStoreOwner {
     private var initialTouchY: Float = 0f
     private var isMoving = false
     private val touchSlop: Int by lazy { ViewConfiguration.get(this).scaledTouchSlop }
+    private val movementThreshold: Int by lazy {
+        TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_DIP,
+            10f,
+            resources.displayMetrics
+        ).toInt()
+    }
 
     companion object {
         private const val TAG = "TimersService"
         private const val NOTIFICATION_ID = 5
         private const val CHANNEL_ID = "TimersServiceChannel"
+        const val PREFS_NAME_FOR_ACTIVITY = "timers_prefs"
     }
 
     override fun onCreate() {
         super.onCreate()
         Log.d(TAG, "onCreate")
         createNotificationChannel()
-        // ViewModel initialization moved to onStartCommand to ensure timerId is available
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -107,19 +125,40 @@ class TimersService : LifecycleService(), ViewModelStoreOwner {
         val intentTimerId = intent?.getIntExtra(EXTRA_TIMER_ID, 0) ?: 0
         Log.d(TAG, "onStartCommand: Action: $action, ID: $intentTimerId")
 
+        // Handle instance management
         if (intentTimerId <= 0 && action != ACTION_STOP_TIMER_SERVICE) {
-            Log.e(TAG, "Invalid or missing Timer ID ($intentTimerId) for action '$action'. Stopping service.")
-            stopService()
-            return START_NOT_STICKY // Don't restart if ID is invalid
+            // Request new instance ID from InstanceManager
+            val instanceId = instanceManager.getNextInstanceId(InstanceManager.TIMERS)
+            if (instanceId == null) {
+                Toast.makeText(
+                    this,
+                    getString(R.string.max_timers_reached),
+                    Toast.LENGTH_LONG
+                ).show()
+                stopSelf()
+                return START_NOT_STICKY
+            }
+            this.timerId = instanceId
+            Log.d(TAG, "Allocated new instanceId: $timerId")
+        } else if (intentTimerId > 0) {
+            // Register existing instance with InstanceManager
+            if (!instanceManager.registerExistingInstance(InstanceManager.TIMERS, intentTimerId)) {
+                Log.w(TAG, "Failed to register existing instance $intentTimerId")
+            }
+            this.timerId = intentTimerId
         }
 
         // Initialize ViewModel if needed (first start or ID change)
         if (!::viewModel.isInitialized || this.timerId != intentTimerId) {
-            this.timerId = intentTimerId
-            // Use default factory which Hilt provides, including SavedStateHandle support
-            viewModel = ViewModelProvider(this)[TimersViewModel::class.java]
+            val bundle = Bundle().apply {
+                putInt(TimersViewModel.KEY_TIMER_ID, timerId)
+            }
+            viewModel = ViewModelProvider(
+                this,
+                HiltViewModelFactory(this, bundle, viewModelFactory)
+            )[TimersViewModel::class.java]
             Log.d(TAG, "ViewModel initialized for timerId: $timerId")
-            observeViewModelState() // Start observing the correct ViewModel instance
+            observeViewModelState()
         }
 
         // Handle actions
@@ -127,149 +166,166 @@ class TimersService : LifecycleService(), ViewModelStoreOwner {
             ACTION_START_STOPWATCH -> {
                 viewModel.setTimerType(TimerType.STOPWATCH)
                 startForegroundServiceIfNeeded()
-                // Use lifecycleScope to ensure addOverlayViewIfNeeded runs after state is potentially updated
                 lifecycleScope.launch { addOverlayViewIfNeeded() }
             }
             ACTION_START_COUNTDOWN -> {
                 val duration = intent.getLongExtra(EXTRA_DURATION_MS, 60000L)
                 viewModel.setTimerType(TimerType.COUNTDOWN)
-                viewModel.setInitialDuration(duration) // Set duration
+                viewModel.setInitialDuration(duration)
                 startForegroundServiceIfNeeded()
                 lifecycleScope.launch { addOverlayViewIfNeeded() }
             }
             ACTION_STOP_TIMER_SERVICE -> {
-                stopService() // Handle explicit stop request
+                stopService()
             }
         }
         return START_STICKY
     }
 
     private fun observeViewModelState() {
-        stateObserverJob?.cancel() // Cancel previous job
+        stateObserverJob?.cancel()
         stateObserverJob = lifecycleScope.launch {
             viewModel.uiState.collectLatest { state ->
                 Log.d(TAG, "Collecting State: Type=${state.type}, Running=${state.isRunning}, Millis=${state.currentMillis}")
-                // Check if the layout needs to change based on the state's type
                 val requiredLayoutId = when (state.type) {
                     TimerType.STOPWATCH -> R.layout.view_floating_timer_stopwatch
                     TimerType.COUNTDOWN -> R.layout.view_floating_timer_countdown
                 }
                 if (overlayView == null || currentInflatedLayoutId != requiredLayoutId) {
                     Log.d(TAG, "State requires layout change. Current: $currentInflatedLayoutId, Required: $requiredLayoutId")
-                    addOverlayViewIfNeeded() // This will inflate the correct layout
+                    addOverlayViewIfNeeded()
                 } else {
-                    // Layout is correct, just update the views
                     updateOverlayViews(state)
                 }
-                // Update layout params (position/size) if they differ from state
                 updateLayoutParamsIfNeeded(state)
             }
         }
         Log.d(TAG, "Started observing ViewModel state for timer $timerId")
     }
 
-    private fun addOverlayViewIfNeeded() {
-        // This function now primarily handles inflation/re-inflation
-        lifecycleScope.launch(Dispatchers.Main) { // Ensure UI operations on Main thread
-            val currentState = viewModel.uiState.value // Get the latest state
+    private suspend fun addOverlayViewIfNeeded() {
+        withContext(Dispatchers.Main) {
+            val currentState = viewModel.uiState.value
             val requiredLayoutId = when (currentState.type) {
                 TimerType.STOPWATCH -> R.layout.view_floating_timer_stopwatch
                 TimerType.COUNTDOWN -> R.layout.view_floating_timer_countdown
             }
 
-            // If view exists but layout is wrong, remove the old one first
             if (overlayView != null && currentInflatedLayoutId != requiredLayoutId) {
                 removeOverlayView()
             }
 
-            // Create/Inflate if view is null
             if (overlayView == null) {
                 layoutParams = createDefaultLayoutParams()
-                // Apply saved position/size from state *before* adding
                 applyStateToLayoutParams(currentState, layoutParams!!)
 
                 val inflater = LayoutInflater.from(this@TimersService)
                 overlayView = inflater.inflate(requiredLayoutId, null)
-                currentInflatedLayoutId = requiredLayoutId // Track inflated layout
+                currentInflatedLayoutId = requiredLayoutId
 
-                cacheViews() // Find and cache views from the newly inflated layout
-                setupListeners() // Setup listeners for the cached views
-                setupWindowDragListener() // Add drag listener to the root overlay view
+                cacheViews()
+                setupListeners()
+                setupWindowDragListener()
 
                 try {
-                    if (!isViewAdded) { // Check isViewAdded before adding
+                    if (!isViewAdded) {
                         windowManager.addView(overlayView, layoutParams)
                         isViewAdded = true
                         Log.d(TAG, "Timer overlay view added (Layout ID: $requiredLayoutId).")
                     }
                 } catch (e: Exception) {
                     Log.e(TAG, "Error adding timer overlay view", e)
-                    cleanupViewReferences() // Reset view state if add failed
+                    cleanupViewReferences()
                 }
             }
-            // Update the view with the current state data immediately after ensuring it's added/correct
             updateOverlayViews(currentState)
         }
     }
 
-    // Cache view references after inflating a layout
+    private fun createDefaultLayoutParams(): WindowManager.LayoutParams {
+        return WindowManager.LayoutParams(
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+            } else {
+                @Suppress("DEPRECATION")
+                WindowManager.LayoutParams.TYPE_PHONE
+            },
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+            PixelFormat.TRANSLUCENT
+        ).apply {
+            gravity = Gravity.CENTER
+        }
+    }
+
     private fun cacheViews() {
         if (overlayView == null) return
         digitalTimeTextView = overlayView?.findViewById(R.id.digitalTimeTextView)
         playPauseButton = overlayView?.findViewById(R.id.playPauseButton)
         settingsButton = overlayView?.findViewById(R.id.settingsButton)
         closeButton = overlayView?.findViewById(R.id.closeButton)
-        // Type specific views
         centisecondsTextView = overlayView?.findViewById(R.id.centisecondsTextView)
         resetButtonCountdown = overlayView?.findViewById(R.id.resetButton)
         lapResetButtonStopwatch = overlayView?.findViewById(R.id.lapResetButton)
         lapTimesLayout = overlayView?.findViewById(R.id.lapTimesLayout)
         noLapsTextView = overlayView?.findViewById(R.id.noLapsTextView)
         lapTimeTextViews.clear()
-        lapTimeTextViews.add(overlayView?.findViewById(R.id.lapTime1TextView) ?: TextView(this)) // Add safely
+        lapTimeTextViews.add(overlayView?.findViewById(R.id.lapTime1TextView) ?: TextView(this))
         lapTimeTextViews.add(overlayView?.findViewById(R.id.lapTime2TextView) ?: TextView(this))
         lapTimeTextViews.add(overlayView?.findViewById(R.id.lapTime3TextView) ?: TextView(this))
         lapTimeTextViews.add(overlayView?.findViewById(R.id.lapTime4TextView) ?: TextView(this))
         lapTimeTextViews.add(overlayView?.findViewById(R.id.lapTime5TextView) ?: TextView(this))
-        // Remove placeholder TextViews if they weren't found
         lapTimeTextViews.removeAll { it.id == View.NO_ID }
     }
 
-    // Setup listeners for cached views
     private fun setupListeners() {
-        playPauseButton?.setOnClickListener { viewModel.togglePlayPause() }
+        playPauseButton?.setOnClickListener {
+            playButtonSound()
+            viewModel.togglePlayPause()
+        }
         closeButton?.setOnClickListener { stopService() }
         settingsButton?.setOnClickListener { openSettings() }
-        lapResetButtonStopwatch?.setOnClickListener { // Stopwatch Lap/Reset
-            if (viewModel.uiState.value.isRunning) viewModel.addLap() else viewModel.resetTimer()
+        lapResetButtonStopwatch?.setOnClickListener {
+            if (viewModel.uiState.value.isRunning) {
+                playButtonSound()
+                viewModel.addLap()
+            } else {
+                playButtonSound()
+                viewModel.resetTimer()
+            }
         }
-        resetButtonCountdown?.setOnClickListener { // Countdown Reset
+        resetButtonCountdown?.setOnClickListener {
+            playButtonSound()
             viewModel.resetTimer()
         }
     }
 
-    // Update the UI elements based on the current state
     private fun updateOverlayViews(state: TimerState) {
-        if (overlayView == null || !isViewAdded) return // Don't update if view isn't ready
+        if (overlayView == null || !isViewAdded) return
 
-        // Ensure correct layout type is inflated before updating views
         val requiredLayoutId = when (state.type) {
             TimerType.STOPWATCH -> R.layout.view_floating_timer_stopwatch
             TimerType.COUNTDOWN -> R.layout.view_floating_timer_countdown
         }
         if (currentInflatedLayoutId != requiredLayoutId) {
             Log.w(TAG, "Timer state update received, but layout mismatch. Waiting for re-inflation.")
-            return // Skip update if layout is wrong, wait for addOverlayViewIfNeeded to fix it
+            return
         }
 
-        // Set background color of the root overlay view
+        // Apply nested state if needed
+        applyNestedState(state)
+
         overlayView?.setBackgroundColor(state.overlayColor)
 
-        // Determine text color based on background luminance for contrast
-        val textColor = if (Color.luminance(state.overlayColor) > 0.5) Color.BLACK else Color.WHITE
+        // Use proper luminance calculation for text color
+        val textColor = if (ColorUtils.calculateLuminance(state.overlayColor) > 0.5) {
+            Color.BLACK
+        } else {
+            Color.WHITE
+        }
 
-        // Update Time Display & Text Color
-        val showCenti = state.showCentiseconds // Check setting
+        val showCenti = state.showCentiseconds
         val timeStr = formatTime(state.currentMillis, showCenti)
 
         digitalTimeTextView?.text = timeStr.substringBeforeLast('.')
@@ -281,90 +337,67 @@ class TimersService : LifecycleService(), ViewModelStoreOwner {
             it.setTextColor(textColor)
         }
 
-        // Update Play/Pause Button state and icon
-        playPauseButton?.setColorFilter(textColor, PorterDuff.Mode.SRC_IN) // Tint the icon
+        playPauseButton?.setColorFilter(textColor, PorterDuff.Mode.SRC_IN)
         playPauseButton?.setImageResource(if (state.isRunning) R.drawable.ic_pause else R.drawable.ic_play)
         playPauseButton?.contentDescription = getString(if (state.isRunning) R.string.pause else R.string.play)
 
-        // Update Close Button (Text color)
-        closeButton?.setTextColor(textColor) // Assuming closeButton is a TextView with '✕'
+        closeButton?.setTextColor(textColor)
 
-        // Update Stopwatch Specific UI & Text Colors
         if (state.type == TimerType.STOPWATCH) {
-            lapResetButtonStopwatch?.setTextColor(textColor) // For Button text
-            // Consider tinting button background or using MaterialButton with appropriate styling for contrast
+            lapResetButtonStopwatch?.setTextColor(textColor)
             lapResetButtonStopwatch?.text = getString(if (state.isRunning) R.string.lap else R.string.reset)
             lapResetButtonStopwatch?.isEnabled = state.isRunning || state.currentMillis > 0L
 
-            val hasLaps = state.laps.isNotEmpty()
+            // Disable lap button if max laps reached
+            if (state.isRunning && state.laps.size >= 10) {
+                lapResetButtonStopwatch?.isEnabled = false
+            }
+
+            // Only show lap times if enabled in settings
+            val hasLaps = state.laps.isNotEmpty() && state.showLapTimes
             lapTimesLayout?.visibility = if (hasLaps) View.VISIBLE else View.GONE
-            noLapsTextView?.visibility = if (!hasLaps) View.VISIBLE else View.GONE
+            noLapsTextView?.visibility = if (state.showLapTimes && !hasLaps) View.VISIBLE else View.GONE
             noLapsTextView?.setTextColor(textColor)
 
-            val reversedLaps = state.laps.reversed()
-            lapTimeTextViews.forEachIndexed { index, textView ->
-                if (index < reversedLaps.size) {
-                    textView.text = "${state.laps.size - index}. ${formatTime(reversedLaps[index], true)}"
-                    textView.visibility = View.VISIBLE
-                    textView.setTextColor(textColor)
-                } else {
-                    textView.visibility = View.GONE
+            if (hasLaps) {
+                val reversedLaps = state.laps.reversed()
+                lapTimeTextViews.forEachIndexed { index, textView ->
+                    if (index < reversedLaps.size) {
+                        textView.text = "${state.laps.size - index}. ${formatTime(reversedLaps[index], true)}"
+                        textView.visibility = View.VISIBLE
+                        textView.setTextColor(textColor)
+                    } else {
+                        textView.visibility = View.GONE
+                    }
                 }
             }
         }
 
-        // Update Stopwatch Specific UI & Text Colors
-        if (state.type == TimerType.STOPWATCH) {
-            lapResetButtonStopwatch?.setTextColor(textColor) // For Button text
-            // Consider tinting button background or using MaterialButton with appropriate styling for contrast
-            lapResetButtonStopwatch?.text = getString(if (state.isRunning) R.string.lap else R.string.reset)
-            lapResetButtonStopwatch?.isEnabled = state.isRunning || state.currentMillis > 0L
-
-            val hasLaps = state.laps.isNotEmpty()
-            lapTimesLayout?.visibility = if (hasLaps) View.VISIBLE else View.GONE
-            noLapsTextView?.visibility = if (!hasLaps) View.VISIBLE else View.GONE
-            noLapsTextView?.setTextColor(textColor)
-
-            val reversedLaps = state.laps.reversed()
-            lapTimeTextViews.forEachIndexed { index, textView ->
-                if (index < reversedLaps.size) {
-                    textView.text = "${state.laps.size - index}. ${formatTime(reversedLaps[index], true)}"
-                    textView.visibility = View.VISIBLE
-                    textView.setTextColor(textColor)
-                } else {
-                    textView.visibility = View.GONE
-                }
-            }
-        }
-
-        // Update Countdown Specific UI & Icon Tints
         if (state.type == TimerType.COUNTDOWN) {
             resetButtonCountdown?.setColorFilter(textColor, PorterDuff.Mode.SRC_IN)
             resetButtonCountdown?.isEnabled = !state.isRunning && (state.currentMillis != state.initialDurationMillis || state.currentMillis == 0L)
         }
+    }
 
-    // Apply saved state to LayoutParams
     private fun applyStateToLayoutParams(state: TimerState, params: WindowManager.LayoutParams) {
         params.x = state.windowX
         params.y = state.windowY
         params.width = if (state.windowWidth > 0) state.windowWidth else WindowManager.LayoutParams.WRAP_CONTENT
         params.height = if (state.windowHeight > 0) state.windowHeight else WindowManager.LayoutParams.WRAP_CONTENT
-        // Ensure gravity is correct for absolute positioning if coords are non-zero
         if (state.windowX != 0 || state.windowY != 0) {
             params.gravity = Gravity.TOP or Gravity.START
         } else {
-            params.gravity = Gravity.CENTER // Default to center if no position saved
+            params.gravity = Gravity.CENTER
         }
     }
 
-    // Update layout params only if changed
     private fun updateLayoutParamsIfNeeded(state: TimerState) {
         if (layoutParams == null || !isViewAdded || overlayView == null) return
         var needsUpdate = false
         if (layoutParams?.x != state.windowX || layoutParams?.y != state.windowY) {
             layoutParams?.x = state.windowX
             layoutParams?.y = state.windowY
-            layoutParams?.gravity = Gravity.TOP or Gravity.START // Use absolute position
+            layoutParams?.gravity = Gravity.TOP or Gravity.START
             needsUpdate = true
         }
         val newWidth = if (state.windowWidth > 0) state.windowWidth else WindowManager.LayoutParams.WRAP_CONTENT
@@ -378,12 +411,13 @@ class TimersService : LifecycleService(), ViewModelStoreOwner {
         if (needsUpdate) {
             try {
                 windowManager.updateViewLayout(overlayView, layoutParams)
-            } catch (e: Exception) { Log.e(TAG, "Error updating layout params from state", e) }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error updating layout params from state", e)
+            }
         }
     }
 
     private fun removeOverlayView() {
-        // Ensure execution on the main thread
         if (Looper.myLooper() != Looper.getMainLooper()) {
             Log.w(TAG, "removeOverlayView called from non-UI thread. Posting to handler.")
             Handler(Looper.getMainLooper()).post { removeOverlayView() }
@@ -405,10 +439,9 @@ class TimersService : LifecycleService(), ViewModelStoreOwner {
 
     private fun cleanupViewReferences() {
         overlayView = null
-        layoutParams = null // Also clear params when view is removed
+        layoutParams = null
         isViewAdded = false
         currentInflatedLayoutId = 0
-        // Clear cached views
         digitalTimeTextView = null
         centisecondsTextView = null
         playPauseButton = null
@@ -421,8 +454,6 @@ class TimersService : LifecycleService(), ViewModelStoreOwner {
         noLapsTextView = null
     }
 
-
-    // Format milliseconds to HH:MM:SS.cc or MM:SS.cc or SS.cc
     private fun formatTime(millis: Long, includeCentiseconds: Boolean): String {
         val totalSeconds = TimeUnit.MILLISECONDS.toSeconds(millis)
         val hours = TimeUnit.MILLISECONDS.toHours(millis)
@@ -443,14 +474,13 @@ class TimersService : LifecycleService(), ViewModelStoreOwner {
         }
     }
 
-
     private fun openSettings() {
-        Toast.makeText(this, "Timer Settings: Coming Soon!", Toast.LENGTH_SHORT).show()
-        // TODO: Implement launching TimersSettingsActivity/Fragment
-        // val intent = Intent(this, TimersSettingsActivity::class.java)
-        // intent.putExtra(EXTRA_TIMER_ID, timerId)
-        // intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        // startActivity(intent)
+        val intent = Intent(this, TimersActivity::class.java).apply {
+            action = TimersActivity.ACTION_SHOW_TIMER_SETTINGS
+            putExtra(EXTRA_TIMER_ID, timerId)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        startActivity(intent)
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -463,8 +493,8 @@ class TimersService : LifecycleService(), ViewModelStoreOwner {
                         initialY = params.y
                         initialTouchX = event.rawX
                         initialTouchY = event.rawY
-                        isMoving = false // Reset moving flag
-                        return@setOnTouchListener true // Consume event if we might drag
+                        isMoving = false
+                        return@setOnTouchListener true
                     }
                     MotionEvent.ACTION_MOVE -> {
                         val currentX = event.rawX
@@ -472,8 +502,8 @@ class TimersService : LifecycleService(), ViewModelStoreOwner {
                         val deltaX = currentX - initialTouchX
                         val deltaY = currentY - initialTouchY
 
-                        // Start moving only if displacement exceeds touch slop
-                        if (!isMoving && (abs(deltaX) > touchSlop || abs(deltaY) > touchSlop)) {
+                        // Use movement threshold instead of touch slop
+                        if (!isMoving && (abs(deltaX) > movementThreshold || abs(deltaY) > movementThreshold)) {
                             isMoving = true
                         }
 
@@ -482,36 +512,46 @@ class TimersService : LifecycleService(), ViewModelStoreOwner {
                             params.y = initialY + deltaY.toInt()
                             try {
                                 windowManager.updateViewLayout(overlayView, params)
-                            } catch (e: Exception) { Log.e(TAG, "Error updating layout on move", e) }
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Error updating layout on move", e)
+                            }
                         }
-                        return@setOnTouchListener true // Consume move events (even if not exceeding slop yet)
+                        return@setOnTouchListener true
                     }
                     MotionEvent.ACTION_UP -> {
                         if (isMoving) {
-                            // Save final position only if a move actually occurred
                             viewModel.updateWindowPosition(params.x, params.y)
-                            isMoving = false // Reset flag
+                            isMoving = false
                         }
-                        // Don't consume UP if no move occurred, to allow button clicks to pass through
-                        // Let the button's own OnClickListener handle the tap.
                         return@setOnTouchListener isMoving
                     }
                     MotionEvent.ACTION_CANCEL -> {
-                        isMoving = false // Reset flag on cancel
+                        isMoving = false
                         return@setOnTouchListener false
                     }
                 }
             }
-            false // Don't consume if params are null
+            false
         }
     }
 
-    // --- Service Lifecycle & Foreground ---
+    private fun stopService() {
+        if (timerId > 0) {
+            instanceManager.releaseInstanceId(InstanceManager.TIMERS, timerId)
+            viewModel.deleteState()
+        }
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
+    }
+
     override fun onDestroy() {
         Log.d(TAG, "onDestroy")
         stateObserverJob?.cancel()
-        removeOverlayView()
-        viewModelStore.clear()
+        try {
+            removeOverlayView()
+        } finally {
+            viewModelStore.clear()
+        }
         super.onDestroy()
     }
 
@@ -540,9 +580,9 @@ class TimersService : LifecycleService(), ViewModelStoreOwner {
         val pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, pendingIntentFlags)
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Purramid Timer Active")
-            .setContentText("Timer or stopwatch is running.")
-            .setSmallIcon(R.drawable.ic_timer) // Use timer icon
+            .setContentTitle(getString(R.string.timer_notification_title))
+            .setContentText(getString(R.string.timer_notification_content))
+            .setSmallIcon(R.drawable.ic_timer)
             .setContentIntent(pendingIntent)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .build()
@@ -552,10 +592,117 @@ class TimersService : LifecycleService(), ViewModelStoreOwner {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "Timers Service Channel",
+                getString(R.string.timer_notification_channel_name),
                 NotificationManager.IMPORTANCE_LOW
             )
-            getSystemService(NotificationManager::class.java)?.createNotificationChannel(channel)
+            notificationManager.createNotificationChannel(channel)
+        }
+    }
+
+    private fun dpToPx(dp: Int): Int {
+        return TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_DIP,
+            dp.toFloat(),
+            resources.displayMetrics
+        ).toInt()
+    }
+
+    private fun applyNestedState(state: TimerState) {
+        if (state.isNested) {
+            layoutParams?.apply {
+                width = dpToPx(75)
+                height = dpToPx(75)
+
+                // If position not yet set, use default top-right
+                if (state.nestedX == -1 || state.nestedY == -1) {
+                    // Calculate top-right position with padding
+                    x = resources.displayMetrics.widthPixels - width - dpToPx(20)
+                    y = dpToPx(20)
+
+                    // Stack if other nested timers exist
+                    val nestedCount = getNestedTimerCount()
+                    y += (nestedCount * (height + dpToPx(10)))
+
+                    // Save the calculated position
+                    viewModel.updateNestedPosition(x, y)
+                } else {
+                    x = state.nestedX
+                    y = state.nestedY
+                }
+
+                gravity = Gravity.TOP or Gravity.START
+            }
+
+            // Hide control buttons for nested view
+            playPauseButton?.visibility = View.GONE
+            resetButtonCountdown?.visibility = View.GONE
+            lapResetButtonStopwatch?.visibility = View.GONE
+            settingsButton?.visibility = View.GONE
+            lapTimesLayout?.visibility = View.GONE
+            noLapsTextView?.visibility = View.GONE
+
+            // Keep only time display and close button visible
+            digitalTimeTextView?.textSize = 20f
+            centisecondsTextView?.textSize = 12f
+        } else {
+            // Restore normal view
+            playPauseButton?.visibility = View.VISIBLE
+            settingsButton?.visibility = View.VISIBLE
+
+            if (viewModel.uiState.value.type == TimerType.COUNTDOWN) {
+                resetButtonCountdown?.visibility = View.VISIBLE
+            } else {
+                lapResetButtonStopwatch?.visibility = View.VISIBLE
+                if (viewModel.uiState.value.showLapTimes) {
+                    if (viewModel.uiState.value.laps.isNotEmpty()) {
+                        lapTimesLayout?.visibility = View.VISIBLE
+                    } else {
+                        noLapsTextView?.visibility = View.VISIBLE
+                    }
+                }
+            }
+
+            digitalTimeTextView?.textSize = 36f
+            centisecondsTextView?.textSize = 20f
+        }
+
+        // Update layout if needed
+        if (isViewAdded && overlayView != null) {
+            try {
+                windowManager.updateViewLayout(overlayView, layoutParams)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error updating nested state layout", e)
+            }
+        }
+    }
+
+    private fun getNestedTimerCount(): Int {
+        // This would query all active timer instances to count how many are nested
+        // For now, return 0 as we need to implement cross-instance communication
+        return 0
+    }
+
+    private fun playButtonSound() {
+        val state = viewModel.uiState.value
+        if (state.soundsEnabled && state.type == TimerType.STOPWATCH) {
+            // Play a short beep sound
+            playBeepSound()
+        }
+    }
+
+    private fun playBeepSound() {
+        try {
+            // Use ToneGenerator for simple beep
+            val toneGen = android.media.ToneGenerator(
+                android.media.AudioManager.STREAM_NOTIFICATION,
+                100
+            )
+            toneGen.startTone(android.media.ToneGenerator.TONE_PROP_BEEP, 100)
+            Handler(Looper.getMainLooper()).postDelayed({
+                toneGen.release()
+            }, 200)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error playing beep sound", e)
         }
     }
 }

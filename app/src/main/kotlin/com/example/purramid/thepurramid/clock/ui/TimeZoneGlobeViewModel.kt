@@ -2,14 +2,16 @@ package com.example.purramid.thepurramid.clock.ui
 
 import android.graphics.Color
 import android.util.Log
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.purramid.thepurramid.clock.data.TimeZoneRepository
 import io.github.sceneview.math.Rotation
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import org.locationtech.jts.geom.Polygon
 import java.time.Instant
 import java.time.ZoneId
@@ -20,7 +22,6 @@ import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
-import kotlinx.coroutines.launch
 
 // Data class to hold processed info for overlays
 data class TimeZoneOverlayInfo(
@@ -36,7 +37,7 @@ data class TimeZoneGlobeUiState(
     val timeZoneOverlays: List<TimeZoneOverlayInfo> = emptyList(),
     val activeTimeZoneId: String? = TimeZone.getDefault().id, // Initial default
     val activeTimeZoneInfo: ActiveZoneDisplayInfo? = null,
-    val currentRotation: Rotation = Rotation(0f, 0f, 0f)
+    val currentRotation: Rotation = Rotation(0f, 0f, 0f),
     val targetRotation: Rotation? = null
 )
 
@@ -56,8 +57,8 @@ class TimeZoneGlobeViewModel @Inject constructor(
 
     private val TAG = "TimeZoneGlobeViewModel"
 
-    private val _uiState = MutableLiveData(TimeZoneGlobeUiState())
-    val uiState: LiveData<TimeZoneGlobeUiState> = _uiState
+    private val _uiState = MutableStateFlow(TimeZoneGlobeUiState())
+    val uiState: StateFlow<TimeZoneGlobeUiState> = _uiState.asStateFlow()
 
     // Keep track of raw polygon data separate from UI overlay info
     private var rawTimeZonePolygons: Map<String, List<Polygon>> = emptyMap()
@@ -110,26 +111,26 @@ class TimeZoneGlobeViewModel @Inject constructor(
     }
 
     private fun loadTimeZoneData() {
-        _uiState.value = _uiState.value?.copy(isLoading = true, error = null)
+        _uiState.update { it.copy(isLoading = true, error = null) }
         viewModelScope.launch {
             val polygonResult = repository.getTimeZonePolygons()
             if (polygonResult.isFailure) {
                 // Handle error...
-                _uiState.value = _uiState.value?.copy(isLoading = false, error = "Failed to load boundaries")
+                _uiState.update { it.copy(isLoading = false, error = "Failed to load boundaries") }
                 return@launch
             }
             rawTimeZonePolygons = polygonResult.getOrNull() ?: emptyMap()
             calculateAllTimeZoneOffsets()
             calculateAllOffsetCenters()
             processDataForUi()
-            updateActiveZoneInfo(_uiState.value?.activeTimeZoneId) // Update info for default zone
+            updateActiveZoneInfo(_uiState.value.activeTimeZoneId) // Update info for default zone
         }
     }
 
     // Processes raw polygons and offsets into list of TimeZoneOverlayInfo for the UI
     private fun processDataForUi() {
         val overlays = mutableListOf<TimeZoneOverlayInfo>()
-        val activeId = _uiState.value?.activeTimeZoneId
+        val activeId = _uiState.value.activeTimeZoneId
 
         // Group by offset for coloring (similar to previous logic)
         val offsetsGrouped = timeZoneOffsets.entries.groupBy { it.value / 3600.0 }
@@ -158,18 +159,20 @@ class TimeZoneGlobeViewModel @Inject constructor(
             overlays.add(TimeZoneOverlayInfo(tzId, polygons, zoneColor))
         }
 
-        _uiState.value = _uiState.value?.copy(
-            isLoading = false,
-            timeZoneOverlays = overlays,
-            error = null
-        )
+        _uiState.update {
+            it.copy(
+                isLoading = false,
+                timeZoneOverlays = overlays,
+                error = null
+            )
+        }
         Log.d(TAG, "Processed ${overlays.size} overlays for UI.")
     }
 
     // Call this when the user interacts or system default changes
     fun setActiveTimeZone(tzId: String) {
-        if (_uiState.value?.activeTimeZoneId != tzId) {
-            _uiState.value = _uiState.value?.copy(activeTimeZoneId = tzId)
+        if (_uiState.value.activeTimeZoneId != tzId) {
+            _uiState.update { it.copy(activeTimeZoneId = tzId) }
             processDataForUi() // Re-process to update active color
             updateActiveZoneInfo(tzId) // Update text info
         }
@@ -177,10 +180,9 @@ class TimeZoneGlobeViewModel @Inject constructor(
 
     // Updates the display text info for the active zone
     private fun updateActiveZoneInfo(timeZoneId: String?) {
-        _uiState.value = _uiState.value?.copy(activeTimeZoneInfo = null)
+        _uiState.update { it.copy(activeTimeZoneInfo = null) }
         if (timeZoneId == null) {
-            val offsetString = getFormattedOffset(timeZoneId) ?: "Invalid Zone"
-            // return
+            return
         }
 
         try {
@@ -194,19 +196,37 @@ class TimeZoneGlobeViewModel @Inject constructor(
                 else -> "UTC${if (offsetHours >= 0) "+" else ""}${offsetHours}${if (offsetMinutes > 0) ":${"%02d".format(offsetMinutes)}" else ""}"
             }
 
-            // --- TODO: Find Representative Cities ---
-            val northernCity = timeZoneId.substringAfterLast('/', timeZoneId).replace('_', ' ') + " (N)"
-            val southernCity = "(City lookup TBD)"
-            // --- End TODO ---
-
-            _uiState.value = _uiState.value?.copy(
-                activeTimeZoneInfo = ActiveZoneDisplayInfo(northernCity, southernCity, offsetString)
-            )
-            Log.d(TAG, "Updated active zone info for: $timeZoneId ($offsetString)")
+            // Find representative cities for this timezone
+            viewModelScope.launch {
+                try {
+                    val cities = repository.getCitiesForTimeZone(timeZoneId)
+                    val northernCities = cities.filter { it.latitude > 0 }.sortedBy { it.latitude }.reversed()
+                    val southernCities = cities.filter { it.latitude < 0 }.sortedBy { it.latitude }
+                    
+                    val northernCity = northernCities.firstOrNull()?.let { "${it.name}, ${it.country}" } ?: "No northern city"
+                    val southernCity = southernCities.firstOrNull()?.let { "${it.name}, ${it.country}" } ?: "No southern city"
+                    
+                    _uiState.update {
+                        it.copy(
+                            activeTimeZoneInfo = ActiveZoneDisplayInfo(northernCity, southernCity, offsetString)
+                        )
+                    }
+                    Log.d(TAG, "Updated active zone info for: $timeZoneId ($offsetString)")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error fetching cities for $timeZoneId", e)
+                    // Fallback to basic info
+                    val fallbackCity = timeZoneId.substringAfterLast('/', timeZoneId).replace('_', ' ')
+                    _uiState.update {
+                        it.copy(
+                            activeTimeZoneInfo = ActiveZoneDisplayInfo(fallbackCity, "City lookup failed", offsetString)
+                        )
+                    }
+                }
+            }
 
         } catch (e: Exception) {
             Log.e(TAG, "Error updating info display for $timeZoneId", e)
-            _uiState.value = _uiState.value?.copy(activeTimeZoneInfo = null) // Clear info on error
+            _uiState.update { it.copy(activeTimeZoneInfo = null) } // Clear info on error
         }
     }
 
@@ -246,7 +266,7 @@ class TimeZoneGlobeViewModel @Inject constructor(
     // --- New: Function called by Activity buttons ---
     // --- Updated: Rotate using the sorted list of all offsets ---
     fun rotateToAdjacentZone(direction: RotationDirection) {
-        val currentState = _uiState.value ?: return
+        val currentState = _uiState.value
         if (sortedOffsets.isEmpty() || offsetCenterLongitudes.isEmpty()) {
             Log.w(TAG, "Offset centers not calculated yet.")
             return
@@ -290,15 +310,19 @@ class TimeZoneGlobeViewModel @Inject constructor(
             x = currentState.currentRotation.x,
             y = finalTargetYRotation,
             z = currentState.currentRotation.z
+        )
 
         val newTargetRotation = Rotation(
             x = currentState.currentRotation.x, // Keep current pitch
             y = finalTargetYRotation,
             z = currentState.currentRotation.z  // Keep current roll
-        _uiState.value = currentState.copy(
-            targetRotation = newTargetRotation,
-            currentRotation = newTargetRotation // Update logical current to match target immediately for next calc
         )
+        _uiState.update {
+            it.copy(
+                targetRotation = newTargetRotation,
+                currentRotation = newTargetRotation // Update logical current to match target immediately for next calc
+            )
+        }
         Log.d(TAG, "Setting target rotation to: $newTargetRotation")
     }
 
@@ -313,18 +337,58 @@ class TimeZoneGlobeViewModel @Inject constructor(
     }
 
     fun updateRotation(newRotation: Rotation) {
-        _uiState.value = _uiState.value?.copy(
-            currentRotation = newRotation,
-            targetRotation = null // Clear any previous animation target
-        )
+        _uiState.update {
+            it.copy(
+                currentRotation = newRotation,
+                targetRotation = null // Clear any previous animation target
+            )
+        }
     }
 
     fun resetRotation() {
         val zeroRotation = Rotation(0f, 0f, 0f)
         // Set both current and target to trigger potential animation/snap to zero
-        _uiState.value = _uiState.value?.copy(
-            currentRotation = zeroRotation,
-            targetRotation = zeroRotation
-        )
+        _uiState.update {
+            it.copy(
+                currentRotation = zeroRotation,
+                targetRotation = zeroRotation
+            )
+        }
     }
+
+    // Helper methods that were missing
+    private fun calculateAllTimeZoneOffsets() {
+        timeZoneOffsets.clear()
+        rawTimeZonePolygons.keys.forEach { tzId ->
+            try {
+                val zoneId = ZoneId.of(tzId)
+                val now = ZonedDateTime.now(zoneId)
+                val offsetSeconds = now.offset.totalSeconds
+                timeZoneOffsets[tzId] = offsetSeconds
+            } catch (e: Exception) {
+                Log.w(TAG, "Could not calculate offset for timezone: $tzId", e)
+            }
+        }
+    }
+
+    private fun getFormattedOffset(timeZoneId: String?): String? {
+        if (timeZoneId == null) return null
+        try {
+            val zoneId = ZoneId.of(timeZoneId)
+            val now = ZonedDateTime.now(zoneId)
+            val offset = now.offset
+            val offsetHours = offset.totalSeconds / 3600
+            val offsetMinutes = abs((offset.totalSeconds % 3600) / 60)
+            return when {
+                offset.totalSeconds == 0 -> "UTC"
+                else -> "UTC${if (offsetHours >= 0) "+" else ""}${offsetHours}${if (offsetMinutes > 0) ":${"%02d".format(offsetMinutes)}" else ""}"
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error formatting offset for $timeZoneId", e)
+            return null
+        }
+    }
+
+    // Missing property that was referenced
+    private val hourlyOffsetCenterLongitudes = mutableMapOf<Int, Float>()
 }

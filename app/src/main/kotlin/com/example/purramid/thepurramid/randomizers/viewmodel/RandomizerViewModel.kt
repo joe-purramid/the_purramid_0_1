@@ -42,37 +42,12 @@ class RandomizerViewModel @Inject constructor(
     }
 
     // --- State ---
-    internal val instanceId: UUID = savedStateHandle.get<String>(KEY_INSTANCE_ID)?.let {
-        try { UUID.fromString(it) } catch (e: IllegalArgumentException) { null }
-    } ?: UUID.randomUUID().also { newId ->
-        savedStateHandle[KEY_INSTANCE_ID] = newId.toString()
-        viewModelScope.launch(Dispatchers.IO) { // Add Dispatcher
-            randomizerDao.saveInstance(RandomizerInstanceEntity(instanceId = newId))
-
-            // Get default lists
-            val allLists = randomizerDao.getAllSpinListsNonLiveData()
-            val firstListId = allLists?.firstOrNull()?.id // Get the ID of the first list
-
-            // Get settings
-            val defaultSettings = randomizerDao.getDefaultSettings()
-            val initialSettings = SpinSettingsEntity(instanceId = newId, currentListId = firstListId)
-            randomizerDao.saveSettings(initialSettings)
-
-            // Post value back to main thread if initializing LiveData from background
-            withContext(Dispatchers.Main) {
-                if (_spinDialData.value == null) { _spinDialData.value = SpinDialViewData() }
-                _spinDialData.value = _spinDialData.value?.copy(settings = initialSettings)
-                firstListId?.let {
-                    savedStateHandle["currentListId"] = it.toString()
-                }
-            }
-        }
-    }
+    internal val instanceId: Int = savedStateHandle.get<Int>(KEY_INSTANCE_ID) ?: 0
 
     private val _currentListId = savedStateHandle.getLiveData<String?>("currentListId")
         .map { it?.let { uuidString -> UUID.fromString(uuidString) } }
 
-    val allSpinLists: LiveData<List<SpinListEntity>> = randomizerDao.getAllSpinLists() // Define only once
+    val allSpinLists: LiveData<List<SpinListEntity>> = randomizerDao.getAllSpinLists()
 
     private val _spinDialData = MutableLiveData<SpinDialViewData>()
     val spinDialData: LiveData<SpinDialViewData> = _spinDialData
@@ -103,8 +78,11 @@ class RandomizerViewModel @Inject constructor(
         if (_spinDialData.value == null) {
             _spinDialData.value = SpinDialViewData()
         }
-        if (savedStateHandle.contains(KEY_INSTANCE_ID)) {
+        
+        if (instanceId > 0) {
             loadDataForInstance(instanceId)
+        } else {
+            Log.e(TAG, "Invalid instanceId: $instanceId")
         }
 
         // Keep only one set of these observers
@@ -127,7 +105,6 @@ class RandomizerViewModel @Inject constructor(
     }
 
     private fun updateDisplayedListOrder(fullList: List<SpinListEntity>?, currentId: UUID?) {
-        // ... (implementation remains the same) ...
         if (fullList == null) {
             _displayedListOrder.value = emptyList()
             return
@@ -142,12 +119,10 @@ class RandomizerViewModel @Inject constructor(
         _displayedListOrder.value = sortedList
     }
 
-    private fun loadDataForInstance(idToLoad: UUID) {
-        viewModelScope.launch(Dispatchers.IO) { // Add Dispatcher
+    private fun loadDataForInstance(idToLoad: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
             val settings = randomizerDao.getSettingsForInstance(idToLoad)
-            // Post value back to main thread
             withContext(Dispatchers.Main) {
-                // Apply null check here
                 _spinDialData.value = _spinDialData.value?.copy(settings = settings)
                 if (_currentListId.value == null && settings?.currentListId != null) {
                     savedStateHandle["currentListId"] = settings.currentListId.toString()
@@ -159,10 +134,9 @@ class RandomizerViewModel @Inject constructor(
     }
 
     private fun loadItemsForList(listId: UUID) {
-        viewModelScope.launch(Dispatchers.IO) { // Add Dispatcher
+        viewModelScope.launch(Dispatchers.IO) {
             val items = randomizerDao.getItemsForList(listId)
             val randomizedItems = items.shuffled()
-            // Post value back to main thread
             withContext(Dispatchers.Main) {
                 _spinDialData.value = _spinDialData.value?.copy(items = randomizedItems)
             }
@@ -171,7 +145,6 @@ class RandomizerViewModel @Inject constructor(
 
     // --- UI Event Handlers ---
     fun handleSpinRequest() {
-        // ... (implementation remains the same) ...
         val currentSettings = _spinDialData.value?.settings ?: return
         val currentItems = _spinDialData.value?.items ?: return
         if (currentItems.isEmpty()) {
@@ -190,7 +163,7 @@ class RandomizerViewModel @Inject constructor(
             if (currentSettings.isSequenceEnabled) {
                 generateSequence(selectedItem)
             } else {
-                _spinDialData.postValue( // Use postValue if already on background, or switch context
+                _spinDialData.postValue(
                     _spinDialData.value?.copy(
                         items = currentItems.sortedByDescending { it.id == selectedItem.id }
                     )
@@ -286,18 +259,20 @@ class RandomizerViewModel @Inject constructor(
      * Deletes the instance-specific settings and its registration from the database.
      */
     fun handleManualClose() {
-        instanceId?.let { idToClose ->
-            Log.d(TAG, "handleManualClose called for instanceId: $idToClose")
+        if (instanceId > 0) {
+            Log.d(TAG, "handleManualClose called for instanceId: $instanceId")
             viewModelScope.launch(Dispatchers.IO) {
                 try {
-                    randomizerDao.deleteSettingsForInstance(idToClose)
-                    randomizerDao.deleteInstance(RandomizerInstanceEntity(instanceId = idToClose))
-                    Log.d(TAG, "Successfully deleted settings and instance record for $idToClose from DB.")
+                    randomizerDao.deleteSettingsForInstance(instanceId)
+                    randomizerDao.deleteInstance(RandomizerInstanceEntity(instanceId = instanceId))
+                    Log.d(TAG, "Successfully deleted settings and instance record for $instanceId from DB.")
                 } catch (e: Exception) {
-                    Log.e(TAG, "Error deleting data for instance $idToClose from DB", e)
+                    Log.e(TAG, "Error deleting data for instance $instanceId from DB", e)
                 }
             }
-        } ?: Log.w(TAG, "handleManualClose called but instanceId is null.")
+        } else {
+            Log.w(TAG, "handleManualClose called but instanceId is invalid.")
+        }
     }
 
     override fun onCleared() {
@@ -391,10 +366,11 @@ class RandomizerViewModel @Inject constructor(
 
     fun deleteItem(item: SpinItemEntity) {
         viewModelScope.launch(Dispatchers.IO) { // Add Dispatcher
-            randomizerDao.deleteItem(item)
+            randomizerDao.deleteSpinItem(item)
             if (_currentListId.value == item.listId) {
                 loadItemsForList(item.listId)
             }
         }
     }
 }
+

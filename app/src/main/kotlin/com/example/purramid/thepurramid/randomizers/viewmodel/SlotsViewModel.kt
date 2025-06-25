@@ -35,16 +35,12 @@ class SlotsViewModel @Inject constructor(
 ) : ViewModel() {
 
     companion object {
-        // Key to get instanceId from SavedStateHandle (passed via NavArgs/Intent)
-        // Ensure this matches the key used in navigation/intent passing
-        const val KEY_INSTANCE_ID = "instanceId" // Or use RandomizerSettingsViewModel.KEY_INSTANCE_ID
+        const val KEY_INSTANCE_ID = "instanceId"
         private const val TAG = "SlotsViewModel"
         const val DEFAULT_NUM_COLUMNS = 3
     }
 
-    private val instanceId: UUID? = savedStateHandle.get<String>(KEY_INSTANCE_ID)?.let {
-        try { UUID.fromString(it) } catch (e: IllegalArgumentException) { null }
-    }
+    private val instanceId: Int = savedStateHandle.get<Int>(KEY_INSTANCE_ID) ?: 0
 
     // Overall settings for this instance
     private val _settings = MutableLiveData<SpinSettingsEntity?>()
@@ -74,7 +70,7 @@ class SlotsViewModel @Inject constructor(
     private val fetchJobs = ConcurrentHashMap<UUID, Deferred<List<SpinItemEntity>>>()
 
     init {
-        if (instanceId != null) {
+        if (instanceId > 0) {
             loadInitialState(instanceId)
         } else {
             _errorEvent.postValue("SlotsViewModel: Missing or invalid Instance ID.")
@@ -99,7 +95,7 @@ class SlotsViewModel @Inject constructor(
         }
     }
 
-    private fun loadInitialState(id: UUID) {
+    private fun loadInitialState(id: Int) {
         viewModelScope.launch(Dispatchers.IO) {
             val loadedSettings = randomizerDao.getSettingsForInstance(id)
             withContext(Dispatchers.Main) {
@@ -222,18 +218,20 @@ class SlotsViewModel @Inject constructor(
     }
 
     fun handleManualClose() {
-        instanceId?.let { idToClose ->
-            Log.d(TAG, "handleManualClose called for instanceId: $idToClose")
+        if (instanceId > 0) {
+            Log.d(TAG, "handleManualClose called for instanceId: $instanceId")
             viewModelScope.launch(Dispatchers.IO) {
                 try {
-                    randomizerDao.deleteSettingsForInstance(idToClose)
-                    randomizerDao.deleteInstance(RandomizerInstanceEntity(instanceId = idToClose))
-                    Log.d(TAG, "Successfully deleted settings and instance record for $idToClose from DB.")
+                    randomizerDao.deleteSettingsForInstance(instanceId)
+                    randomizerDao.deleteInstance(RandomizerInstanceEntity(instanceId = instanceId))
+                    Log.d(TAG, "Successfully deleted settings and instance record for $instanceId from DB.")
                 } catch (e: Exception) {
-                    Log.e(TAG, "Error deleting data for instance $idToClose from DB", e)
+                    Log.e(TAG, "Error deleting data for instance $instanceId from DB", e)
                 }
             }
-        } ?: Log.w(TAG, "handleManualClose called but instanceId is null.")
+        } else {
+            Log.w(TAG, "handleManualClose called but instanceId is invalid.")
+        }
     }
 
     // --- Cleanup in onCleared ---
@@ -324,7 +322,7 @@ class SlotsViewModel @Inject constructor(
 
     // --- Persistence ---
     private fun saveCurrentState() {
-        if (instanceId == null) return
+        if (instanceId <= 0) return
         val currentSettings = _settings.value ?: return
         val currentColumns = _columnStates.value ?: return
 
@@ -343,4 +341,5 @@ class SlotsViewModel @Inject constructor(
             randomizerDao.saveSettings(settingsToSave)
         }
     }
+}
 }

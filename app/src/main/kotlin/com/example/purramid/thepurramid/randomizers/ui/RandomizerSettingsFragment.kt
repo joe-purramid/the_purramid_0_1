@@ -34,17 +34,16 @@ import com.example.purramid.thepurramid.data.db.SpinSettingsEntity
 import com.example.purramid.thepurramid.databinding.FragmentRandomizerSettingsBinding
 import com.example.purramid.thepurramid.randomizers.DiceSumResultType
 import com.example.purramid.thepurramid.randomizers.GraphDistributionType
-import com.example.purramid.thepurramid.randomizers.PlotType // Your new enum
+import com.example.purramid.thepurramid.randomizers.PlotType
 import com.example.purramid.thepurramid.randomizers.RandomizerMode
 import com.example.purramid.thepurramid.randomizers.RandomizersHostActivity
 import com.example.purramid.thepurramid.randomizers.viewmodel.RandomizerSettingsViewModel
-import com.example.purramid.thepurramid.ui.PurramidPalette // For color picker
+import com.example.purramid.thepurramid.ui.PurramidPalette
 import com.google.android.material.chip.Chip
 import com.google.android.material.colorpicker.MaterialColorPickerDialog
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
-import java.util.UUID
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -59,10 +58,10 @@ class RandomizerSettingsFragment : Fragment() {
     private val args: RandomizerSettingsFragmentArgs by navArgs()
 
     private lateinit var currentSettingsEntity: SpinSettingsEntity
-    private var initialBackgroundColor: Int = Color.BLACK // Default or from palette
+    private var initialBackgroundColor: Int = Color.BLACK
 
     @Inject
-    lateinit var randomizerDao: RandomizerDao // Injected for "Add Another" functionality
+    lateinit var randomizerDao: RandomizerDao
 
     companion object {
         private const val TAG = "RandomizerSettingsFrag"
@@ -90,9 +89,6 @@ class RandomizerSettingsFragment : Fragment() {
         settingsViewModel.settings.observe(viewLifecycleOwner) { settings ->
             if (settings == null) {
                 Log.e(TAG, "Settings are null for instanceId: ${args.instanceId}. Attempting to re-load or use defaults.")
-                // Attempt to re-trigger load or create defaults if this state is unexpected.
-                // For now, we might disable UI or show error.
-                // binding.mainSettingsContainer.isVisible = false // Example
                 return@observe
             }
             Log.d(TAG, "Settings observed: ${settings.instanceId}, Mode: ${settings.mode}")
@@ -106,9 +102,6 @@ class RandomizerSettingsFragment : Fragment() {
                 Snackbar.make(binding.root, errorMessage, Snackbar.LENGTH_LONG).show()
             }
         }
-        // If instanceId is passed via navArgs, ViewModel uses SavedStateHandle to get it and load.
-        // Explicit call to settingsViewModel.loadSettings(args.instanceId) is generally not needed
-        // if ViewModel's init block handles loading via SavedStateHandle.
     }
 
     private fun updateUiWithSettings() {
@@ -347,14 +340,11 @@ class RandomizerSettingsFragment : Fragment() {
         binding.textFieldSpinMaxItems.doAfterTextChanged { text -> if (::currentSettingsEntity.isInitialized) currentSettingsEntity = currentSettingsEntity.copy(spinMaxItems = text.toString().toIntOrNull() ?: 20) }
         binding.buttonEditSpinList.setOnClickListener {
             if (!::currentSettingsEntity.isInitialized) return@setOnClickListener
-            val instanceIdString = currentSettingsEntity.instanceId.toString()
+            val instanceIdInt = currentSettingsEntity.instanceId
             val listIdToEdit = currentSettingsEntity.currentSpinListId
-            // You'll need a NavAction that can take both instanceId and an optional listId
-            // If listIdToEdit is null, ListEditorActivity treats it as "create new for this instance"
-            // If listIdToEdit is not null, ListEditorActivity loads that list.
             val action = RandomizerSettingsFragmentDirections.actionRandomizerSettingsFragmentToListEditorActivity(
-                instanceId = instanceIdString,
-                listId = listIdToEdit ?: -1L // Pass -1L or another indicator for "new list" if your editor expects a Long
+                instanceId = instanceIdInt,
+                listId = listIdToEdit ?: -1L
             )
             findNavController().navigate(action)
         }
@@ -370,7 +360,7 @@ class RandomizerSettingsFragment : Fragment() {
                 val newColumnCount = when (checkedId) {
                     R.id.buttonSlotsColumns3 -> 3
                     R.id.buttonSlotsColumns5 -> 5
-                    else -> currentSettingsEntity.numSlotsColumns // Should not happen
+                    else -> currentSettingsEntity.numSlotsColumns
                 }
                 if (currentSettingsEntity.numSlotsColumns != newColumnCount) {
                     currentSettingsEntity = currentSettingsEntity.copy(numSlotsColumns = newColumnCount)
@@ -382,7 +372,7 @@ class RandomizerSettingsFragment : Fragment() {
         binding.switchDiceAnimationEnabled.setOnCheckedChangeListener { _, isChecked -> if (::currentSettingsEntity.isInitialized) currentSettingsEntity = currentSettingsEntity.copy(isDiceAnimationEnabled = isChecked) }
         binding.switchDiceSumResultsEnabled.setOnCheckedChangeListener { _, isChecked -> if (::currentSettingsEntity.isInitialized) currentSettingsEntity = currentSettingsEntity.copy(isDiceSumResultsEnabled = isChecked) }
         binding.switchDicePips.setOnCheckedChangeListener { _, isChecked -> if (::currentSettingsEntity.isInitialized) currentSettingsEntity = currentSettingsEntity.copy(useDicePips = isChecked) }
-        binding.switchDiceResultAnnouncement.setOnCheckedChangeListener { _, isChecked -> if (::currentSettingsEntity.isInitialized) currentSettingsEntity = currentSettingsEntity.copy(isAnnounceEnabled = isChecked) } // Re-uses isAnnounceEnabled
+        binding.switchDiceResultAnnouncement.setOnCheckedChangeListener { _, isChecked -> if (::currentSettingsEntity.isInitialized) currentSettingsEntity = currentSettingsEntity.copy(isAnnounceEnabled = isChecked) }
         binding.switchDiceCritCelebration.setOnCheckedChangeListener { _, isChecked -> if (::currentSettingsEntity.isInitialized) currentSettingsEntity = currentSettingsEntity.copy(isDiceCritCelebrationEnabled = isChecked) }
         binding.buttonManageDicePool.setOnClickListener { if (::currentSettingsEntity.isInitialized) DicePoolDialogFragment.newInstance(currentSettingsEntity.instanceId).show(parentFragmentManager, DicePoolDialogFragment.TAG) }
         binding.buttonManageDiceModifiers.setOnClickListener { if (::currentSettingsEntity.isInitialized) DiceModifiersDialogFragment.newInstance(currentSettingsEntity.instanceId).show(parentFragmentManager, DiceModifiersDialogFragment.TAG) }
@@ -395,7 +385,7 @@ class RandomizerSettingsFragment : Fragment() {
                 binding.diceGraphPlotTypeLayout.visibility = visibility
                 binding.diceGraphDistributionTypeLayout.visibility = visibility
                 binding.diceGraphFlipCountLayout.visibility = visibility
-                if (isChecked) { // If enabling, ensure dropdowns are populated/refreshed
+                if (isChecked) {
                     setupGraphPlotTypeDropdown(binding.diceGraphPlotTypeDropDown, currentSettingsEntity.diceGraphPlotType, PlotType.HISTOGRAM, true)
                     setupGraphDistributionTypeDropdown(binding.diceGraphDistributionTypeDropDown, currentSettingsEntity.diceGraphDistributionType, GraphDistributionType.SUM_OF_ALL_DICE, true)
                 }
@@ -432,22 +422,22 @@ class RandomizerSettingsFragment : Fragment() {
             if (::currentSettingsEntity.isInitialized) {
                 currentSettingsEntity = currentSettingsEntity.copy(isCoinGraphEnabled = isChecked)
                 val visibility = if (isChecked) View.VISIBLE else View.GONE
-                binding.menuCoinGraphPlotTypeLayout.visibility = visibility // Use your actual ID
+                binding.menuCoinGraphPlotTypeLayout.visibility = visibility
                 binding.coinGraphDistributionTypeLayout.visibility = visibility
                 binding.coinGraphFlipCountLayout.visibility = visibility
-                if (isChecked) { // If enabling, ensure dropdowns are populated/refreshed
+                if (isChecked) {
                     setupGraphPlotTypeDropdown(binding.autoCompleteCoinGraphPlotType, currentSettingsEntity.coinGraphPlotType, PlotType.HISTOGRAM, false)
                     setupGraphDistributionTypeDropdown(binding.coinGraphDistributionTypeDropDown, currentSettingsEntity.coinGraphDistributionType, GraphDistributionType.NONE, false)
                 }
             }
         }
-        binding.autoCompleteCoinGraphPlotType.onItemClickListener = AdapterView.OnItemClickListener { _, _, position, _ -> // Use your actual ID
+        binding.autoCompleteCoinGraphPlotType.onItemClickListener = AdapterView.OnItemClickListener { _, _, position, _ ->
             if (::currentSettingsEntity.isInitialized) {
                 val selectedPlotType = PlotType.values()[position]
                 currentSettingsEntity = currentSettingsEntity.copy(coinGraphPlotType = selectedPlotType.name)
             }
         }
-        binding.coinGraphDistributionTypeDropDown.onItemClickListener = AdapterView.OnItemClickListener { _, _, position, _ -> // Use your actual ID
+        binding.coinGraphDistributionTypeDropDown.onItemClickListener = AdapterView.OnItemClickListener { _, _, position, _ ->
             if (::currentSettingsEntity.isInitialized) {
                 val selectedDistType = GraphDistributionType.values()[position]
                 currentSettingsEntity = currentSettingsEntity.copy(coinGraphDistributionType = selectedDistType.name)
@@ -547,39 +537,33 @@ class RandomizerSettingsFragment : Fragment() {
                 return@launch
             }
 
-            // Save current settings BEFORE cloning, so the clone gets the latest changes.
             settingsViewModel.saveSettings(currentSettingsEntity)
 
-            val newInstanceId = UUID.randomUUID()
+            // Get next available instanceId from the instance manager
+            val newInstanceId = withContext(Dispatchers.IO) {
+                // This should use the InstanceManager to get the next available instanceId
+                // For now, we'll use a simple approach - find the next available ID
+                val existingIds = randomizerDao.getAllStates().map { it.instanceId }.toSet()
+                (1..MAX_RANDOMIZER_INSTANCES).find { it !in existingIds } ?: 1
+            }
+
             val newSettings = currentSettingsEntity.copy(
                 instanceId = newInstanceId,
-                // Reset any instance-specific states if necessary
-                slotsColumnStates = emptyList(), // Example
-                // Consider if graph data should be cloned or reset for the new instance
-                // For now, graph-related settings are cloned, but accumulated graph data is not.
-                // Resetting fields like spin list ID, slots list ID if they shouldn't be shared.
-                currentSpinListId = null // Example: New instance starts with no list selected
+                slotsColumnStates = emptyList(),
+                currentSpinListId = null
             )
             val newInstanceEntity = RandomizerInstanceEntity(instanceId = newInstanceId)
 
             try {
                 withContext(Dispatchers.IO) {
-                    randomizerDao.saveSettings(newSettings) // Save settings for the NEW instance
-                    randomizerDao.saveInstance(newInstanceEntity) // Save the NEW instance record
+                    randomizerDao.saveSettings(newSettings)
+                    randomizerDao.saveInstance(newInstanceEntity)
                 }
                 Log.d(TAG, "Cloned settings from ${currentSettingsEntity.instanceId} and created new instance: $newInstanceId")
 
-                // Launch the new RandomizersHostActivity with the NEW instance ID
-                (activity as? MainActivity)?.launchNewRandomizerInstanceWithBounds(newInstanceId.toString())
+                (activity as? MainActivity)?.launchNewRandomizerInstanceWithBounds(newInstanceId)
 
-
-                // The RandomizerSettingsViewModel has a cloneSettingsForNewInstance method.
-                // The current logic in this fragment directly creates and saves the new settings.
-                // This is a valid approach. The ViewModel's method might be for a different cloning trigger.
-
-                updateAddAnotherButtonState() // Refresh button state
-                // Potentially close this settings window or navigate, depending on UX desired
-                // activity?.finish() // Closes the current RandomizersHostActivity window
+                updateAddAnotherButtonState()
 
             } catch (e: Exception) {
                 Log.e(TAG, "Error saving new cloned instance or launching activity", e)

@@ -12,11 +12,6 @@ fun Context.dpToPx(dp: Int): Int {
     ).toInt()
 }
 
-// You can also add one for Float if you need more precision before converting to Int
-fun Context.dpToPxF(dp: Float): Float {
-    return TypedValue.applyDimension(
-        TypedValue.COMPLEX_UNIT_DIP,
-        dp,
-        this.resources.displayMetrics
-    )
+fun Context.pxToDp(px: Int): Int {
+    return (px / resources.displayMetrics.density).toInt()
 }

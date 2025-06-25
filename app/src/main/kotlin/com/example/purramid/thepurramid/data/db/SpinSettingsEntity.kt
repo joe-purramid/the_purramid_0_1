@@ -20,7 +20,7 @@ const val DEFAULT_COIN_COLOR_INT = 0xFFDAA520.toInt()
 
 @Entity(tableName = "spin_settings")
 data class SpinSettingsEntity(
-    @PrimaryKey val instanceId: UUID,
+    @PrimaryKey val instanceId: Int,
 
     var mode: RandomizerMode = RandomizerMode.SPIN,
 
@@ -28,15 +28,24 @@ data class SpinSettingsEntity(
     var currentListId: UUID? = null, // ID of the currently selected list
     var isAnnounceEnabled: Boolean = false,
     var isCelebrateEnabled: Boolean = false,
+    var backgroundColor: Int = 0xFF000000.toInt(), // Default black background
 
     // --- Spin Specific ---
     var isSpinEnabled: Boolean = true,
     var isSequenceEnabled: Boolean = false,
+    var isSoundEnabled: Boolean = true,
+    var isConfettiEnabled: Boolean = false,
+    var spinDurationMillis: Long = 2000L,
+    var spinMaxItems: Int = 20,
     val currentSpinListId: Long? = null, // Assuming Long is the type of your List ID
 
     // --- Slots Specific ---
     val numSlotsColumns: Int = 3, // Default to 3 columns
     var slotsColumnStates: List<SlotsColumnState> = emptyList(), // List to hold state for each column
+    var isSlotsSoundEnabled: Boolean = true,
+    var isSlotsAnnounceResultEnabled: Boolean = false,
+    var slotsSpinDuration: Long = 1000L,
+    var slotsReelStopVariation: Long = 200L,
     val currentSlotsListId: Long? = null,
 
     // --- Dice Specific ---
@@ -48,9 +57,12 @@ data class SpinSettingsEntity(
     var isPercentileDiceEnabled: Boolean = false, // Default off
     var isDiceAnimationEnabled: Boolean = true, // Default on
     var isDiceCritCelebrationEnabled: Boolean = false, // Default off
+    var isDiceSumResultsEnabled: Boolean = true,
+    var isDiceGraphEnabled: Boolean = false,
     var diceSumResultType: DiceSumResultType = DiceSumResultType.INDIVIDUAL, // Default
     var graphDistributionType: GraphDistributionType = GraphDistributionType.OFF, // Default off
     var diceGraphPlotType: String = GraphPlotType.HISTOGRAM.name, // Default solid
+    var diceGraphFlipCount: Int = 1000,
     var graphRollCount: Int = 1000, // Default for Normal/Uniform
 
     // --- Coin Flip Mode Specific ---

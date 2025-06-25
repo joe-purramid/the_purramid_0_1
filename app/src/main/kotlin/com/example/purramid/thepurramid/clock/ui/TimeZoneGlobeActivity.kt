@@ -1,5 +1,8 @@
 package com.example.purramid.thepurramid.clock.ui
 
+import android.animation.ValueAnimator
+import android.animation.TypeEvaluator
+import android.view.animation.AccelerateDecelerateInterpolator
 import android.os.Bundle
 import android.util.Log
 import android.view.MotionEvent
@@ -27,6 +30,7 @@ import io.github.sceneview.node.Node
 import io.github.sceneview.utils.Color as SceneViewColor
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.collectLatest
 import org.locationtech.jts.geom.Polygon
 import java.io.IOException
 import java.nio.FloatBuffer
@@ -39,6 +43,7 @@ import com.example.purramid.thepurramid.clock.ui.TimeZoneGlobeUiState
 import com.example.purramid.thepurramid.clock.ui.TimeZoneGlobeViewModel
 import com.example.purramid.thepurramid.clock.ui.TimeZoneOverlayInfo
 import com.example.purramid.thepurramid.clock.ui.RotationDirection // Import Enum
+import com.google.android.material.snackbar.Snackbar
 
 @AndroidEntryPoint // Enable Hilt Injection
 class TimeZoneGlobeActivity : AppCompatActivity(R.layout.activity_time_zone_globe) { // Use constructor injection for layout
@@ -76,6 +81,9 @@ class TimeZoneGlobeActivity : AppCompatActivity(R.layout.activity_time_zone_glob
     private var lastX: Float = 0f
     private var lastY: Float = 0f
 
+    // --- City Pin Management ---
+    private val cityPinNodes = mutableListOf<Node>()
+    
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -146,30 +154,17 @@ class TimeZoneGlobeActivity : AppCompatActivity(R.layout.activity_time_zone_glob
     }
 
     private fun observeViewModel() {
-        viewModel.uiState.observe(this) { state ->
-            updateUiTexts(state)
-            if (globeNode != null && overlayParentNode != null) {
-                if (state.isLoading) {
-                    clearOverlays()
-                } else if (state.error != null) {
-                    handleError(state.error)
-                    clearOverlays()
-                } else {
-                    globeNode?.rotation = state.currentRotation // Apply rotation from ViewModel
-                    createOrUpdateOverlays(state.timeZoneOverlays)
+        lifecycleScope.launch {
+            viewModel.uiState.collectLatest { uiState ->
+                // Update UI elements based on state
+                uiState.activeTimeZoneInfo?.let { info ->
+                    cityNorthernTextView.text = info.northernCity
+                    citySouthernTextView.text = info.southernCity
+                    utcOffsetTextView.text = info.utcOffsetString
                 }
-            }
-
-            // Check if the target rotation is new and different from the current node rotation
-            val currentVisualRotation = globeNode?.rotation // Get actual current rotation
-            if (state.targetRotation != null && state.targetRotation != currentVisualRotation) {
-                // *** Start Animation ***
-                animateGlobeRotation(currentVisualRotation ?: state.currentRotation, state.targetRotation)
-                // Optionally update ViewModel's currentRotation once animation is triggered or finished
-                // viewModel.syncCurrentRotation(state.targetRotation) // Example method needed in ViewModel
-            } else if (state.targetRotation == null && currentVisualRotation != state.currentRotation) {
-                // If target is null, snap to the logical currentRotation (e.g., after reset or drag)
-                globeNode?.rotation = state.currentRotation
+                
+                // Update city pins when timezone changes
+                updateCityPins(uiState.activeTimeZoneId)
             }
         }
     }
@@ -224,9 +219,12 @@ class TimeZoneGlobeActivity : AppCompatActivity(R.layout.activity_time_zone_glob
         // from 'start' to 'end' over a specific duration.
         Log.d(TAG, "Animating rotation from $start to $end")
         // Example using ObjectAnimator (might need a TypeEvaluator for Rotation)
-        ObjectAnimator.ofObject(globeNode, "rotation", RotationEvaluator(), start, end).apply {
+        ValueAnimator.ofObject(RotationEvaluator(), start, end).apply {
             duration = 500 // ms
             interpolator = AccelerateDecelerateInterpolator()
+            addUpdateListener { animation ->
+                globeNode?.rotation = animation.animatedValue as Rotation
+            }
             start()
         }
     }
@@ -381,10 +379,146 @@ class TimeZoneGlobeActivity : AppCompatActivity(R.layout.activity_time_zone_glob
     // --- Utility ---
     private fun handleError(message: String, throwable: Throwable? = null) {
         Log.e(TAG, message, throwable)
-        Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+        Snackbar.make(sceneView, message, Snackbar.LENGTH_LONG).show()
     }
 
     // --- Lifecycle is handled by SceneView ---
+
+    private fun updateCityPins(timeZoneId: String?) {
+        // Clear existing pins
+        clearCityPins()
+        
+        if (timeZoneId == null) return
+        
+        // Load cities for the active timezone
+        lifecycleScope.launch {
+            try {
+                val cities = viewModel.repository.getCitiesForTimeZone(timeZoneId)
+                val northernCities = cities.filter { it.latitude > 0 }.sortedBy { it.latitude }.reversed().take(2)
+                val southernCities = cities.filter { it.latitude < 0 }.sortedBy { it.latitude }.take(2)
+                
+                // Create pins for northern cities
+                northernCities.forEach { city ->
+                    createCityPin(city, isNorthern = true)
+                }
+                
+                // Create pins for southern cities
+                southernCities.forEach { city ->
+                    createCityPin(city, isNorthern = false)
+                }
+                
+            } catch (e: Exception) {
+                Log.e(TAG, "Error loading city pins for $timeZoneId", e)
+            }
+        }
+    }
+    
+    private fun createCityPin(city: CityData, isNorthern: Boolean) {
+        lifecycleScope.launch {
+            try {
+                // Create a simple sphere for the city pin
+                val engine = sceneView.engine
+                val pinRadius = 0.02f // Small pin size
+                val pinColor = if (isNorthern) SceneViewColor(0xFF0000FF) else SceneViewColor(0xFF00FF00) // Blue for north, green for south
+                
+                val material = materialLoader.createColorInstance(
+                    color = pinColor,
+                    isMetallic = 0.0f,
+                    roughness = 0.5f,
+                    reflectance = 0.0f
+                )
+                
+                // Create sphere geometry (simplified)
+                val renderableEntity = engine.entityManager.create()
+                val bounds = Box(0f, 0f, 0f, pinRadius, pinRadius, pinRadius)
+                
+                RenderableManager.Builder(1)
+                    .boundingBox(bounds)
+                    .geometry(0, RenderableManager.PrimitiveType.TRIANGLES, createSphereGeometry(pinRadius))
+                    .material(0, material)
+                    .culling(false)
+                    .build(engine, renderableEntity)
+                
+                // Position pin on globe surface
+                val pinPosition = latLonToFloat3(city.latitude, city.longitude, EARTH_RADIUS + 0.01f) // Slightly above surface
+                val pinNode = Node(engine, renderableEntity).apply {
+                    position = Position(pinPosition.x, pinPosition.y, pinPosition.z)
+                    tag = "city_pin_${city.name}"
+                }
+                
+                pinNode.setParent(overlayParentNode)
+                cityPinNodes.add(pinNode)
+                
+                Log.d(TAG, "Created city pin for ${city.name} at (${city.latitude}, ${city.longitude})")
+                
+            } catch (e: Exception) {
+                Log.e(TAG, "Error creating city pin for ${city.name}", e)
+            }
+        }
+    }
+    
+    private fun clearCityPins() {
+        cityPinNodes.forEach { it.destroy() }
+        cityPinNodes.clear()
+    }
+    
+    private fun createSphereGeometry(radius: Float): Pair<VertexBuffer, IndexBuffer> {
+        // Simplified sphere geometry creation
+        val segments = 8
+        val vertices = mutableListOf<Float3>()
+        val indices = mutableListOf<Int>()
+        
+        // Generate sphere vertices
+        for (lat in 0..segments) {
+            val theta = lat * Math.PI / segments
+            val sinTheta = sin(theta)
+            val cosTheta = cos(theta)
+            
+            for (lon in 0..segments) {
+                val phi = lon * 2 * Math.PI / segments
+                val sinPhi = sin(phi)
+                val cosPhi = cos(phi)
+                
+                val x = (radius * cosPhi * sinTheta).toFloat()
+                val y = (radius * cosTheta).toFloat()
+                val z = (radius * sinPhi * sinTheta).toFloat()
+                
+                vertices.add(Float3(x, y, z))
+            }
+        }
+        
+        // Generate indices for triangles
+        for (lat in 0 until segments) {
+            for (lon in 0 until segments) {
+                val current = lat * (segments + 1) + lon
+                val next = current + segments + 1
+                
+                indices.add(current)
+                indices.add(next)
+                indices.add(current + 1)
+                
+                indices.add(next)
+                indices.add(next + 1)
+                indices.add(current + 1)
+            }
+        }
+        
+        val engine = sceneView.engine
+        val vertexBuffer = VertexBuffer.Builder()
+            .bufferCount(1)
+            .vertexCount(vertices.size)
+            .attribute(VertexBuffer.VertexAttribute.POSITION, 0, VertexBuffer.AttributeType.FLOAT3, 0, 0)
+            .build(engine)
+        vertexBuffer.setBufferAt(engine, 0, Float3.toFloatBuffer(vertices))
+        
+        val indexBuffer = IndexBuffer.Builder()
+            .indexCount(indices.size)
+            .bufferType(IndexBuffer.Builder.IndexType.UINT)
+            .build(engine)
+        indexBuffer.setBuffer(engine, IntArray(indices.size) { indices[it] }.toBuffer())
+        
+        return Pair(vertexBuffer, indexBuffer)
+    }
 }
 
 // --- Buffer Utils (Outside Activity) ---
@@ -398,4 +532,36 @@ fun IntArray.toBuffer(): IntBuffer {
     val buffer = java.nio.ByteBuffer.allocateDirect(this.size * 4)
         .order(java.nio.ByteOrder.nativeOrder()).asIntBuffer()
     buffer.put(this); buffer.rewind(); return buffer
+}
+
+// --- Animation Support ---
+class RotationEvaluator : TypeEvaluator<Rotation> {
+    override fun evaluate(fraction: Float, startValue: Rotation, endValue: Rotation): Rotation {
+        // Interpolate each rotation component (x, y, z)
+        val startX = startValue.x
+        val startY = startValue.y
+        val startZ = startValue.z
+        
+        val endX = endValue.x
+        val endY = endValue.y
+        val endZ = endValue.z
+        
+        // Handle Y-axis wrap-around (longitude)
+        val deltaY = endY - startY
+        val adjustedDeltaY = when {
+            deltaY > 180f -> deltaY - 360f
+            deltaY < -180f -> deltaY + 360f
+            else -> deltaY
+        }
+        
+        val interpolatedX = startX + (endX - startX) * fraction
+        val interpolatedY = startY + adjustedDeltaY * fraction
+        val interpolatedZ = startZ + (endZ - startZ) * fraction
+        
+        return Rotation(
+            x = interpolatedX,
+            y = interpolatedY,
+            z = interpolatedZ
+        )
+    }
 }

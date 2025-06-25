@@ -97,9 +97,7 @@ class CoinFlipViewModel @Inject constructor(
         const val FLIP_ANIMATION_DURATION_MS = 750L
     }
 
-    private val instanceId: UUID? = savedStateHandle.get<String>(KEY_INSTANCE_ID)?.let {
-        try { UUID.fromString(it) } catch (e: IllegalArgumentException) { null }
-    }
+    private val instanceId: Int = savedStateHandle.get<Int>(KEY_INSTANCE_ID) ?: 0
 
     private val _uiState = MutableStateFlow(CoinFlipUiState())
     val uiState: StateFlow<CoinFlipUiState> = _uiState.asStateFlow()
@@ -111,7 +109,7 @@ class CoinFlipViewModel @Inject constructor(
 
 
     init {
-        if (instanceId != null) {
+        if (instanceId > 0) {
             loadSettings(instanceId) // Load settings initially
 
             // Observe settings changes from DB for this instance
@@ -124,14 +122,14 @@ class CoinFlipViewModel @Inject constructor(
             }
         } else {
             _uiState.update { it.copy(errorEvent = Event("CoinFlipViewModel: Invalid Instance ID")) }
-            Log.e(TAG, "Critical Error: Instance ID is null for CoinFlipViewModel.")
+            Log.e(TAG, "Critical Error: Instance ID is invalid for CoinFlipViewModel: $instanceId")
         }
 
         // Initialize with a default coin pool if desired, or leave empty
         // addCoinToPool(CoinType.BIT_1) // Example: start with one 1-bit coin
     }
 
-    private fun loadSettings(id: UUID) {
+    private fun loadSettings(id: Int) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val loadedSettings = randomizerDao.getSettingsForInstance(id)
@@ -156,7 +154,9 @@ class CoinFlipViewModel @Inject constructor(
 
     // Called when settings might have changed (e.g., from settings fragment)
     fun refreshSettings() {
-        instanceId?.let { loadSettings(it) }
+        if (instanceId > 0) {
+            loadSettings(instanceId)
+        }
     }
 
     // --- Coin Pool Management ---

@@ -7,14 +7,14 @@ import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.example.purramid.thepurramid.R
-import com.example.purramid.thepurramid.timers.service.ACTION_START_STOPWATCH
-import com.example.purramid.thepurramid.timers.service.EXTRA_DURATION_MS
-import com.example.purramid.thepurramid.timers.service.EXTRA_TIMER_ID
-import com.example.purramid.thepurramid.timers.service.TimersService
-import com.example.purramid.thepurramid.timers.ui.TimersSettingsFragment // Import settings fragment
+import com.example.purramid.thepurramid.timers.ACTION_START_STOPWATCH
+import com.example.purramid.thepurramid.timers.ACTION_START_COUNTDOWN
+import com.example.purramid.thepurramid.timers.EXTRA_DURATION_MS
+import com.example.purramid.thepurramid.timers.EXTRA_TIMER_ID
+import com.example.purramid.thepurramid.timers.TimersService
+import com.example.purramid.thepurramid.timers.ui.TimersSettingsFragment
+import com.example.purramid.thepurramid.timers.viewmodel.TimersViewModel
 import dagger.hilt.android.AndroidEntryPoint
-import java.util.UUID // Using UUID for potential future flexibility
-import java.util.concurrent.atomic.AtomicInteger
 
 @AndroidEntryPoint
 class TimersActivity : AppCompatActivity() {
@@ -23,22 +23,12 @@ class TimersActivity : AppCompatActivity() {
         private const val TAG = "TimersActivity"
         // Action for the intent to show settings
         const val ACTION_SHOW_TIMER_SETTINGS = "com.example.purramid.timers.ACTION_SHOW_TIMER_SETTINGS"
-
-        // Simple counter for demo purposes. Replace with robust ID management.
-        private val timerIdCounter = AtomicInteger(1) // Start from 1
-
-        // This should ideally come from a shared preference or DB to ensure uniqueness across app sessions
-        fun getNextTimerId(): Int {
-            return timerIdCounter.getAndIncrement()
-        }
     }
 
     private var currentTimerId: Int = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // This activity might not need its own layout if it only launches service/fragment
-        // setContentView(R.layout.activity_timers) // Optional: if you want a host layout
         Log.d(TAG, "onCreate - Intent Action: ${intent.action}")
 
         currentTimerId = intent.getIntExtra(EXTRA_TIMER_ID, 0)
@@ -48,16 +38,14 @@ class TimersActivity : AppCompatActivity() {
                 showSettingsFragment(currentTimerId)
             } else {
                 Log.e(TAG, "Cannot show settings, invalid timerId: $currentTimerId")
-                finish() // Close if ID is invalid for settings
+                finish()
             }
         } else {
             // Default action: launch a new timer service instance
-            if (currentTimerId == 0) { // Only generate new ID if one wasn't passed
-                currentTimerId = getNextTimerId()
-            }
-            Log.d(TAG, "Launching/ensuring service for timerId: $currentTimerId")
-            startTimerService(currentTimerId, TimerType.STOPWATCH) // Default to stopwatch
-            finish() // Finish after launching the service
+            // Let the service handle getting a new instance ID from InstanceManager
+            Log.d(TAG, "Launching timer service")
+            startTimerService(currentTimerId, TimerType.STOPWATCH)
+            finish()
         }
     }
 
@@ -65,11 +53,13 @@ class TimersActivity : AppCompatActivity() {
         Log.d(TAG, "Requesting start for TimerService, ID: $timerId, Type: $type")
         val serviceIntent = Intent(this, TimersService::class.java).apply {
             action = if (type == TimerType.COUNTDOWN) {
-                com.example.purramid.thepurramid.timers.service.ACTION_START_COUNTDOWN
+                ACTION_START_COUNTDOWN
             } else {
-                com.example.purramid.thepurramid.timers.service.ACTION_START_STOPWATCH
+                ACTION_START_STOPWATCH
             }
-            putExtra(EXTRA_TIMER_ID, timerId)
+            if (timerId != 0) {
+                putExtra(EXTRA_TIMER_ID, timerId)
+            }
             durationMs?.let { putExtra(EXTRA_DURATION_MS, it) }
         }
         ContextCompat.startForegroundService(this, serviceIntent)
@@ -84,25 +74,18 @@ class TimersActivity : AppCompatActivity() {
         }
     }
 
-    // Handle new intent if Activity is already running and settings are requested
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
-        setIntent(intent) // Update the activity's intent
+        setIntent(intent)
         Log.d(TAG, "onNewIntent - Action: ${intent?.action}")
         if (intent?.action == ACTION_SHOW_TIMER_SETTINGS) {
             val timerIdForSettings = intent.getIntExtra(EXTRA_TIMER_ID, 0)
             if (timerIdForSettings != 0) {
-                currentTimerId = timerIdForSettings // Update current ID if settings for specific timer
+                currentTimerId = timerIdForSettings
                 showSettingsFragment(timerIdForSettings)
             } else {
                 Log.e(TAG, "Cannot show settings from onNewIntent, invalid timerId.")
             }
-        } else {
-            // If launched again without specific action, and it's not for settings,
-            // it might be an attempt to launch a new timer.
-            // The current logic in onCreate might lead to just finishing.
-            // Consider how multiple launches of TimersActivity should behave.
-            // For now, if it's not for settings, onCreate's logic of launching service and finishing will run.
         }
     }
 }

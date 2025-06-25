@@ -3,11 +3,12 @@ package com.example.purramid.thepurramid.data.db
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import java.util.UUID
 
-@Entity(tableName = "screen_mask_state")
+@Entity(tableName = "screen_mask_states")
 data class ScreenMaskStateEntity(
-    @PrimaryKey // instanceId will be unique
-    val instanceId: Int,
+    @PrimaryKey val instanceId: Int,
+    val uuid: String = UUID.randomUUID().toString(),
     val x: Int,
     val y: Int,
     val width: Int,

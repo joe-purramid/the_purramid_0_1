@@ -48,9 +48,14 @@ class DiceColorPickerDialogFragment : DialogFragment() {
 
 
     companion object {
-        const val TAG = "DiceColorPickerDialog"
-        fun newInstance(instanceId: UUID): DiceColorPickerDialogFragment {
-            return DiceColorPickerDialogFragment()
+        const val TAG = "DiceColorPickerDialogFragment"
+
+        fun newInstance(instanceId: Int): DiceColorPickerDialogFragment {
+            return DiceColorPickerDialogFragment().apply {
+                arguments = Bundle().apply {
+                    putInt("instanceId", instanceId)
+                }
+            }
         }
     }
 

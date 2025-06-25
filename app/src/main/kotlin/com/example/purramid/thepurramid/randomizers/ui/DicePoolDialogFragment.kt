@@ -50,16 +50,14 @@ class DicePoolDialogFragment : DialogFragment() {
     private var currentDicePool: MutableMap<Int, Int> = mutableMapOf()
 
     companion object {
-        const val TAG = "DicePoolDialog"
-        private const val ARG_INSTANCE_ID = "instanceId" // Key for argument
+        const val TAG = "DicePoolDialogFragment"
+        const val PERCENTILE_DIE_TYPE_KEY = 100 // Special key for percentile dice (d100)
 
-        // Factory method to create instance and pass arguments
-        fun newInstance(instanceId: UUID): DicePoolDialogFragment {
-            val args = Bundle().apply {
-                putString(ARG_INSTANCE_ID, instanceId.toString())
-            }
+        fun newInstance(instanceId: Int): DicePoolDialogFragment {
             return DicePoolDialogFragment().apply {
-                arguments = args
+                arguments = Bundle().apply {
+                    putInt("instanceId", instanceId)
+                }
             }
         }
 

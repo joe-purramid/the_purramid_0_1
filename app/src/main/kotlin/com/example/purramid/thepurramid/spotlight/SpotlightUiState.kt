@@ -1,24 +1,36 @@
 // SpotlightUiState.kt
 package com.example.purramid.thepurramid.spotlight
 
-// Import the data class for the individual spotlight item
-import com.example.purramid.thepurramid.spotlight.SpotlightView.Spotlight
-
 /**
- * Represents the overall state for the Spotlight UI.
+ * Represents the UI state for the Spotlight overlay.
+ * A single overlay can contain multiple openings (holes).
  *
- * @param spotlights The list of individual spotlight data objects to be displayed.
- * @param globalShape The currently selected shape for new spotlights or global changes.
- * @param isLoading True if the state is currently being loaded (e.g., from the database).
- * @param error A string message describing an error, if one occurred, otherwise null.
- * @param canAddMore True if the user is allowed to add more spotlights (not at max limit).
+ * @param instanceId The service instance ID (1-4)
+ * @param openings The list of spotlight openings to display
+ * @param showControls Whether to show control buttons
+ * @param isAnyLocked True if any opening is locked
+ * @param areAllLocked True if all openings are locked
+ * @param canAddMore True if more openings can be added (max 4)
+ * @param isLoading True during database operations
+ * @param error Error message to display, if any
  */
 data class SpotlightUiState(
-    val spotlights: List<Spotlight> = emptyList(),
-    val globalShape: Spotlight.Shape = Spotlight.Shape.CIRCLE, // Default shape
+    val instanceId: Int = 0,
+    val openings: List<SpotlightOpening> = emptyList(),
+    val showControls: Boolean = true,
+    val isAnyLocked: Boolean = false,
+    val areAllLocked: Boolean = false,
+    val canAddMore: Boolean = true,
     val isLoading: Boolean = false,
     val error: String? = null
-    // Consider adding other relevant UI state flags if needed, e.g.:
-    // val showControls: Boolean = true,
-    // val canAddMore: Boolean = true // This might be derived from spotlights.size < MAX
-)
+) {
+    companion object {
+        const val MAX_OPENINGS = 4
+    }
+
+    /**
+     * Computed property to check if we can add more openings
+     */
+    val isAtMaxCapacity: Boolean
+        get() = openings.size >= MAX_OPENINGS
+}
