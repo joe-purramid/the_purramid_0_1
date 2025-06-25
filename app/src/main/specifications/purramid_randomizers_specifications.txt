@@ -27,7 +27,7 @@ Randomizers is a collection of four different randomization tools: Spin, Slots, 
 	-- DiceViewModel
 	-- ListCreatorViewModel
 	-- ListEditorViewModel
-	-- RandomzierSettingsViewModel
+	-- RandomizerSettingsViewModel
 	-- RandomizerViewModel
 	-- SlotsViewModel
   - DAO: RandomizerDao

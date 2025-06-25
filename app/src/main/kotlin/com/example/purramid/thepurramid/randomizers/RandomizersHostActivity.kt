@@ -14,7 +14,7 @@ import com.example.purramid.thepurramid.data.db.DEFAULT_SETTINGS_ID
 import com.example.purramid.thepurramid.data.db.RandomizerDao
 import com.example.purramid.thepurramid.data.db.RandomizerInstanceEntity
 import com.example.purramid.thepurramid.data.db.SpinSettingsEntity
-import com.example.purramid.thepurramid.databinding.ActivityRandomziersHostBinding
+import com.example.purramid.thepurramid.databinding.ActivityRandomizersHostBinding
 import com.example.purramid.thepurramid.instance.InstanceManager
 import com.example.purramid.thepurramid.randomizers.viewmodel.RandomizerSettingsViewModel // Changed import
 import com.example.purramid.thepurramid.randomizers.viewmodel.RandomizerViewModel // Keep for EXTRA_INSTANCE_ID
@@ -28,7 +28,7 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class RandomizersHostActivity : AppCompatActivity() {
 
-    private lateinit var binding: ActivityRandomziersHostBinding
+    private lateinit var binding: ActivityRandomizersHostBinding
     private var currentInstanceId: Int = 0
     private lateinit var navController: NavController
 
@@ -45,7 +45,7 @@ class RandomizersHostActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityRandomziersHostBinding.inflate(layoutInflater)
+        binding = ActivityRandomizersHostBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
         val navHostFragment =
