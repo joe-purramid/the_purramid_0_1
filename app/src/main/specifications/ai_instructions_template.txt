@@ -27,3 +27,9 @@ For each issue, provide:
 - Current implementation
 - Required change
 - Priority (High/Medium/Low)
+
+## New Code Review
+Review all files for this app-intent for syntax errors and undefined terms. This includes:
+- all new files created during this review process
+- any files modified during this review process
+- all unchanged files associated with this app-intent
