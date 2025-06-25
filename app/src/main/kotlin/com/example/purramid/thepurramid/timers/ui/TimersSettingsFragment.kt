@@ -191,6 +191,11 @@ class TimersSettingsFragment : DialogFragment() {
             if (blockListeners) return@setOnCheckedChangeListener
             viewModel.setNested(isChecked)
         }
+
+        // Set Countdown duration
+        binding.layoutSetCountdown.setOnClickListener {
+            showSetCountdownDialog()
+        }
     }
 
     private fun observeViewModel() {
@@ -216,9 +221,10 @@ class TimersSettingsFragment : DialogFragment() {
 
                     // Update Countdown specific UI
                     if (state.type == TimerType.COUNTDOWN) {
-                        if (!binding.editTextHours.hasFocus() && !binding.editTextMinutes.hasFocus() && !binding.editTextSeconds.hasFocus()) {
-                            populateDurationFields(state.initialDurationMillis)
-                        }
+                        // Update duration display
+                        val durationStr = formatDuration(state.initialDurationMillis)
+                        binding.textViewCurrentDuration.text = durationStr
+
                         binding.switchPlaySoundOnEnd.isChecked = state.playSoundOnEnd
                         binding.switchNestTimer.isChecked = state.isNested
                     }
@@ -321,6 +327,20 @@ class TimersSettingsFragment : DialogFragment() {
 
         // Dismiss settings
         dismiss()
+    }
+
+    private fun showSetCountdownDialog() {
+        val currentDuration = viewModel.uiState.value.initialDurationMillis
+        SetCountdownDialog.newInstance(currentDuration) { newDuration ->
+            viewModel.setInitialDuration(newDuration)
+        }.show(childFragmentManager, "SetCountdownDialog")
+    }
+
+    private fun formatDuration(millis: Long): String {
+        val hours = TimeUnit.MILLISECONDS.toHours(millis)
+        val minutes = TimeUnit.MILLISECONDS.toMinutes(millis) % 60
+        val seconds = TimeUnit.MILLISECONDS.toSeconds(millis) % 60
+        return String.format("%02d:%02d:%02d", hours, minutes, seconds)
     }
 
     override fun onDestroyView() {

@@ -20,7 +20,7 @@ const val DEFAULT_COIN_COLOR_INT = 0xFFDAA520.toInt()
 
 @Entity(tableName = "spin_settings")
 data class SpinSettingsEntity(
-    @PrimaryKey val instanceId: UUID,
+    @PrimaryKey val instanceId: Int,
 
     var mode: RandomizerMode = RandomizerMode.SPIN,
 
