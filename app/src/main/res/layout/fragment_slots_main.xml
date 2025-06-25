@@ -4,147 +4,49 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="8dp"
+    android:padding="16dp"
     tools:context=".randomizers.ui.SlotsMainFragment">
 
-    <ImageButton
-        android:id="@+id/slotsCloseButton"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:layout_marginTop="8dp"
-        android:layout_marginEnd="8dp"
-        android:background="?attr/selectableItemBackgroundBorderless"
-        android:contentDescription="@string/close"
-        android:src="@drawable/ic_close"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <ImageButton
-        android:id="@+id/slotsSettingsButton"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:layout_marginTop="8dp"
-        android:layout_marginEnd="8dp"
-        android:background="?attr/selectableItemBackgroundBorderless"
-        android:contentDescription="@string/settings"
-        android:src="@drawable/ic_settings"
-        app:layout_constraintEnd_toStartOf="@id/slotsCloseButton"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <LinearLayout
-        android:id="@+id/slotsColumnsContainer"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:layout_marginTop="16dp"
-        android:layout_marginBottom="16dp"
-        android:orientation="horizontal"
-        android:baselineAligned="false"
-        app:layout_constraintTop_toBottomOf="@id/slotsCloseButton"
-        app:layout_constraintBottom_toTopOf="@id/slotsSpinButton"
+    <TextView
+        android:id="@+id/slotsTitleTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Slots"
+        android:textSize="24sp"
+        android:textStyle="bold"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
-
-        <com.example.purramid.thepurramid.randomizers.ui.SlotColumnView
-            android:id="@+id/slotColumnView1"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:layout_marginStart="4dp"
-            android:layout_marginEnd="4dp"
-            tools:layout="@layout/view_slot_column" />
-
-        <com.example.purramid.thepurramid.randomizers.ui.SlotColumnView
-            android:id="@+id/slotColumnView2"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:layout_marginStart="4dp"
-            android:layout_marginEnd="4dp"
-            tools:layout="@layout/view_slot_column" />
-
-        <com.example.purramid.thepurramid.randomizers.ui.SlotColumnView
-            android:id="@+id/slotColumnView3"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:layout_marginStart="4dp"
-            android:layout_marginEnd="4dp"
-            tools:layout="@layout/view_slot_column" />
-
-        <com.example.purramid.thepurramid.randomizers.ui.SlotColumnView
-            android:id="@+id/slotColumnView4"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:layout_marginStart="4dp"
-            android:layout_marginEnd="4dp"
-            android:visibility="gone"
-            tools:visibility="visible"
-            tools:layout="@layout/view_slot_column" />
-
-        <com.example.purramid.thepurramid.randomizers.ui.SlotColumnView
-            android:id="@+id/slotColumnView5"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:layout_marginStart="4dp"
-            android:layout_marginEnd="4dp"
-            android:visibility="gone"
-            tools:visibility="visible"
-            tools:layout="@layout/view_slot_column" />
-
-    </LinearLayout>
+        app:layout_constraintTop_toTopOf="parent" />
 
     <Button
         android:id="@+id/slotsSpinButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"
-        android:text="@string/spin"
+        android:text="Spin"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
 
-    <FrameLayout
-        android:id="@+id/slotsAnnouncementOverlay"
+    <LinearLayout
+        android:id="@+id/slotsColumnsContainer"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:background="#AAFFFFFF" android:clickable="true" android:focusable="true"
-        android:elevation="10dp"
-        android:visibility="gone"
-        app:layout_constraintTop_toTopOf="@id/slotsColumnsContainer"
-        app:layout_constraintBottom_toBottomOf="@id/slotsColumnsContainer"
-        app:layout_constraintStart_toStartOf="parent"
+        android:orientation="horizontal"
+        android:gravity="center"
+        app:layout_constraintBottom_toTopOf="@id/slotsSpinButton"
         app:layout_constraintEnd_toEndOf="parent"
-        tools:visibility="visible">
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/slotsTitleTextView" />
 
-        <LinearLayout
-            android:id="@+id/slotsAnnouncementResultsLayout" android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:orientation="horizontal"
-            android:padding="16dp">
-        </LinearLayout>
-
-    </FrameLayout>
-
-    <androidx.cardview.widget.CardView
-        android:id="@+id/slotsListDropdownCardView"
+    <TextView
+        android:id="@+id/slotsResultTextView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:text=""
+        android:textSize="18sp"
         android:visibility="gone"
-        app:cardCornerRadius="8dp"
-        app:cardElevation="8dp"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/slotsSpinButton"
         app:layout_constraintEnd_toEndOf="parent"
-        tools:visibility="visible">
-        <ListView
-            android:id="@+id/slotsListDropdownListView"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:maxHeight="250dp"/>
-    </androidx.cardview.widget.CardView>
+        app:layout_constraintStart_toStartOf="parent"
+        tools:visibility="visible" />
 
-
-</androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.constraintlayout.widget.ConstraintLayout> 
