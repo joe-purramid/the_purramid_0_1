@@ -1,5 +1,5 @@
 // TimersService.kt
-package com.example.purramid.thepurramid.timers.service
+package com.example.purramid.thepurramid.timers
 
 import android.annotation.SuppressLint
 import android.app.Notification
@@ -10,7 +10,11 @@ import android.content.Intent
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.graphics.PorterDuff
-import android.graphics.PorterDuffColorFilter
+import android.media.AudioManager
+import android.media.MediaPlayer
+import android.media.RingtoneManager
+import android.media.ToneGenerator
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -32,18 +36,14 @@ import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import androidx.core.graphics.ColorUtils
 import androidx.lifecycle.*
-import com.example.purramid.thepurramid.di.HiltViewModelFactory
 import com.example.purramid.thepurramid.instance.InstanceManager
 import com.example.purramid.thepurramid.MainActivity
 import com.example.purramid.thepurramid.R
-import com.example.purramid.thepurramid.timers.TimerState
-import com.example.purramid.thepurramid.timers.TimerType
 import com.example.purramid.thepurramid.timers.viewmodel.TimersViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
@@ -58,15 +58,13 @@ const val EXTRA_TIMER_ID = TimersViewModel.KEY_TIMER_ID
 const val EXTRA_DURATION_MS = "com.example.purramid.timers.EXTRA_DURATION_MS"
 
 @AndroidEntryPoint
-class TimersService : LifecycleService(), ViewModelStoreOwner {
+class TimersService : LifecycleService() {
 
     @Inject lateinit var windowManager: WindowManager
     @Inject lateinit var instanceManager: InstanceManager
-    @Inject lateinit var viewModelFactory: ViewModelProvider.Factory
     @Inject lateinit var notificationManager: NotificationManager
+    @Inject lateinit var timerCoordinator: TimerCoordinator
 
-    private val viewModelStore = ViewModelStore()
-    override fun getViewModelStore(): ViewModelStore = viewModelStore
     private lateinit var viewModel: TimersViewModel
 
     private var overlayView: View? = null
@@ -105,6 +103,10 @@ class TimersService : LifecycleService(), ViewModelStoreOwner {
             resources.displayMetrics
         ).toInt()
     }
+
+    // Track if finish sound has been played for current countdown
+    private var hasPlayedFinishSound = false
+    private var lastCountdownMillis = -1L
 
     companion object {
         private const val TAG = "TimersService"
@@ -150,13 +152,7 @@ class TimersService : LifecycleService(), ViewModelStoreOwner {
 
         // Initialize ViewModel if needed (first start or ID change)
         if (!::viewModel.isInitialized || this.timerId != intentTimerId) {
-            val bundle = Bundle().apply {
-                putInt(TimersViewModel.KEY_TIMER_ID, timerId)
-            }
-            viewModel = ViewModelProvider(
-                this,
-                HiltViewModelFactory(this, bundle, viewModelFactory)
-            )[TimersViewModel::class.java]
+            viewModel = ViewModelProvider(this)[TimersViewModel::class.java]
             Log.d(TAG, "ViewModel initialized for timerId: $timerId")
             observeViewModelState()
         }
@@ -198,6 +194,25 @@ class TimersService : LifecycleService(), ViewModelStoreOwner {
                     updateOverlayViews(state)
                 }
                 updateLayoutParamsIfNeeded(state)
+
+                // Handle countdown finish sound
+                if (state.type == TimerType.COUNTDOWN) {
+                    // Reset flag when countdown restarts
+                    if (state.currentMillis > 0 && lastCountdownMillis == 0L) {
+                        hasPlayedFinishSound = false
+                    }
+
+                    // Play sound when countdown reaches zero
+                    if (state.currentMillis == 0L &&
+                        !state.isRunning &&
+                        state.playSoundOnEnd &&
+                        !hasPlayedFinishSound) {
+                        playFinishSound(state)
+                        hasPlayedFinishSound = true
+                    }
+
+                    lastCountdownMillis = state.currentMillis
+                }
             }
         }
         Log.d(TAG, "Started observing ViewModel state for timer $timerId")
@@ -547,11 +562,7 @@ class TimersService : LifecycleService(), ViewModelStoreOwner {
     override fun onDestroy() {
         Log.d(TAG, "onDestroy")
         stateObserverJob?.cancel()
-        try {
-            removeOverlayView()
-        } finally {
-            viewModelStore.clear()
-        }
+        removeOverlayView()
         super.onDestroy()
     }
 
@@ -620,11 +631,26 @@ class TimersService : LifecycleService(), ViewModelStoreOwner {
                     y = dpToPx(20)
 
                     // Stack if other nested timers exist
-                    val nestedCount = getNestedTimerCount()
-                    y += (nestedCount * (height + dpToPx(10)))
+                    lifecycleScope.launch {
+                        val stackPosition = timerCoordinator.getNestedTimerStackPosition(timerId)
+                        withContext(Dispatchers.Main) {
+                            layoutParams?.let { params ->
+                                params.y = dpToPx(20) + (stackPosition * (params.height + dpToPx(10)))
 
-                    // Save the calculated position
-                    viewModel.updateNestedPosition(x, y)
+                                // Save the calculated position
+                                viewModel.updateNestedPosition(params.x, params.y)
+
+                                // Update view if already added
+                                if (isViewAdded && overlayView != null) {
+                                    try {
+                                        windowManager.updateViewLayout(overlayView, params)
+                                    } catch (e: Exception) {
+                                        Log.e(TAG, "Error updating nested position", e)
+                                    }
+                                }
+                            }
+                        }
+                    }
                 } else {
                     x = state.nestedX
                     y = state.nestedY
@@ -676,12 +702,6 @@ class TimersService : LifecycleService(), ViewModelStoreOwner {
         }
     }
 
-    private fun getNestedTimerCount(): Int {
-        // This would query all active timer instances to count how many are nested
-        // For now, return 0 as we need to implement cross-instance communication
-        return 0
-    }
-
     private fun playButtonSound() {
         val state = viewModel.uiState.value
         if (state.soundsEnabled && state.type == TimerType.STOPWATCH) {
@@ -693,16 +713,91 @@ class TimersService : LifecycleService(), ViewModelStoreOwner {
     private fun playBeepSound() {
         try {
             // Use ToneGenerator for simple beep
-            val toneGen = android.media.ToneGenerator(
-                android.media.AudioManager.STREAM_NOTIFICATION,
+            val toneGen = ToneGenerator(
+                AudioManager.STREAM_NOTIFICATION,
                 100
             )
-            toneGen.startTone(android.media.ToneGenerator.TONE_PROP_BEEP, 100)
+            toneGen.startTone(ToneGenerator.TONE_PROP_BEEP, 100)
             Handler(Looper.getMainLooper()).postDelayed({
                 toneGen.release()
             }, 200)
         } catch (e: Exception) {
             Log.e(TAG, "Error playing beep sound", e)
+        }
+    }
+
+    private fun playFinishSound(state: TimerState) {
+        try {
+            when {
+                // First priority: Custom music URL
+                !state.musicUrl.isNullOrEmpty() -> {
+                    playMusicUrl(state.musicUrl)
+                }
+                // Second priority: Selected system sound
+                !state.selectedSoundUri.isNullOrEmpty() -> {
+                    playSystemSound(state.selectedSoundUri)
+                }
+                // Default: Play default notification sound
+                else -> {
+                    playDefaultSound()
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error playing finish sound", e)
+        }
+    }
+
+    private fun playMusicUrl(url: String) {
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val mediaPlayer = MediaPlayer().apply {
+                    setDataSource(url)
+                    prepareAsync()
+                    setOnPreparedListener {
+                        start()
+                        Log.d(TAG, "Playing music URL: $url")
+                    }
+                    setOnCompletionListener {
+                        release()
+                    }
+                    setOnErrorListener { _, _, _ ->
+                        Log.e(TAG, "Error playing music URL: $url")
+                        withContext(Dispatchers.Main) {
+                            playDefaultSound() // Fallback
+                        }
+                        release()
+                        true
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to play music URL", e)
+                withContext(Dispatchers.Main) {
+                    playDefaultSound() // Fallback
+                }
+            }
+        }
+    }
+
+    private fun playSystemSound(uriString: String) {
+        try {
+            val uri = Uri.parse(uriString)
+            val ringtone = RingtoneManager.getRingtone(this, uri)
+            ringtone?.play()
+            Log.d(TAG, "Playing system sound: $uriString")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to play system sound", e)
+            playDefaultSound() // Fallback
+        }
+    }
+
+    private fun playDefaultSound() {
+        try {
+            val notification = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+            val ringtone = RingtoneManager.getRingtone(this, notification)
+            ringtone?.play()
+            Log.d(TAG, "Playing default notification sound")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to play default sound", e)
         }
     }
 }
