@@ -11,8 +11,11 @@ import java.util.UUID
  */
 @Entity(tableName = "randomizer_instances")
 data class RandomizerInstanceEntity(
-    // The instanceId is the primary key and the only data needed in this table for now.
-    @PrimaryKey val instanceId: UUID
-    val type: String,
-    var windowId: Int? = null
+    @PrimaryKey val instanceId: Int,
+    val uuid: UUID = UUID.randomUUID(),
+    val windowX: Int = 0,
+    val windowY: Int = 0,
+    val windowWidth: Int = -1,  // -1 indicates WRAP_CONTENT
+    val windowHeight: Int = -1, // -1 indicates WRAP_CONTENT
+    val isActive: Boolean = true
 )

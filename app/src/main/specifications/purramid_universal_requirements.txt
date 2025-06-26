@@ -39,7 +39,7 @@
 		(3.4.2) Spotlihgt has additional requirements for moving.
 	(3.5) can have up to four instances active at the same time.
 		(3.5.1) About does not allow for extra instances.
-		(3.5.2) Dice mode in the Randomziers app-intent allows for seven instances at the saem time.
+		(3.5.2) Dice mode in the Randomizers app-intent allows for seven instances at the saem time.
 
 (4) Windowed app-intents allow pass-through events.
 	(4.1) A touch event on an area not on the clock UI passes through its Overlay layer to interact with the screen below.

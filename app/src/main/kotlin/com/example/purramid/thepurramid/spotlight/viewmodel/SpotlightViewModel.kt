@@ -33,10 +33,13 @@ class SpotlightViewModel @Inject constructor(
         private const val DEFAULT_RADIUS = 125f // 250px diameter as per spec
     }
 
-    private var instanceId: Int = 1 // Default, will be set via setter
+    private var instanceId: Int = 1 // Default, will be set via initialize()
 
     private val _uiState = MutableStateFlow(SpotlightUiState(instanceId = instanceId, isLoading = true))
     val uiState: StateFlow<SpotlightUiState> = _uiState.asStateFlow()
+
+    private var isLockAllActive = false
+    private val individuallyLockedOpenings = mutableSetOf<Int>()
 
     // Call this immediately after creation to set the instance ID
     fun initialize(instanceId: Int, screenWidth: Int, screenHeight: Int) {
@@ -175,25 +178,6 @@ class SpotlightViewModel @Inject constructor(
         }
     }
 
-    fun updateOpeningSize(openingId: Int, newRadius: Float? = null, newWidth: Float? = null, newHeight: Float? = null) {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val opening = spotlightDao.getOpeningById(openingId)
-                if (opening != null && !opening.isLocked) {
-                    val updated = opening.copy(
-                        radius = newRadius ?: opening.radius,
-                        width = newWidth ?: opening.width,
-                        height = newHeight ?: opening.height,
-                        size = maxOf(newWidth ?: opening.width, newHeight ?: opening.height)
-                    )
-                    spotlightDao.updateOpening(updated)
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error updating opening size", e)
-            }
-        }
-    }
-
     fun toggleOpeningShape(openingId: Int) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -258,7 +242,16 @@ class SpotlightViewModel @Inject constructor(
             try {
                 val opening = spotlightDao.getOpeningById(openingId)
                 if (opening != null) {
-                    spotlightDao.updateOpeningLockState(openingId, !opening.isLocked)
+                    val newLockState = !opening.isLocked
+
+                    // Track individually locked openings
+                    if (newLockState && !isLockAllActive) {
+                        individuallyLockedOpenings.add(openingId)
+                    } else if (!newLockState && opening.isLocked && !isLockAllActive) {
+                        individuallyLockedOpenings.remove(openingId)
+                    }
+
+                    spotlightDao.updateOpeningLockState(openingId, newLockState)
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error toggling lock", e)
@@ -269,8 +262,20 @@ class SpotlightViewModel @Inject constructor(
     fun toggleAllLocks() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val areAllLocked = _uiState.value.areAllLocked
-                spotlightDao.updateAllOpeningsLockState(instanceId, !areAllLocked)
+                isLockAllActive = !isLockAllActive
+
+                if (isLockAllActive) {
+                    // Lock all openings
+                    spotlightDao.updateAllOpeningsLockState(instanceId, true)
+                } else {
+                    // Unlock only openings that weren't individually locked
+                    val allOpenings = spotlightDao.getOpeningsForInstance(instanceId)
+                    allOpenings.forEach { opening ->
+                        if (!individuallyLockedOpenings.contains(opening.openingId)) {
+                            spotlightDao.updateOpeningLockState(opening.openingId, false)
+                        }
+                    }
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "Error toggling all locks", e)
             }

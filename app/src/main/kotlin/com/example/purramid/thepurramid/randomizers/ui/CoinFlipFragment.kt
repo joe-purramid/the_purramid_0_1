@@ -113,7 +113,7 @@ class CoinFlipFragment : Fragment() {
         binding.coinFlipSettingsButton.setOnClickListener {
             coinFlipViewModel.uiState.value.settings?.instanceId?.let { instanceId ->
                 try {
-                    val action = CoinFlipFragmentDirections.actionCoinFlipFragmentToRandomizerSettingsFragment(instanceId.toString())
+                    val action = CoinFlipFragmentDirections.actionCoinFlipFragmentToRandomizerSettingsFragment(instanceId)
                     findNavController().navigate(action)
                 } catch (e: Exception) {
                     Log.e("CoinFlipFragment", "Navigation to Settings failed.", e)

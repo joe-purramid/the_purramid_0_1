@@ -12,14 +12,17 @@ interface ClockDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOrUpdate(state: ClockStateEntity)
 
-    @Query("SELECT * FROM clock_state WHERE clockId = :id")
-    suspend fun getById(id: Int): ClockStateEntity?
+    @Query("SELECT * FROM clock_state WHERE clockId = :instanceId")
+    suspend fun getByInstanceId(instanceId: Int): ClockStateEntity?
 
     @Query("SELECT * FROM clock_state")
     suspend fun getAllStates(): List<ClockStateEntity> // To load all clocks on service start
 
-    @Query("DELETE FROM clock_state WHERE clockId = :id")
-    suspend fun deleteById(id: Int) // To delete when a clock is closed
+    @Query("SELECT COUNT(*) FROM clock_state")
+    suspend fun getActiveInstanceCount(): Int
+
+    @Query("DELETE FROM clock_state WHERE clockId = :instanceId")
+    suspend fun deleteByInstanceId(instanceId: Int)
 
     @Query("DELETE FROM clock_state")
     suspend fun clearAll() // Optional: For debugging or resetting

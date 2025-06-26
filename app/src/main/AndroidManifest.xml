@@ -7,7 +7,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.INTERNET" />
-
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
         android:name=".PurramidApplication"
@@ -105,14 +105,19 @@
                 android:defaultHeight="500dp" android:gravity="center" />
         </activity>
 
-        <activity
-            android:name=".screen_mask.ScreenMaskActivity"
-            android:theme="@style/CenteredActivityTheme" />
-
         <service android:name=".screen_mask.ScreenMaskService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
+
+        <receiver
+            android:name=".spotlight.SpotlightBootReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
 
         <activity android:name=".spotlight.SpotlightActivity"
             android:exported="false"

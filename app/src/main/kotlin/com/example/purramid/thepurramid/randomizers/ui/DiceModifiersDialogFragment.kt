@@ -44,9 +44,14 @@ class DiceModifiersDialogFragment : DialogFragment() {
     private var isUpdatingModifierEditTextProgrammatically = false
 
     companion object {
-        const val TAG = "DiceModifiersDialog"
-        fun newInstance(instanceId: UUID? = null): DiceModifiersDialogFragment {
-            return DiceModifiersDialogFragment()
+        const val TAG = "DiceModifiersDialogFragment"
+
+        fun newInstance(instanceId: Int? = null): DiceModifiersDialogFragment {
+            return DiceModifiersDialogFragment().apply {
+                arguments = Bundle().apply {
+                    putInt("instanceId", instanceId ?: 0)
+                }
+            }
         }
         const val MIN_MODIFIER = 0
         const val MAX_MODIFIER = 100

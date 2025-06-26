@@ -133,4 +133,20 @@ interface RandomizerDao {
     */
 
     // Add other specific queries as needed for your application logic
+
+    /** Gets a specific randomizer instance by integer ID. */
+    @Query("SELECT * FROM randomizer_instances WHERE instanceId = :instanceId")
+    suspend fun getByInstanceId(instanceId: Int): RandomizerInstanceEntity?
+
+    /** Gets all randomizer instance states. */
+    @Query("SELECT * FROM randomizer_instances")
+    suspend fun getAllStates(): List<RandomizerInstanceEntity>
+
+    /** Deletes a specific randomizer instance by integer ID. */
+    @Query("DELETE FROM randomizer_instances WHERE instanceId = :instanceId")
+    suspend fun deleteByInstanceId(instanceId: Int)
+
+    /** Gets the count of active instances. */
+    @Query("SELECT COUNT(*) FROM randomizer_instances WHERE isActive = 1")
+    suspend fun getActiveInstanceCount(): Int
 }
