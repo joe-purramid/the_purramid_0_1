@@ -32,7 +32,6 @@ import android.widget.Button
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
-import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import androidx.core.graphics.ColorUtils
 import androidx.lifecycle.*
@@ -132,11 +131,7 @@ class TimersService : LifecycleService() {
             // Request new instance ID from InstanceManager
             val instanceId = instanceManager.getNextInstanceId(InstanceManager.TIMERS)
             if (instanceId == null) {
-                Toast.makeText(
-                    this,
-                    getString(R.string.max_timers_reached),
-                    Toast.LENGTH_LONG
-                ).show()
+                Log.e(TAG, "No available instance slots for Timer")
                 stopSelf()
                 return START_NOT_STICKY
             }

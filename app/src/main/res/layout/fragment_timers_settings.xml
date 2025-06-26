@@ -113,7 +113,7 @@
                     android:layout_width="24dp"
                     android:layout_height="24dp"
                     android:src="@drawable/ic_edit"
-                    android:contentDescription="@string/edit_duration"/>
+                    android:contentDescription="@string/set_duration_label"/>
 
             </LinearLayout>
 
@@ -140,7 +140,7 @@
                     android:layout_width="24dp"
                     android:layout_height="24dp"
                     android:src="@drawable/ic_arrow_drop_down"
-                    android:contentDescription="@string/select_sound"
+                    android:contentDescription="@string/play_sound_on_finish"
                     android:layout_marginStart="8dp"/>
 
             </LinearLayout>
@@ -174,7 +174,7 @@
                 android:id="@+id/switchLapTime"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/lap_time"
+                android:text="@string/lap"
                 android:checked="false"/>
 
             <com.google.android.material.materialswitch.MaterialSwitch
@@ -242,7 +242,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="@string/add_another"
+                android:text="@string/setting_add_another_timer"
                 android:textAppearance="?attr/textAppearanceTitleMedium"/>
 
             <ImageView
@@ -250,7 +250,7 @@
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:src="@drawable/ic_add_circle"
-                android:contentDescription="@string/add_another"/>
+                android:contentDescription="@string/setting_add_another_timer"/>
 
         </LinearLayout>
 

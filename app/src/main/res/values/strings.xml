@@ -594,6 +594,8 @@
     <string name="lap">Lap Times</string>
     <string name="no_laps_recorded">No laps recorded</string>
     <string name="sounds">Stopwatch sounds</string>
+    <string name="setting_add_another_timer">Add Another Timer</string>
+    <string name="max_timers_reached_snackbar">Maximum number of timers reached.</string>
 
     <!-- `` TRAFFIC LIGHT APP `` -->
     <string name="traffic_light_vertical_desc">A vertically oriented traffic light.</string>
@@ -611,7 +613,7 @@
     <string name="setting_add_title">Add Title</string>
     <string name="setting_show_time_remaining">Show Time Remaining (Timed Mode)</string>
     <string name="setting_show_timeline">Show Timeline (Timed Mode)</string>
-    <string name="setting_add_another">Add Another Traffic Light</string>
+    <string name="setting_add_another_traffic_light">Add Another Traffic Light</string>
     <string name="max_traffic_lights_reached_snackbar">Maximum number of traffic lights reached.</string>
     <string name="dialog_close">Close</string>
     <string name="min_db_label">Min:</string> <!-- Minimum -->

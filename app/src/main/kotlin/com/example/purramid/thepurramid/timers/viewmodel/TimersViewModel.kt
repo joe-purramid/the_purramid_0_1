@@ -33,8 +33,8 @@ class TimersViewModel @Inject constructor(
         private const val MAX_LAPS = 10 // As per specification
     }
 
-    // Get timerId passed via SavedStateHandle
-    private val timerId: Int = savedStateHandle[KEY_TIMER_ID] ?: 0
+    // Initialize timerId - will be set by setTimerId() from Service
+    private var timerId: Int = 0
 
     private val _uiState = MutableStateFlow(TimerState(timerId = timerId))
     val uiState: StateFlow<TimerState> = _uiState.asStateFlow()
@@ -43,11 +43,15 @@ class TimersViewModel @Inject constructor(
     private val gson = Gson()
 
     init {
-        Log.d(TAG, "Initializing ViewModel for timerId: $timerId")
-        if (timerId != 0) {
-            loadInitialState(timerId)
-        } else {
-            Log.e(TAG, "Invalid timerId (0), using default state without persistence.")
+        Log.d(TAG, "Initializing ViewModel")
+        // TimerId will be set by the Service
+    }
+
+    fun setTimerId(id: Int) {
+        if (timerId == 0 && id > 0) {
+            timerId = id
+            savedStateHandle[KEY_TIMER_ID] = id
+            loadInitialState(id)
         }
     }
 
@@ -66,7 +70,7 @@ class TimersViewModel @Inject constructor(
                         Log.d(TAG, "No saved state for timer $id, using defaults.")
                         val defaultState = TimerState(
                             timerId = id,
-                            uuid = UUID.randomUUID() // Generate new UUID
+                            uuid = UUID.randomUUID()
                         )
                         _uiState.value = defaultState
                         saveState(defaultState)
@@ -177,246 +181,237 @@ class TimersViewModel @Inject constructor(
             Log.d(TAG, "Timer $timerId finished.")
             saveState(_uiState.value)
         }
-    }.RingtoneManager.getRingtone(
-    savedStateHandle.get<android.content.Context>("context"),
-    notification
-    )
-    ringtone?.play()
-    Log.d(TAG, "Playing default notification sound")
-} catch (e: Exception) {
-    Log.e(TAG, "Failed to play default sound", e)
-}
-}
+    }
 
-// --- Settings Updates ---
-fun setInitialDuration(durationMillis: Long) {
-    if (_uiState.value.type == TimerType.COUNTDOWN && !_uiState.value.isRunning) {
-        _uiState.update { it.copy(initialDurationMillis = durationMillis, currentMillis = durationMillis) }
+    // --- Settings Updates ---
+    fun setInitialDuration(durationMillis: Long) {
+        if (_uiState.value.type == TimerType.COUNTDOWN && !_uiState.value.isRunning) {
+            _uiState.update { it.copy(initialDurationMillis = durationMillis, currentMillis = durationMillis) }
+            saveState(_uiState.value)
+        }
+    }
+
+    fun setShowCentiseconds(show: Boolean) {
+        if (_uiState.value.showCentiseconds == show) return
+        _uiState.update { it.copy(showCentiseconds = show) }
         saveState(_uiState.value)
     }
-}
 
-fun setShowCentiseconds(show: Boolean) {
-    if (_uiState.value.showCentiseconds == show) return
-    _uiState.update { it.copy(showCentiseconds = show) }
-    saveState(_uiState.value)
-}
-
-fun setPlaySoundOnEnd(play: Boolean) {
-    if (_uiState.value.playSoundOnEnd == play) return
-    _uiState.update { it.copy(playSoundOnEnd = play) }
-    saveState(_uiState.value)
-}
-
-fun setTimerType(type: TimerType) {
-    if (_uiState.value.type == type) return
-    stopTicker()
-    _uiState.update {
-        it.copy(
-            type = type,
-            isRunning = false,
-            currentMillis = if (type == TimerType.COUNTDOWN) it.initialDurationMillis else 0L,
-            laps = emptyList()
-        )
+    fun setPlaySoundOnEnd(play: Boolean) {
+        if (_uiState.value.playSoundOnEnd == play) return
+        _uiState.update { it.copy(playSoundOnEnd = play) }
+        saveState(_uiState.value)
     }
-    saveState(_uiState.value)
-}
 
-fun updateOverlayColor(newColor: Int) {
-    if (_uiState.value.overlayColor == newColor) return
-    _uiState.update { it.copy(overlayColor = newColor) }
-    saveState(_uiState.value)
-}
-
-fun updateWindowPosition(x: Int, y: Int) {
-    if (_uiState.value.windowX == x && _uiState.value.windowY == y) return
-    _uiState.update { it.copy(windowX = x, windowY = y) }
-    saveState(_uiState.value)
-}
-
-fun updateWindowSize(width: Int, height: Int) {
-    if (_uiState.value.windowWidth == width && _uiState.value.windowHeight == height) return
-    _uiState.update { it.copy(windowWidth = width, windowHeight = height) }
-    saveState(_uiState.value)
-}
-
-// --- New Feature Methods ---
-fun setNested(nested: Boolean) {
-    if (_uiState.value.isNested == nested) return
-    _uiState.update {
-        it.copy(
-            isNested = nested,
-            // Reset nested position when toggling off
-            nestedX = if (nested) it.nestedX else -1,
-            nestedY = if (nested) it.nestedY else -1
-        )
+    fun setTimerType(type: TimerType) {
+        if (_uiState.value.type == type) return
+        stopTicker()
+        _uiState.update {
+            it.copy(
+                type = type,
+                isRunning = false,
+                currentMillis = if (type == TimerType.COUNTDOWN) it.initialDurationMillis else 0L,
+                laps = emptyList()
+            )
+        }
+        saveState(_uiState.value)
     }
-    saveState(_uiState.value)
-}
 
-fun updateNestedPosition(x: Int, y: Int) {
-    if (_uiState.value.nestedX == x && _uiState.value.nestedY == y) return
-    _uiState.update { it.copy(nestedX = x, nestedY = y) }
-    saveState(_uiState.value)
-}
+    fun updateOverlayColor(newColor: Int) {
+        if (_uiState.value.overlayColor == newColor) return
+        _uiState.update { it.copy(overlayColor = newColor) }
+        saveState(_uiState.value)
+    }
 
-fun setSoundsEnabled(enabled: Boolean) {
-    if (_uiState.value.soundsEnabled == enabled) return
-    _uiState.update { it.copy(soundsEnabled = enabled) }
-    saveState(_uiState.value)
-}
+    fun updateWindowPosition(x: Int, y: Int) {
+        if (_uiState.value.windowX == x && _uiState.value.windowY == y) return
+        _uiState.update { it.copy(windowX = x, windowY = y) }
+        saveState(_uiState.value)
+    }
 
-fun setShowLapTimes(show: Boolean) {
-    if (_uiState.value.showLapTimes == show) return
-    _uiState.update { it.copy(showLapTimes = show) }
-    saveState(_uiState.value)
-}
+    fun updateWindowSize(width: Int, height: Int) {
+        if (_uiState.value.windowWidth == width && _uiState.value.windowHeight == height) return
+        _uiState.update { it.copy(windowWidth = width, windowHeight = height) }
+        saveState(_uiState.value)
+    }
 
-fun setSelectedSound(uri: String?) {
-    if (_uiState.value.selectedSoundUri == uri) return
-    _uiState.update { it.copy(selectedSoundUri = uri) }
-    saveState(_uiState.value)
-}
+    // --- New Feature Methods ---
+    fun setNested(nested: Boolean) {
+        if (_uiState.value.isNested == nested) return
+        _uiState.update {
+            it.copy(
+                isNested = nested,
+                // Reset nested position when toggling off
+                nestedX = if (nested) it.nestedX else -1,
+                nestedY = if (nested) it.nestedY else -1
+            )
+        }
+        saveState(_uiState.value)
+    }
 
-fun setMusicUrl(url: String?) {
-    if (_uiState.value.musicUrl == url) return
+    fun updateNestedPosition(x: Int, y: Int) {
+        if (_uiState.value.nestedX == x && _uiState.value.nestedY == y) return
+        _uiState.update { it.copy(nestedX = x, nestedY = y) }
+        saveState(_uiState.value)
+    }
 
-    // Update recent URLs list
-    val recentUrls = _uiState.value.recentMusicUrls.toMutableList()
-    url?.let {
-        recentUrls.remove(it) // Remove if already exists
-        recentUrls.add(0, it) // Add to beginning
-        if (recentUrls.size > 3) {
-            recentUrls.removeAt(3) // Keep only last 3
+    fun setSoundsEnabled(enabled: Boolean) {
+        if (_uiState.value.soundsEnabled == enabled) return
+        _uiState.update { it.copy(soundsEnabled = enabled) }
+        saveState(_uiState.value)
+    }
+
+    fun setShowLapTimes(show: Boolean) {
+        if (_uiState.value.showLapTimes == show) return
+        _uiState.update { it.copy(showLapTimes = show) }
+        saveState(_uiState.value)
+    }
+
+    fun setSelectedSound(uri: String?) {
+        if (_uiState.value.selectedSoundUri == uri) return
+        _uiState.update { it.copy(selectedSoundUri = uri) }
+        saveState(_uiState.value)
+    }
+
+    fun setMusicUrl(url: String?) {
+        if (_uiState.value.musicUrl == url) return
+
+        // Update recent URLs list
+        val recentUrls = _uiState.value.recentMusicUrls.toMutableList()
+        url?.let {
+            recentUrls.remove(it) // Remove if already exists
+            recentUrls.add(0, it) // Add to beginning
+            if (recentUrls.size > 3) {
+                recentUrls.removeAt(3) // Keep only last 3
+            }
+        }
+
+        _uiState.update {
+            it.copy(
+                musicUrl = url,
+                recentMusicUrls = recentUrls
+            )
+        }
+        saveState(_uiState.value)
+    }
+
+    // --- Persistence ---
+    private fun saveState(state: TimerState) {
+        if (state.timerId <= 0) {
+            Log.w(TAG, "Attempted to save state with invalid timerId: ${state.timerId}")
+            return
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val entity = mapStateToEntity(state)
+                timerDao.insertOrUpdate(entity)
+                Log.d(TAG, "Saved state for timer ${state.timerId}")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to save state for timer ${state.timerId}", e)
+            }
         }
     }
 
-    _uiState.update {
-        it.copy(
-            musicUrl = url,
-            recentMusicUrls = recentUrls
+    fun deleteState() {
+        if (timerId <= 0) return
+        stopTicker()
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                timerDao.deleteById(timerId)
+                Log.d(TAG, "Deleted state for timer $timerId")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to delete state for timer $timerId", e)
+            }
+        }
+    }
+
+    // --- Mappers ---
+    private fun mapEntityToState(entity: TimerStateEntity): TimerState {
+        val lapsList = try {
+            val typeToken = object : TypeToken<List<Long>>() {}.type
+            gson.fromJson<List<Long>>(entity.lapsJson, typeToken) ?: emptyList()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to parse laps JSON, using empty list.", e)
+            emptyList()
+        }
+
+        val recentUrlsList = try {
+            val typeToken = object : TypeToken<List<String>>() {}.type
+            gson.fromJson<List<String>>(entity.recentMusicUrlsJson, typeToken) ?: emptyList()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to parse recent URLs JSON, using empty list.", e)
+            emptyList()
+        }
+
+        return TimerState(
+            timerId = entity.timerId,
+            uuid = try {
+                UUID.fromString(entity.uuid)
+            } catch (e: Exception) {
+                Log.e(TAG, "Invalid UUID in entity, generating new one", e)
+                UUID.randomUUID()
+            },
+            type = try {
+                TimerType.valueOf(entity.type)
+            } catch (e: Exception) {
+                TimerType.STOPWATCH
+            },
+            initialDurationMillis = entity.initialDurationMillis,
+            currentMillis = entity.currentMillis,
+            isRunning = entity.isRunning,
+            laps = lapsList,
+            showCentiseconds = entity.showCentiseconds,
+            playSoundOnEnd = entity.playSoundOnEnd,
+            overlayColor = entity.overlayColor,
+            windowX = entity.windowX,
+            windowY = entity.windowY,
+            windowWidth = entity.windowWidth,
+            windowHeight = entity.windowHeight,
+            isNested = entity.isNested,
+            nestedX = entity.nestedX,
+            nestedY = entity.nestedY,
+            soundsEnabled = entity.soundsEnabled,
+            selectedSoundUri = entity.selectedSoundUri,
+            musicUrl = entity.musicUrl,
+            recentMusicUrls = recentUrlsList,
+            showLapTimes = entity.showLapTimes
         )
     }
-    saveState(_uiState.value)
-}
 
-// --- Persistence ---
-private fun saveState(state: TimerState) {
-    if (state.timerId <= 0) {
-        Log.w(TAG, "Attempted to save state with invalid timerId: ${state.timerId}")
-        return
-    }
-    viewModelScope.launch(Dispatchers.IO) {
-        try {
-            val entity = mapStateToEntity(state)
-            timerDao.insertOrUpdate(entity)
-            Log.d(TAG, "Saved state for timer ${state.timerId}")
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to save state for timer ${state.timerId}", e)
-        }
-    }
-}
+    private fun mapStateToEntity(state: TimerState): TimerStateEntity {
+        val lapsJson = gson.toJson(state.laps)
+        val recentUrlsJson = gson.toJson(state.recentMusicUrls)
 
-fun deleteState() {
-    if (timerId <= 0) return
-    stopTicker()
-    viewModelScope.launch(Dispatchers.IO) {
-        try {
-            timerDao.deleteById(timerId)
-            Log.d(TAG, "Deleted state for timer $timerId")
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to delete state for timer $timerId", e)
-        }
-    }
-}
-
-// --- Mappers ---
-private fun mapEntityToState(entity: TimerStateEntity): TimerState {
-    val lapsList = try {
-        val typeToken = object : TypeToken<List<Long>>() {}.type
-        gson.fromJson<List<Long>>(entity.lapsJson, typeToken) ?: emptyList()
-    } catch (e: Exception) {
-        Log.e(TAG, "Failed to parse laps JSON, using empty list.", e)
-        emptyList()
+        return TimerStateEntity(
+            timerId = state.timerId,
+            uuid = state.uuid.toString(),
+            type = state.type.name,
+            initialDurationMillis = state.initialDurationMillis,
+            currentMillis = state.currentMillis,
+            isRunning = state.isRunning,
+            lapsJson = lapsJson,
+            showCentiseconds = state.showCentiseconds,
+            playSoundOnEnd = state.playSoundOnEnd,
+            overlayColor = state.overlayColor,
+            windowX = state.windowX,
+            windowY = state.windowY,
+            windowWidth = state.windowWidth,
+            windowHeight = state.windowHeight,
+            isNested = state.isNested,
+            nestedX = state.nestedX,
+            nestedY = state.nestedY,
+            soundsEnabled = state.soundsEnabled,
+            selectedSoundUri = state.selectedSoundUri,
+            musicUrl = state.musicUrl,
+            recentMusicUrlsJson = recentUrlsJson,
+            showLapTimes = state.showLapTimes
+        )
     }
 
-    val recentUrlsList = try {
-        val typeToken = object : TypeToken<List<String>>() {}.type
-        gson.fromJson<List<String>>(entity.recentMusicUrlsJson, typeToken) ?: emptyList()
-    } catch (e: Exception) {
-        Log.e(TAG, "Failed to parse recent URLs JSON, using empty list.", e)
-        emptyList()
+    // --- Cleanup ---
+    override fun onCleared() {
+        Log.d(TAG, "ViewModel cleared for timerId: $timerId")
+        stopTicker()
+        super.onCleared()
     }
-
-    return TimerState(
-        timerId = entity.timerId,
-        uuid = try {
-            UUID.fromString(entity.uuid)
-        } catch (e: Exception) {
-            Log.e(TAG, "Invalid UUID in entity, generating new one", e)
-            UUID.randomUUID()
-        },
-        type = try {
-            TimerType.valueOf(entity.type)
-        } catch (e: Exception) {
-            TimerType.STOPWATCH
-        },
-        initialDurationMillis = entity.initialDurationMillis,
-        currentMillis = entity.currentMillis,
-        isRunning = entity.isRunning,
-        laps = lapsList,
-        showCentiseconds = entity.showCentiseconds,
-        playSoundOnEnd = entity.playSoundOnEnd,
-        overlayColor = entity.overlayColor,
-        windowX = entity.windowX,
-        windowY = entity.windowY,
-        windowWidth = entity.windowWidth,
-        windowHeight = entity.windowHeight,
-        isNested = entity.isNested,
-        nestedX = entity.nestedX,
-        nestedY = entity.nestedY,
-        soundsEnabled = entity.soundsEnabled,
-        selectedSoundUri = entity.selectedSoundUri,
-        musicUrl = entity.musicUrl,
-        recentMusicUrls = recentUrlsList,
-        showLapTimes = entity.showLapTimes
-    )
-}
-
-private fun mapStateToEntity(state: TimerState): TimerStateEntity {
-    val lapsJson = gson.toJson(state.laps)
-    val recentUrlsJson = gson.toJson(state.recentMusicUrls)
-
-    return TimerStateEntity(
-        timerId = state.timerId,
-        uuid = state.uuid.toString(),
-        type = state.type.name,
-        initialDurationMillis = state.initialDurationMillis,
-        currentMillis = state.currentMillis,
-        isRunning = state.isRunning,
-        lapsJson = lapsJson,
-        showCentiseconds = state.showCentiseconds,
-        playSoundOnEnd = state.playSoundOnEnd,
-        overlayColor = state.overlayColor,
-        windowX = state.windowX,
-        windowY = state.windowY,
-        windowWidth = state.windowWidth,
-        windowHeight = state.windowHeight,
-        isNested = state.isNested,
-        nestedX = state.nestedX,
-        nestedY = state.nestedY,
-        soundsEnabled = state.soundsEnabled,
-        selectedSoundUri = state.selectedSoundUri,
-        musicUrl = state.musicUrl,
-        recentMusicUrlsJson = recentUrlsJson,
-        showLapTimes = state.showLapTimes
-    )
-}
-
-// --- Cleanup ---
-override fun onCleared() {
-    Log.d(TAG, "ViewModel cleared for timerId: $timerId")
-    stopTicker()
-    super.onCleared()
-}
 }

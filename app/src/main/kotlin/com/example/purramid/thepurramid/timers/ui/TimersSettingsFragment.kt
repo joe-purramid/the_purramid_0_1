@@ -297,7 +297,7 @@ class TimersSettingsFragment : DialogFragment() {
         if (activeCount >= 4) {
             Toast.makeText(
                 requireContext(),
-                getString(R.string.max_timers_reached),
+                getString(R.string.max_timers_reached_snackbar),
                 Toast.LENGTH_LONG
             ).show()
             return
