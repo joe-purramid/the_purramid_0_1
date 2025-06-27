@@ -4,6 +4,7 @@ import android.os.SystemClock // For double-tap timing
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 // import androidx.lifecycle.viewModelScope
 import com.example.purramid.thepurramid.data.db.TrafficLightDao
 import com.example.purramid.thepurramid.data.db.TrafficLightStateEntity
@@ -40,6 +41,11 @@ class TrafficLightViewModel @Inject constructor(
     private var lastTapTimeMs: Long = 0
     private var lastTappedColor: LightColor? = null
     private val doubleTapTimeoutMs: Long = 500 // Standard double-tap timeout
+
+    // Variables for microphone access
+    private var audioRecord: AudioRecord? = null
+    private var isRecording = false
+    private var recordingThread: Thread? = null
 
     init {
         Log.d(TAG, "Initializing ViewModel for instanceId: $instanceId")
@@ -170,6 +176,51 @@ class TrafficLightViewModel @Inject constructor(
         }
     }
 
+    private fun startMicrophoneMonitoring() {
+        if (!checkMicrophonePermission()) {
+            _uiState.update { it.copy(isMicrophoneAvailable = false) }
+            return
+        }
+
+        val bufferSize = AudioRecord.getMinBufferSize(
+            44100,
+            AudioFormat.CHANNEL_IN_MONO,
+            AudioFormat.ENCODING_PCM_16BIT
+        )
+
+        audioRecord = AudioRecord(
+            MediaRecorder.AudioSource.MIC,
+            44100,
+            AudioFormat.CHANNEL_IN_MONO,
+            AudioFormat.ENCODING_PCM_16BIT,
+            bufferSize
+        )
+
+        audioRecord?.startRecording()
+        isRecording = true
+
+        recordingThread = thread(start = true) {
+            val audioBuffer = ShortArray(bufferSize)
+            while (isRecording) {
+                val result = audioRecord?.read(audioBuffer, 0, bufferSize) ?: 0
+                if (result > 0) {
+                    val maxAmplitude = audioBuffer.maxOrNull()?.toInt() ?: 0
+                    val db = 20 * log10(maxAmplitude.toDouble() / 32767.0) + 90
+                    updateLightForDecibel(db.toInt())
+                }
+                Thread.sleep(2000) // Check every 2 seconds as per spec
+            }
+        }
+    }
+
+    private fun stopMicrophoneMonitoring() {
+        isRecording = false
+        recordingThread?.join()
+        audioRecord?.stop()
+        audioRecord?.release()
+        audioRecord = null
+    }
+
     // Extracted calculation logic (remains complex, needs careful implementation)
     private fun calculateUpdatedRanges(
         currentSettings: ResponsiveModeSettings,
@@ -194,6 +245,29 @@ class TrafficLightViewModel @Inject constructor(
 
         // Return potentially modified ranges
         return currentSettings.copy(greenRange = newGreen, yellowRange = newYellow, redRange = newRed)
+    }
+
+    fun activateDangerousAlert() {
+        _uiState.update {
+            it.copy(
+                isDangerousAlertActive = true,
+                previousMode = it.currentMode,
+                currentMode = TrafficLightMode.DANGER_ALERT
+            )
+        }
+    }
+
+    fun deactivateDangerousAlert() {
+        _uiState.update {
+            it.copy(
+                isDangerousAlertActive = false,
+                currentMode = it.previousMode ?: TrafficLightMode.MANUAL_CHANGE
+            )
+        }
+    }
+
+    fun setKeyboardAvailable(available: Boolean) {
+        _uiState.update { it.copy(isKeyboardAvailable = available) }
     }
 
     // --- Persistence ---
@@ -262,7 +336,7 @@ class TrafficLightViewModel @Inject constructor(
             orientation = state.orientation.name,
             isBlinkingEnabled = state.isBlinkingEnabled,
             activeLight = state.activeLight?.name,
-            isSettingsOpen = state.isSettingsOpen,
+            isSettingsOpen = false,
             isMicrophoneAvailable = state.isMicrophoneAvailable,
             numberOfOpenInstances = state.numberOfOpenInstances, // This might be better managed globally
             responsiveModeSettingsJson = responsiveJson,

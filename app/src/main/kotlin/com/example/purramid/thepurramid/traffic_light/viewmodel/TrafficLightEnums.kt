@@ -12,3 +12,7 @@ enum class TrafficLightMode {
 enum class Orientation {
     VERTICAL, HORIZONTAL
 }
+
+enum class TrafficLightMode {
+    MANUAL_CHANGE, RESPONSIVE_CHANGE, TIMED_CHANGE, DANGER_ALERT
+}

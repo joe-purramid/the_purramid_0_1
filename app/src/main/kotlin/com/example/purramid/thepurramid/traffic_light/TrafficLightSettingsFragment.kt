@@ -185,6 +185,16 @@ class TrafficLightSettingsFragment : DialogFragment() { // Or AppCompatDialogFra
         blockListeners = false
     }
 
+    private fun showTextInput() {
+        if (!viewModel.uiState.value.isKeyboardAvailable) {
+            // Show on-screen keyboard hint
+            Snackbar.make(
+                binding.root,
+                "External keyboard not detected. Using on-screen keyboard.",
+                Snackbar.LENGTH_SHORT
+            ).show()
+        }
+    }
 
     override fun onDismiss(dialog: DialogInterface) {
         super.onDismiss(dialog)

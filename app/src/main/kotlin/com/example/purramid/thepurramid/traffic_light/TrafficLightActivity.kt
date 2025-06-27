@@ -23,7 +23,7 @@ class TrafficLightActivity : AppCompatActivity() {
         // Use constants from Service for SharedPreferences
         const val PREFS_NAME = TrafficLightService.PREFS_NAME_FOR_ACTIVITY
         const val KEY_ACTIVE_COUNT = TrafficLightService.KEY_ACTIVE_COUNT_FOR_ACTIVITY
-        const val EXTRA_INSTANCE_ID = TrafficLightViewModel.KEY_INSTANCE_ID
+        const val EXTRA_INSTANCE_ID = "extra_traffic_light_instance_id"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

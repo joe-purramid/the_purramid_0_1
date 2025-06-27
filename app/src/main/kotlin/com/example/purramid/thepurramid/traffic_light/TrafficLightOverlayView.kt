@@ -8,6 +8,7 @@ import android.content.Context
 import android.graphics.Rect
 import android.util.AttributeSet
 import android.util.Log
+import android.view.animation.LinearInterpolator
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
@@ -33,7 +34,41 @@ class TrafficLightOverlayView @JvmOverloads constructor(
     private val instanceId: Int // Added instanceId to constructor
 ) : FrameLayout(context, attrs, defStyleAttr) { // Or ConstraintLayout if your XML root is that
 
-    private val binding: TrafficLightOverlayViewBinding
+    companion object {
+        private const val BASE_MESSAGE_TEXT_SIZE_SP = 24f
+        private const val MIN_ACCESSIBLE_TEXT_SIZE_SP = 14f
+        private const val TAG = "TrafficLightOverlay"
+    }
+
+    private fun getScaledTextSize(baseSizeSp: Float): Float {
+        return TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_SP,
+            baseSizeSp,
+            resources.displayMetrics
+        )
+    }
+
+    // Apply to any text views when messages are implemented
+    private fun applyAccessibleTextSize(textView: TextView) {
+        textView.textSize = getScaledTextSize(BASE_MESSAGE_TEXT_SIZE_SP)
+    }
+
+    // When implementing messages (spec 12.3.4)
+    private fun displayMessage(message: String, color: LightColor) {
+        messageTextView.apply {
+            text = message
+            textSize = getScaledTextSize(
+                BASE_MESSAGE_TEXT_SIZE_SP * 0.8f // 0.8f of bulb size per spec
+            )
+            // Ensure minimum readable size
+            val minSize = getScaledTextSize(MIN_ACCESSIBLE_TEXT_SIZE_SP)
+            if (textSize < minSize) {
+                textSize = minSize
+            }
+        }
+    }
+
+private val binding: TrafficLightOverlayViewBinding
     var interactionListener: InteractionListener? = null
 
     // Touch Handling Variables

@@ -117,6 +117,61 @@ class TrafficLightService : LifecycleService(), ViewModelStoreOwner {
         }
     }
 
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+
+        // Handle font scale changes
+        if (newConfig.fontScale != resources.configuration.fontScale) {
+            handleFontScaleChange()
+        }
+
+        // Handle keyboard availability changes
+        if (newConfig.keyboard != resources.configuration.keyboard ||
+            newConfig.keyboardHidden != resources.configuration.keyboardHidden) {
+            handleKeyboardChange(newConfig)
+        }
+    }
+
+    private fun handleFontScaleChange() {
+        // Refresh all overlay views to apply new text sizes
+        activeTrafficLightViews.forEach { (id, view) ->
+            val params = trafficLightLayoutParams[id]
+            val state = activeTrafficLightViewModels[id]?.uiState?.value
+
+            if (params != null && state != null && view.isAttachedToWindow) {
+                // Remove and re-add view to force layout refresh
+                windowManager.removeView(view)
+
+                // Recreate view with new font scale
+                val newView = TrafficLightOverlayView(this, instanceId = id).apply {
+                    interactionListener = createTrafficLightInteractionListener(id, this, params)
+                }
+
+                activeTrafficLightViews[id] = newView
+                windowManager.addView(newView, params)
+                newView.updateState(state)
+            }
+        }
+    }
+
+    private fun handleKeyboardChange(newConfig: Configuration) {
+        val isKeyboardAvailable = newConfig.keyboard != Configuration.KEYBOARD_NOKEYS
+
+        // Notify all ViewModels about keyboard availability
+        activeTrafficLightViewModels.values.forEach { viewModel ->
+            viewModel.setKeyboardAvailable(isKeyboardAvailable)
+        }
+    }
+
+    private fun requestMicrophonePermission() {
+        // Since this is a Service, we need to launch an Activity to request permission
+        val intent = Intent(this, TrafficLightActivity::class.java).apply {
+            action = "REQUEST_MICROPHONE_PERMISSION"
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        startActivity(intent)
+    }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
         val action = intent?.action
@@ -273,7 +328,17 @@ class TrafficLightService : LifecycleService(), ViewModelStoreOwner {
     ): TrafficLightOverlayView.InteractionListener {
         return object : TrafficLightOverlayView.InteractionListener {
             override fun onLightTapped(id: Int, color: LightColor) { // id here is instanceId
+                val viewModel = activeTrafficLightViewModels[id]
+                val state = viewModel?.uiState?.value
                 activeTrafficLightViewModels[id]?.handleLightTap(color)
+
+                // Check if in dangerous alert mode and green was double-tapped
+                if (state?.isDangerousAlertActive == true && color == LightColor.GREEN) {
+                    // Check for double-tap logic here
+                    dismissDangerousSoundAlert() // This affects ALL instances
+                } else {
+                    viewModel?.handleLightTap(color)
+                }
             }
             override fun onCloseRequested(id: Int) {
                 removeTrafficLightInstance(id)
