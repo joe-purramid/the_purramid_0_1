@@ -1,17 +1,16 @@
 package com.example.purramid.thepurramid.traffic_light.viewmodel
 
-import android.os.SystemClock // For double-tap timing
+// import androidx.lifecycle.viewModelScope
+import android.media.AudioRecord
+import android.os.SystemClock
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-// import androidx.lifecycle.viewModelScope
 import com.example.purramid.thepurramid.data.db.TrafficLightDao
 import com.example.purramid.thepurramid.data.db.TrafficLightStateEntity
-import com.example.purramid.thepurramid.traffic_light.AdjustValuesFragment // For ColorForRange enum
-import com.google.gson.Gson
+import com.example.purramid.thepurramid.traffic_light.AdjustValuesFragment
 import dagger.hilt.android.lifecycle.HiltViewModel
-import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,20 +18,33 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import javax.inject.Inject
 
 @HiltViewModel
 class TrafficLightViewModel @Inject constructor(
     private val trafficLightDao: TrafficLightDao, // Inject DAO
-    private val savedStateHandle: SavedStateHandle // Inject SavedStateHandle
+    savedStateHandle: SavedStateHandle // Inject SavedStateHandle
 ) : ViewModel() {
 
-    companion object {
-        const val KEY_INSTANCE_ID = TrafficLightActivity.EXTRA_INSTANCE_ID // Use key from Activity
-        private const val TAG = "TrafficLightVM"
-    }
+//    companion object {
+//        const val KEY_INSTANCE_ID = TrafficLightActivity.EXTRA_INSTANCE_ID // Use key from Activity
+//        private const val TAG = "TrafficLightVM"
+//    }
 
     // instanceId passed via Intent/Args through SavedStateHandle
-    private val instanceId: Int? = savedStateHandle[KEY_INSTANCE_ID]
+    private val instanceId: Int? = null
+
+    fun initialize(id: Int) {
+        if (instanceId != null) {
+            Log.w(TAG, "ViewModel already initialized with ID: $instanceId")
+            return
+        }
+
+        instanceId = id
+        Log.d(TAG, "Initializing ViewModel for instanceId: $id")
+        loadInitialState(id)
+    }
+
 
     private val _uiState = MutableStateFlow(TrafficLightState())
     val uiState: StateFlow<TrafficLightState> = _uiState.asStateFlow()
@@ -41,6 +53,8 @@ class TrafficLightViewModel @Inject constructor(
     private var lastTapTimeMs: Long = 0
     private var lastTappedColor: LightColor? = null
     private val doubleTapTimeoutMs: Long = 500 // Standard double-tap timeout
+    private var lastGreenTapTime = 0L
+    private val DOUBLE_TAP_THRESHOLD = 500L // ms
 
     // Variables for microphone access
     private var audioRecord: AudioRecord? = null
@@ -48,7 +62,7 @@ class TrafficLightViewModel @Inject constructor(
     private var recordingThread: Thread? = null
 
     init {
-        Log.d(TAG, "Initializing ViewModel for instanceId: $instanceId")
+        Log.d(TAG, "ViewModel created, awaiting initialization")
         if (instanceId != null) {
             loadInitialState(instanceId)
         } else {
@@ -103,6 +117,33 @@ class TrafficLightViewModel @Inject constructor(
             _uiState.update { it.copy(activeLight = newActiveLight) }
             saveState(_uiState.value) // Save updated state
         }
+
+        if (currentState.isDangerousAlertActive && tappedColor == LightColor.GREEN) {
+            val currentTime = System.currentTimeMillis()
+            if (currentTime - lastGreenTapTime < DOUBLE_TAP_THRESHOLD) {
+                // Double tap detected on green - dismiss alert
+                deactivateDangerousAlert()
+                lastGreenTapTime = 0L
+                return
+            }
+            lastGreenTapTime = currentTime
+            return // Don't process single taps in danger mode
+        }
+
+        // Reset green tap timer if not in danger mode
+        lastGreenTapTime = 0L
+    }
+
+    // Add method to check decibel levels for danger
+    fun checkDecibelForDanger(db: Int) {
+        val currentState = _uiState.value
+
+        // Only check if dangerous sound alert is enabled
+        if (!currentState.responsiveModeSettings.dangerousSoundAlertEnabled) return
+
+        if (db >= 150 && !currentState.isDangerousAlertActive) {
+            activateDangerousAlert()
+        }
     }
 
     fun setOrientation(newOrientation: Orientation) {
@@ -134,7 +175,6 @@ class TrafficLightViewModel @Inject constructor(
         // isSettingsOpen is likely transient UI state, maybe don't persist?
         // If persistence is desired, uncomment saveState.
         _uiState.update { it.copy(isSettingsOpen = isOpen) }
-        // saveState(_uiState.value)
     }
 
     // --- Placeholder functions for settings items to be implemented later ---
@@ -143,6 +183,11 @@ class TrafficLightViewModel @Inject constructor(
         _uiState.update { it.copy(showTimeRemaining = show) }
         saveState(_uiState.value) // Save the change
    }
+
+    fun updateMessages(messages: TrafficLightMessages) {
+        _uiState.update { it.copy(messages = messages) }
+        saveState(_uiState.value)
+    }
 
     fun setShowTimeline(show: Boolean) {
         if (_uiState.value.showTimeline == show) return
@@ -248,20 +293,29 @@ class TrafficLightViewModel @Inject constructor(
     }
 
     fun activateDangerousAlert() {
+        val currentState = _uiState.value
+        if (currentState.isDangerousAlertActive) return // Already active
+
         _uiState.update {
             it.copy(
                 isDangerousAlertActive = true,
                 previousMode = it.currentMode,
-                currentMode = TrafficLightMode.DANGER_ALERT
+                currentMode = TrafficLightMode.DANGER_ALERT,
+                dangerousSoundDetectedAt = System.currentTimeMillis()
             )
         }
     }
 
     fun deactivateDangerousAlert() {
+        val currentState = _uiState.value
+        if (!currentState.isDangerousAlertActive) return
+
         _uiState.update {
             it.copy(
                 isDangerousAlertActive = false,
-                currentMode = it.previousMode ?: TrafficLightMode.MANUAL_CHANGE
+                currentMode = it.previousMode ?: TrafficLightMode.MANUAL_CHANGE,
+                previousMode = null,
+                dangerousSoundDetectedAt = null
             )
         }
     }

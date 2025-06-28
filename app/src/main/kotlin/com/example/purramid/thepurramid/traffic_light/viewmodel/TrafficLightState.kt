@@ -16,14 +16,20 @@ data class TrafficLightState(
     val isBlinkingEnabled: Boolean = true,
     val activeLight: LightColor? = null,
     val isSettingsOpen: Boolean = false,
+    val messages: TrafficLightMessages = TrafficLightMessages(),
     val isMicrophoneAvailable: Boolean = true, // Update later with actual check
     val isDangerousAlertActive: Boolean = false,
     val previousMode: TrafficLightMode? = null,
     val currentDecibelLevel: Int? = null,
+    val dangerousSoundDetectedAt: Long? = null,
     val numberOfOpenInstances: Int = 1,       // Update later when "Add Another" is implemented
     val responsiveModeSettings: ResponsiveModeSettings = ResponsiveModeSettings()
     val isKeyboardAvailable: Boolean = true,
-    // Add fields for Timed Mode UI settings
+    val timedSequences: List<TimedSequence> = emptyList(),
+    val activeSequenceId: String? = null,
+    val currentStepIndex: Int = 0,
+    val elapsedStepSeconds: Int = 0,
+    val isSequencePlaying: Boolean = false,
     val showTimeRemaining: Boolean = false, // Default to false
     val showTimeline: Boolean = true,      // Default to true (as per layout)
     // Add fields for window persistence state

@@ -4,6 +4,7 @@ package com.example.purramid.thepurramid.traffic_light
 import android.content.Context // Added for SharedPreferences
 import android.content.DialogInterface
 import android.content.Intent // Added for Service Intent
+import androidx.core.view.isVisible
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -98,7 +99,9 @@ class TrafficLightSettingsFragment : DialogFragment() { // Or AppCompatDialogFra
         }
 
         binding.buttonAddMessages.setOnClickListener {
-            Snackbar.make(binding.root, "Add Messages: Coming Soon", Snackbar.LENGTH_SHORT).show()
+            AddMessagesFragment.newInstance().show(
+                parentFragmentManager, AddMessagesFragment.TAG
+            )
         }
 
         binding.buttonEditSequence.setOnClickListener {

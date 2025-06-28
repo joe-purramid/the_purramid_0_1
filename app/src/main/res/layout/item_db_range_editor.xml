@@ -15,7 +15,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
-        tools:src="@drawable/ic_circle_green" /> <TextView
+        tools:src="@drawable/ic_circle_green_filled" /> <TextView
         android:id="@+id/label_min_db"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

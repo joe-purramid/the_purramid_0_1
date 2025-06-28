@@ -6,13 +6,9 @@ enum class LightColor {
 }
 
 enum class TrafficLightMode {
-    MANUAL_CHANGE, RESPONSIVE_CHANGE, TIMED_CHANGE
+    MANUAL_CHANGE, RESPONSIVE_CHANGE, TIMED_CHANGE, DANGER_ALERT
 }
 
 enum class Orientation {
     VERTICAL, HORIZONTAL
-}
-
-enum class TrafficLightMode {
-    MANUAL_CHANGE, RESPONSIVE_CHANGE, TIMED_CHANGE, DANGER_ALERT
 }

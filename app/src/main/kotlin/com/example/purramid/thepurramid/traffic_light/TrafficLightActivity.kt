@@ -76,4 +76,28 @@ class TrafficLightActivity : AppCompatActivity() {
             showSettingsFragment(instanceIdForFragment)
         }
     }
+
+    override fun onPause() {
+        super.onPause()
+        // Notify service that settings are closing
+        notifyServiceSettingsClosed()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        // Ensure notification even if onPause was skipped
+        notifyServiceSettingsClosed()
+    }
+
+    private fun notifyServiceSettingsClosed() {
+        // Use a broadcast or bind to service to notify
+        val intent = Intent(this, TrafficLightService::class.java).apply {
+            action = "SETTINGS_CLOSED"
+        }
+        try {
+            startService(intent)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error notifying service of settings closure", e)
+        }
+    }
 }
