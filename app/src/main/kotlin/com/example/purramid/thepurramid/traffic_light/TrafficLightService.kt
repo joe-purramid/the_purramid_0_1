@@ -274,8 +274,7 @@ class TrafficLightService : LifecycleService(), ViewModelStoreOwner {
             if (view == null) {
                 Log.d(TAG, "Creating new TrafficLightOverlayView UI for ID: $instanceId")
                 // Pass the current state to createDefaultLayoutParams
-                params = createDefaultLayoutParams(state)  // Changed from createDefaultLayoutParams(null)
-
+                params = createDefaultLayoutParams(state)
                 view = TrafficLightOverlayView(this, instanceId = instanceId).apply {
                     interactionListener = createTrafficLightInteractionListener(instanceId, this, params)
                 }
@@ -293,11 +292,38 @@ class TrafficLightService : LifecycleService(), ViewModelStoreOwner {
                     }
                 } catch (e: Exception) {
                     Log.e(TAG, "Error adding TrafficLightOverlayView ID $instanceId", e)
-                    // Cleanup on error...
+                    activeTrafficLightViews.remove(instanceId)
+                    trafficLightLayoutParams.remove(instanceId)
+                    stateObserverJobs[instanceId]?.cancel()
+                    activeTrafficLightViewModels.remove(instanceId)?.onCleared()
+                    updateActiveInstanceCountInPrefs()
+                    return@post
                 }
             }
 
             view.updateState(state)
+
+            var layoutNeedsUpdate = false
+            if (params!!.x != state.windowX || params.y != state.windowY) {
+                params.x = state.windowX
+                params.y = state.windowY
+                layoutNeedsUpdate = true
+            }
+            val newWidth = if (state.windowWidth > 0) state.windowWidth else params.width
+            val newHeight = if (state.windowHeight > 0) state.windowHeight else params.height
+            if (params.width != newWidth || params.height != newHeight) {
+                params.width = newWidth
+                params.height = newHeight
+                layoutNeedsUpdate = true
+            }
+
+            if (layoutNeedsUpdate && view.isAttachedToWindow) {
+                try {
+                    windowManager.updateViewLayout(view, params)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error updating WM layout for TL ID $instanceId", e)
+                }
+            }
         }
     }
 

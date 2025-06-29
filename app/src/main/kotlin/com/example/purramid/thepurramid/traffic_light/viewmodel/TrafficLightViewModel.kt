@@ -26,10 +26,10 @@ class TrafficLightViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle // Inject SavedStateHandle
 ) : ViewModel() {
 
-//    companion object {
-//        const val KEY_INSTANCE_ID = TrafficLightActivity.EXTRA_INSTANCE_ID // Use key from Activity
-//        private const val TAG = "TrafficLightVM"
-//    }
+    companion object {
+        const val KEY_INSTANCE_ID = TrafficLightActivity.EXTRA_INSTANCE_ID // Use key from Activity
+        private const val TAG = "TrafficLightVM"
+    }
 
     // instanceId passed via Intent/Args through SavedStateHandle
     private val instanceId: Int? = null
