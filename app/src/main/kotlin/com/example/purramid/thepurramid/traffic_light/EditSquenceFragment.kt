@@ -14,6 +14,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.example.purramid.thepurramid.R
 import com.example.purramid.thepurramid.databinding.FragmentEditSequenceBinding
 import com.example.purramid.thepurramid.traffic_light.viewmodel.TimedSequence
 import com.example.purramid.thepurramid.traffic_light.viewmodel.TrafficLightViewModel
@@ -25,10 +26,10 @@ class EditSequenceFragment : DialogFragment() {
 
     private var _binding: FragmentEditSequenceBinding? = null
     private val binding get() = _binding!!
-    
+
     private val viewModel: TrafficLightViewModel by activityViewModels()
     private lateinit var sequenceAdapter: SequenceListAdapter
-    
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -39,7 +40,7 @@ class EditSequenceFragment : DialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        
+
         setupRecyclerView()
         setupButtons()
         observeViewModel()
@@ -54,7 +55,7 @@ class EditSequenceFragment : DialogFragment() {
                 confirmDeleteSequence(sequence)
             }
         )
-        
+
         binding.recyclerViewSequences.apply {
             layoutManager = LinearLayoutManager(context)
             adapter = sequenceAdapter
@@ -72,10 +73,10 @@ class EditSequenceFragment : DialogFragment() {
                 ).show()
                 return@setOnClickListener
             }
-            
+
             openSequenceEditor(null) // New sequence
         }
-        
+
         binding.buttonClose.setOnClickListener {
             dismiss()
         }
@@ -93,11 +94,11 @@ class EditSequenceFragment : DialogFragment() {
 
     private fun updateSequenceList(sequences: List<TimedSequence>) {
         sequenceAdapter.submitList(sequences.sortedBy { it.title })
-        
+
         // Show/hide empty state
         binding.textEmptyState.isVisible = sequences.isEmpty()
         binding.recyclerViewSequences.isVisible = sequences.isNotEmpty()
-        
+
         // Update button state
         binding.buttonAddSequence.isEnabled = sequences.size < TimedSequence.MAX_SEQUENCES
     }

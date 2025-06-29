@@ -15,26 +15,31 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.example.purramid.thepurramid.R
 import com.example.purramid.thepurramid.databinding.FragmentSequenceEditorBinding
+import com.example.purramid.thepurramid.traffic_light.viewmodel.LightColor
 import com.example.purramid.thepurramid.traffic_light.viewmodel.SequenceStep
 import com.example.purramid.thepurramid.traffic_light.viewmodel.TimedSequence
 import com.example.purramid.thepurramid.traffic_light.viewmodel.TrafficLightViewModel
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
 import java.util.Collections
+import java.util.UUID
 
 class SequenceEditorFragment : DialogFragment() {
 
     private var _binding: FragmentSequenceEditorBinding? = null
     private val binding get() = _binding!!
-    
+
     private val viewModel: TrafficLightViewModel by activityViewModels()
     private lateinit var stepAdapter: SequenceStepAdapter
-    
+
     private var sequenceId: String? = null
     private var currentSequence: TimedSequence? = null
     private var editedSteps = mutableListOf<SequenceStep>()
-    
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         sequenceId = arguments?.getString(ARG_SEQUENCE_ID)
@@ -50,7 +55,7 @@ class SequenceEditorFragment : DialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        
+
         setupViews()
         setupRecyclerView()
         loadSequence()
@@ -61,16 +66,16 @@ class SequenceEditorFragment : DialogFragment() {
         binding.editTextTitle.filters = arrayOf(
             InputFilter.LengthFilter(TimedSequence.MAX_TITLE_LENGTH)
         )
-        
+
         // Buttons
         binding.buttonSaveSequence.setOnClickListener {
             saveSequence()
         }
-        
+
         binding.buttonCancelSequence.setOnClickListener {
             dismiss()
         }
-        
+
         binding.buttonAddStep.setOnClickListener {
             addNewStep()
         }
@@ -91,12 +96,12 @@ class SequenceEditorFragment : DialogFragment() {
                 deleteStep(position)
             }
         )
-        
+
         binding.recyclerViewSteps.apply {
             layoutManager = LinearLayoutManager(context)
             adapter = stepAdapter
         }
-        
+
         // Setup drag to reorder
         val itemTouchHelper = ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(
             ItemTouchHelper.UP or ItemTouchHelper.DOWN, 0
@@ -108,10 +113,10 @@ class SequenceEditorFragment : DialogFragment() {
             ): Boolean {
                 val fromPosition = viewHolder.adapterPosition
                 val toPosition = target.adapterPosition
-                
+
                 Collections.swap(editedSteps, fromPosition, toPosition)
                 stepAdapter.notifyItemMoved(fromPosition, toPosition)
-                
+
                 // Update order numbers
                 updateStepOrder()
                 return true
@@ -121,8 +126,13 @@ class SequenceEditorFragment : DialogFragment() {
                 // Not used
             }
         })
-        
+
         itemTouchHelper.attachToRecyclerView(binding.recyclerViewSteps)
+
+        // Set up drag handle touch listener
+        stepAdapter.dragHandleTouchListener = { viewHolder ->
+            itemTouchHelper.startDrag(viewHolder)
+        }
     }
 
     private fun loadSequence() {
@@ -134,7 +144,7 @@ class SequenceEditorFragment : DialogFragment() {
                 updateStepList()
             }
         }
-        
+
         // If no sequence (new), add one default step
         if (editedSteps.isEmpty()) {
             addNewStep()
@@ -150,13 +160,13 @@ class SequenceEditorFragment : DialogFragment() {
             ).show()
             return
         }
-        
+
         val newStep = SequenceStep(
             order = editedSteps.size + 1,
             color = null,
             durationSeconds = 0
         )
-        
+
         editedSteps.add(newStep)
         updateStepList()
     }
@@ -177,14 +187,14 @@ class SequenceEditorFragment : DialogFragment() {
 
     private fun updateStepList() {
         stepAdapter.submitList(editedSteps.toList())
-        
+
         // Update total duration
         val totalSeconds = editedSteps.sumOf { it.durationSeconds }
         val hours = totalSeconds / 3600
         val minutes = (totalSeconds % 3600) / 60
         val seconds = totalSeconds % 60
         binding.textTotalDuration.text = String.format("Total: %d:%02d:%02d", hours, minutes, seconds)
-        
+
         // Update button states
         binding.buttonAddStep.isEnabled = editedSteps.size < TimedSequence.MAX_STEPS
         binding.textStepCount.text = "${editedSteps.size}/${TimedSequence.MAX_STEPS} steps"
@@ -193,7 +203,7 @@ class SequenceEditorFragment : DialogFragment() {
     private fun showColorPicker(position: Int, step: SequenceStep) {
         val colors = arrayOf("Red", "Yellow", "Green")
         val colorValues = arrayOf(LightColor.RED, LightColor.YELLOW, LightColor.GREEN)
-        
+
         MaterialAlertDialogBuilder(requireContext())
             .setTitle("Select Color")
             .setItems(colors) { _, which ->
@@ -211,7 +221,6 @@ class SequenceEditorFragment : DialogFragment() {
     }
 
     private fun showMessageEditor(position: Int, step: SequenceStep) {
-        // Similar to AddMessagesFragment but for a single message
         StepMessageFragment.newInstance(step.message) { newMessage ->
             editedSteps[position] = step.copy(message = newMessage)
             updateStepList()
@@ -220,12 +229,12 @@ class SequenceEditorFragment : DialogFragment() {
 
     private fun saveSequence() {
         val title = binding.editTextTitle.text.toString().trim()
-        
+
         if (title.isEmpty()) {
             Snackbar.make(binding.root, "Please enter a sequence title", Snackbar.LENGTH_SHORT).show()
             return
         }
-        
+
         // Validate all steps
         val invalidSteps = editedSteps.filter { !it.isValid() }
         if (invalidSteps.isNotEmpty()) {
@@ -236,19 +245,19 @@ class SequenceEditorFragment : DialogFragment() {
             ).show()
             return
         }
-        
+
         val sequence = TimedSequence(
             id = sequenceId ?: UUID.randomUUID().toString(),
             title = title,
             steps = editedSteps
         )
-        
+
         if (sequenceId != null) {
             viewModel.updateSequence(sequence)
         } else {
             viewModel.addSequence(sequence)
         }
-        
+
         dismiss()
     }
 
@@ -260,7 +269,7 @@ class SequenceEditorFragment : DialogFragment() {
     companion object {
         const val TAG = "SequenceEditorDialog"
         private const val ARG_SEQUENCE_ID = "sequence_id"
-        
+
         fun newInstance(sequenceId: String?): SequenceEditorFragment {
             return SequenceEditorFragment().apply {
                 arguments = bundleOf(ARG_SEQUENCE_ID to sequenceId)

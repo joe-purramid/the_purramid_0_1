@@ -177,7 +177,6 @@ class TrafficLightViewModel @Inject constructor(
         _uiState.update { it.copy(isSettingsOpen = isOpen) }
     }
 
-    // --- Placeholder functions for settings items to be implemented later ---
     fun setShowTimeRemaining(show: Boolean) {
         if (_uiState.value.showTimeRemaining == show) return
         _uiState.update { it.copy(showTimeRemaining = show) }
@@ -187,6 +186,51 @@ class TrafficLightViewModel @Inject constructor(
     fun updateMessages(messages: TrafficLightMessages) {
         _uiState.update { it.copy(messages = messages) }
         saveState(_uiState.value)
+    }
+
+    fun addSequence(sequence: TimedSequence) {
+        val currentSequences = _uiState.value.timedSequences
+        if (currentSequences.size >= TimedSequence.MAX_SEQUENCES) return
+
+        _uiState.update {
+            it.copy(timedSequences = currentSequences + sequence)
+        }
+        saveState()
+    }
+
+    fun updateSequence(sequence: TimedSequence) {
+        val currentSequences = _uiState.value.timedSequences.toMutableList()
+        val index = currentSequences.indexOfFirst { it.id == sequence.id }
+
+        if (index >= 0) {
+            currentSequences[index] = sequence
+            _uiState.update {
+                it.copy(timedSequences = currentSequences)
+            }
+            saveState()
+        }
+    }
+
+    fun deleteSequence(sequenceId: String) {
+        _uiState.update { state ->
+            state.copy(
+                timedSequences = state.timedSequences.filter { it.id != sequenceId },
+                // Clear active sequence if it was deleted
+                activeSequenceId = if (state.activeSequenceId == sequenceId) null else state.activeSequenceId
+            )
+        }
+        saveState()
+    }
+
+    fun setActiveSequence(sequenceId: String?) {
+        _uiState.update {
+            it.copy(
+                activeSequenceId = sequenceId,
+                currentStepIndex = 0,
+                elapsedStepSeconds = 0,
+                isSequencePlaying = false
+            )
+        }
     }
 
     fun setShowTimeline(show: Boolean) {
@@ -325,6 +369,11 @@ class TrafficLightViewModel @Inject constructor(
     }
 
     // --- Persistence ---
+    fun saveState() {
+        saveState(_uiState.value)
+    }
+
+    // Keep the private overload for internal use:
     private fun saveState(state: TrafficLightState) {
         val currentInstanceId = state.instanceId
         if (currentInstanceId <= 0) { // Don't save if ID is invalid/default
@@ -365,6 +414,21 @@ class TrafficLightViewModel @Inject constructor(
             Log.e(TAG, "Failed to parse ResponsiveModeSettings JSON, using default.", e)
             ResponsiveModeSettings() // Default on error
         }
+
+        val messages = try {
+            gson.fromJson(entity.messagesJson, TrafficLightMessages::class.java)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to parse TrafficLightMessages JSON, using default.", e)
+            TrafficLightMessages()
+        }
+
+        val sequences = try {
+            val listType = object : TypeToken<List<TimedSequence>>() {}.type
+            gson.fromJson<List<TimedSequence>>(entity.timedSequencesJson, listType)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to parse TimedSequence list JSON, using default.", e)
+            emptyList<TimedSequence>()
+        }
         return TrafficLightState(
             instanceId = entity.instanceId,
             currentMode = try { TrafficLightMode.valueOf(entity.currentMode) } catch (e: Exception) { TrafficLightMode.MANUAL_CHANGE },
@@ -375,15 +439,30 @@ class TrafficLightViewModel @Inject constructor(
             isMicrophoneAvailable = entity.isMicrophoneAvailable,
             numberOfOpenInstances = entity.numberOfOpenInstances,
             responsiveModeSettings = responsiveSettings,
+            showTimeRemaining = entity.showTimeRemaining,
+            showTimeline = entity.showTimeline,
             windowX = entity.windowX,
             windowY = entity.windowY,
             windowWidth = entity.windowWidth,
-            windowHeight = entity.windowHeight
+            windowHeight = entity.windowHeight,
+            messages = messages,
+            timedSequences = sequences,
+            activeSequenceId = entity.activeSequenceId,
+            currentStepIndex = entity.currentStepIndex,
+            elapsedStepSeconds = entity.elapsedStepSeconds,
+            isSequencePlaying = entity.isSequencePlaying,
+            isDangerousAlertActive = entity.isDangerousAlertActive,
+            previousMode = entity.previousMode?.let { try { TrafficLightMode.valueOf(it) } catch (e: Exception) { null } },
+            currentDecibelLevel = entity.currentDecibelLevel,
+            dangerousSoundDetectedAt = entity.dangerousSoundDetectedAt
         )
     }
 
     private fun mapStateToEntity(state: TrafficLightState): TrafficLightStateEntity {
         val responsiveJson = gson.toJson(state.responsiveModeSettings)
+        val messagesJson = gson.toJson(state.messages)
+        val sequencesJson = gson.toJson(state.timedSequences)
+
         return TrafficLightStateEntity(
             instanceId = state.instanceId,
             currentMode = state.currentMode.name,
@@ -399,7 +478,17 @@ class TrafficLightViewModel @Inject constructor(
             windowX = state.windowX,
             windowY = state.windowY,
             windowWidth = state.windowWidth,
-            windowHeight = state.windowHeight
+            windowHeight = state.windowHeight,
+            messagesJson = messagesJson,
+            timedSequencesJson = sequencesJson,
+            activeSequenceId = state.activeSequenceId,
+            currentStepIndex = state.currentStepIndex,
+            elapsedStepSeconds = state.elapsedStepSeconds,
+            isSequencePlaying = state.isSequencePlaying,
+            isDangerousAlertActive = state.isDangerousAlertActive,
+            previousMode = state.previousMode?.name,
+            currentDecibelLevel = state.currentDecibelLevel,
+            dangerousSoundDetectedAt = state.dangerousSoundDetectedAt
         )
     }
 

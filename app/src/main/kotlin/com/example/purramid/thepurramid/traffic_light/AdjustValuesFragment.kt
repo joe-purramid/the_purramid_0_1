@@ -2,6 +2,7 @@
 package com.example.purramid.thepurramid.traffic_light
 
 import android.app.Dialog
+import android.graphics.PorterDuff
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -59,19 +60,27 @@ class AdjustValuesFragment : DialogFragment() {
     }
 
     private fun setupViews() {
-        // Set color indicators (these could be simple colored drawables)
-        greenRangeBinding.imageColorIndicator.setImageResource(R.drawable.ic_circle_green_filled) // Create these drawables
-        yellowRangeBinding.imageColorIndicator.setImageResource(R.drawable.ic_circle_yellow_filled)
-        redRangeBinding.imageColorIndicator.setImageResource(R.drawable.ic_circle_red_filled)
+        // Set color indicators using the base drawable with tint
+        greenRangeBinding.imageColorIndicator.apply {
+            setImageResource(R.drawable.ic_circle_base)
+            setColorFilter(COLOR_GREEN_ACTIVE, PorterDuff.Mode.SRC_IN)
+        }
+        yellowRangeBinding.imageColorIndicator.apply {
+            setImageResource(R.drawable.ic_circle_base)
+            setColorFilter(COLOR_YELLOW_ACTIVE, PorterDuff.Mode.SRC_IN)
+        }
+        redRangeBinding.imageColorIndicator.apply {
+            setImageResource(R.drawable.ic_circle_base)
+            setColorFilter(COLOR_RED_ACTIVE, PorterDuff.Mode.SRC_IN)
+        }
 
-        // Setup TextWatchers for EditTexts (more complex logic needed here)
+        // Setup TextWatchers for EditTexts - THIS IS IMPORTANT!
         setupEditTextListener(greenRangeBinding.editTextMinDb, ColorForRange.GREEN, true)
         setupEditTextListener(greenRangeBinding.editTextMaxDb, ColorForRange.GREEN, false)
         setupEditTextListener(yellowRangeBinding.editTextMinDb, ColorForRange.YELLOW, true)
         setupEditTextListener(yellowRangeBinding.editTextMaxDb, ColorForRange.YELLOW, false)
         setupEditTextListener(redRangeBinding.editTextMinDb, ColorForRange.RED, true)
         setupEditTextListener(redRangeBinding.editTextMaxDb, ColorForRange.RED, false)
-
 
         binding.checkboxDangerousSoundAlert.setOnCheckedChangeListener { _, isChecked ->
             if (blockListeners) return@setOnCheckedChangeListener
@@ -87,10 +96,23 @@ class AdjustValuesFragment : DialogFragment() {
             // For now, changes are live via ViewModel.
             dismiss()
         }
+
         binding.buttonCancelAdjustments.setOnClickListener {
             // TODO: Optionally revert to original values if changes aren't live.
             // For now, just dismiss. ViewModel holds the state.
             dismiss()
+        }
+    }
+
+    companion object {
+        const val TAG = "AdjustValuesDialog"
+        // Add color constants
+        private const val COLOR_RED_ACTIVE = 0xFFFF0000.toInt()
+        private const val COLOR_YELLOW_ACTIVE = 0xFFFFFF00.toInt()
+        private const val COLOR_GREEN_ACTIVE = 0xFF00FF00.toInt()
+
+        fun newInstance(): AdjustValuesFragment {
+            return AdjustValuesFragment()
         }
     }
 

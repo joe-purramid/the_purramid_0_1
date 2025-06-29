@@ -105,7 +105,9 @@ class TrafficLightSettingsFragment : DialogFragment() { // Or AppCompatDialogFra
         }
 
         binding.buttonEditSequence.setOnClickListener {
-            Snackbar.make(binding.root, "Edit Sequence: Coming Soon", Snackbar.LENGTH_SHORT).show()
+            EditSequenceFragment.newInstance().show(
+                parentFragmentManager, EditSequenceFragment.TAG
+            )
         }
 
         binding.switchShowTimeRemaining.setOnCheckedChangeListener { _, isChecked ->
