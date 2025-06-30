@@ -70,6 +70,8 @@ class TrafficLightOverlayView @JvmOverloads constructor(
     private var isMoving = false
     private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop.toFloat()
     private val viewBoundsRect = Rect()
+    private val playPauseButton: ImageButton by lazy { binding.buttonPlayPause }
+    private val resetButton: ImageButton by lazy { binding.buttonReset }
 
     // Resize/Scale Handling Variables
     private var scaleGestureDetector: ScaleGestureDetector
@@ -97,8 +99,14 @@ class TrafficLightOverlayView @JvmOverloads constructor(
         get() = (context as? TrafficLightService)?.let { service ->
             service.activeTrafficLightViewModels[instanceId]?.uiState
         } ?: MutableStateFlow(TrafficLightState())
+    private val timedModeControls: View by lazy { binding.timedModeControls }
+    private val timeRemainingText: TextView by lazy { binding.textTimeRemaining }
+    private val timelineContainer: View by lazy { binding.timelineContainer }
+    private val timelineView: TimelineView by lazy { binding.timelineView }
 
     interface InteractionListener {
+        fun onPlayPauseClicked(instanceId: Int)
+        fun onResetClicked(instanceId: Int)
         fun onLightTapped(instanceId: Int, color: LightColor)
         fun onCloseRequested(instanceId: Int)
         fun onSettingsRequested(instanceId: Int)
@@ -115,6 +123,7 @@ class TrafficLightOverlayView @JvmOverloads constructor(
         setupOverlayTouchListener()
         setupDangerMessageViews()
         initializeLightColors()
+        setupTimedModeListeners()
     }
 
     private fun initializeLightColors() {
@@ -133,6 +142,16 @@ class TrafficLightOverlayView @JvmOverloads constructor(
         updateLightColor(binding.lightRedHorizontalOverlay, LightColor.RED, false)
         updateLightColor(binding.lightYellowHorizontalOverlay, LightColor.YELLOW, false)
         updateLightColor(binding.lightGreenHorizontalOverlay, LightColor.GREEN, false)
+    }
+
+    private fun setupTimedModeListeners() {
+        playPauseButton.setOnClickListener {
+            interactionListener?.onPlayPauseClicked(instanceId)
+        }
+
+        resetButton.setOnClickListener {
+            interactionListener?.onResetClicked(instanceId)
+        }
     }
 
     private fun updateLightColor(lightView: ImageView, color: LightColor, isActive: Boolean) {
@@ -174,6 +193,84 @@ class TrafficLightOverlayView @JvmOverloads constructor(
 
         // Update message display
         updateMessageDisplay(state)
+
+        // Update timed mode UI
+        updateTimedModeDisplay(state)
+    }
+
+    private fun updateTimedModeDisplay(state: TrafficLightState) {
+        val isTimedMode = state.currentMode == TrafficLightMode.TIMED_CHANGE
+
+        timedModeControls.isVisible = isTimedMode
+
+        if (isTimedMode) {
+            // Update play/pause button
+            playPauseButton.setImageResource(
+                if (state.isSequencePlaying) R.drawable.ic_pause else R.drawable.ic_play
+            )
+
+            // Update timeline
+            if (state.showTimeline) {
+                timelineContainer.isVisible = true
+                val sequence = state.timedSequences.find { it.id == state.activeSequenceId }
+                timelineView.setSequence(
+                    sequence,
+                    state.currentStepIndex,
+                    state.elapsedStepSeconds,
+                    state.showTimeRemaining && !state.showTimeline // Show time on timeline if both enabled
+                )
+            } else {
+                timelineContainer.isVisible = false
+            }
+
+            // Update time remaining (only if timeline is not showing it)
+            if (state.showTimeRemaining && !state.showTimeline) {
+                updateTimeRemaining(state)
+            } else {
+                timeRemainingText.isVisible = false
+            }
+
+            // Update message display for current step
+            updateStepMessage(state)
+        } else {
+            timelineContainer.isVisible = false
+            timeRemainingText.isVisible = false
+        }
+    }
+
+    private fun updateTimeRemaining(state: TrafficLightState) {
+        val sequence = state.timedSequences.find { it.id == state.activeSequenceId }
+        val currentStep = sequence?.steps?.getOrNull(state.currentStepIndex)
+
+        if (currentStep != null) {
+            val remainingSeconds = currentStep.durationSeconds - state.elapsedStepSeconds
+            timeRemainingText.apply {
+                isVisible = true
+                text = formatTime(remainingSeconds)
+            }
+        }
+    }
+
+    private fun updateStepMessage(state: TrafficLightState) {
+        val sequence = state.timedSequences.find { it.id == state.activeSequenceId }
+        val currentStep = sequence?.steps?.getOrNull(state.currentStepIndex)
+
+        if (currentStep?.message != null && !currentStep.message.isEmpty()) {
+            // Display message aligned with current light
+            showMessage(currentStep.color ?: LightColor.RED, currentStep.message, state.orientation == Orientation.VERTICAL)
+        }
+    }
+
+    private fun formatTime(totalSeconds: Int): String {
+        val hours = totalSeconds / 3600
+        val minutes = (totalSeconds % 3600) / 60
+        val seconds = totalSeconds % 60
+
+        return when {
+            hours > 0 -> String.format("%d:%02d:%02d", hours, minutes, seconds)
+            minutes > 0 -> String.format("%d:%02d", minutes, seconds)
+            else -> String.format("0:%02d", seconds)
+        }
     }
 
     private fun updateNormalLightState(state: TrafficLightState, isVertical: Boolean) {
@@ -665,5 +762,18 @@ class TrafficLightOverlayView @JvmOverloads constructor(
         blinkingAnimator = null
         dangerBlinkingAnimator = null
         currentlyBlinkingView = null
+    }
+
+    private fun updateTimedModeDisplay(state: TrafficLightState) {
+        if (state.currentMode != TrafficLightMode.TIMED_CHANGE) return
+
+        // Show active sequence name
+        state.activeSequenceId?.let { id ->
+            val sequence = state.timedSequences.find { it.id == id }
+            binding.textActiveSequence.apply {
+                isVisible = true
+                text = sequence?.title ?: ""
+            }
+        }
     }
 }

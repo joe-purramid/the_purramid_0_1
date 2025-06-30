@@ -188,7 +188,7 @@ class TrafficLightService : LifecycleService(), ViewModelStoreOwner {
         val action = intent?.action
         Log.d(TAG, "onStartCommand: Action: $action")
 
-        when (action) {
+        when (intent?.action) {
             ACTION_START_TRAFFIC_LIGHT_SERVICE -> {
                 startForegroundServiceIfNeeded()
                 if (activeTrafficLightViewModels.isEmpty() && servicePrefs.getInt(KEY_ACTIVE_COUNT_FOR_ACTIVITY, 0) == 0) {
@@ -202,6 +202,13 @@ class TrafficLightService : LifecycleService(), ViewModelStoreOwner {
             }
             ACTION_STOP_TRAFFIC_LIGHT_SERVICE -> {
                 stopAllInstancesAndService()
+            }
+
+            "MICROPHONE_PERMISSION_GRANTED" -> {
+                // Notify ViewModels that permission is now available
+                activeTrafficLightViewModels.values.forEach { viewModel ->
+                    viewModel.onMicrophonePermissionGranted()
+                }
             }
 
             "SETTINGS_CLOSED" -> {
@@ -260,6 +267,12 @@ class TrafficLightService : LifecycleService(), ViewModelStoreOwner {
         stateObserverJobs[instanceId] = lifecycleScope.launch {
             viewModel.uiState.collectLatest { state ->
                 Log.d(TAG, "State update for TrafficLight ID $instanceId: Mode=${state.currentMode}, Active=${state.activeLight}")
+                // Check if permission is needed
+                if (state.needsMicrophonePermission) {
+                    requestMicrophonePermission()
+                    // Reset the flag so we don't keep requesting
+                    viewModel.clearMicrophonePermissionRequest()
+                }
                 addOrUpdateTrafficLightOverlayView(instanceId, state)
             }
         }

@@ -21,6 +21,7 @@ import com.example.purramid.thepurramid.traffic_light.viewmodel.TrafficLightView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
+import kotlin.io.root
 
 class EditSequenceFragment : DialogFragment() {
 
@@ -49,7 +50,7 @@ class EditSequenceFragment : DialogFragment() {
     private fun setupRecyclerView() {
         sequenceAdapter = SequenceListAdapter(
             onSequenceClick = { sequence ->
-                openSequenceEditor(sequence)
+                showSequenceOptionsDialog(sequence)
             },
             onDeleteClick = { sequence ->
                 confirmDeleteSequence(sequence)
@@ -91,6 +92,24 @@ class EditSequenceFragment : DialogFragment() {
             }
         }
     }
+
+    private fun showSequenceOptionsDialog(sequence: TimedSequence) {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(sequence.title)
+            .setItems(arrayOf("Edit", "Set as Active", "Delete")) { _, which ->
+                when (which) {
+                    0 -> openSequenceEditor(sequence)
+                    1 -> {
+                        viewModel.setActiveSequence(sequence.id)
+                        Snackbar.make(binding.root, "${sequence.title} set as active", Snackbar.LENGTH_SHORT).show()
+                    }
+                    2 -> confirmDeleteSequence(sequence)
+                }
+            }
+            .show()
+    }
+
+
 
     private fun updateSequenceList(sequences: List<TimedSequence>) {
         sequenceAdapter.submitList(sequences.sortedBy { it.title })

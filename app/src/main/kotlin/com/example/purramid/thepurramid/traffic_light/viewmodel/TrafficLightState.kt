@@ -17,6 +17,7 @@ data class TrafficLightState(
     val activeLight: LightColor? = null,
     val isSettingsOpen: Boolean = false,
     val messages: TrafficLightMessages = TrafficLightMessages(),
+    val needsMicrophonePermission: Boolean = false,
     val isMicrophoneAvailable: Boolean = true, // Update later with actual check
     val isDangerousAlertActive: Boolean = false,
     val previousMode: TrafficLightMode? = null,

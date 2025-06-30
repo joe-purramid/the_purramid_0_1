@@ -1,9 +1,16 @@
 package com.example.purramid.thepurramid.traffic_light.viewmodel
 
 // import androidx.lifecycle.viewModelScope
+import android.app.Application
+import android.content.pm.PackageManager
+import android.Manifest
+import android.media.AudioFormat
 import android.media.AudioRecord
+import android.media.MediaRecorder
+import android.os.CountDownTimer
 import android.os.SystemClock
 import android.util.Log
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -11,11 +18,13 @@ import com.example.purramid.thepurramid.data.db.TrafficLightDao
 import com.example.purramid.thepurramid.data.db.TrafficLightStateEntity
 import com.example.purramid.thepurramid.traffic_light.AdjustValuesFragment
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -45,6 +54,30 @@ class TrafficLightViewModel @Inject constructor(
         loadInitialState(id)
     }
 
+    private fun checkMicrophonePermission(): Boolean {
+        return ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.RECORD_AUDIO
+        ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    fun onMicrophonePermissionGranted() {
+        _uiState.update {
+            it.copy(
+                isMicrophoneAvailable = true,
+                needsMicrophonePermission = false
+            )
+        }
+
+        // If in Responsive mode, start monitoring
+        if (_uiState.value.currentMode == TrafficLightMode.RESPONSIVE_CHANGE) {
+            startMicrophoneMonitoring()
+        }
+    }
+
+    fun clearMicrophonePermissionRequest() {
+        _uiState.update { it.copy(needsMicrophonePermission = false) }
+    }
 
     private val _uiState = MutableStateFlow(TrafficLightState())
     val uiState: StateFlow<TrafficLightState> = _uiState.asStateFlow()
@@ -163,6 +196,24 @@ class TrafficLightViewModel @Inject constructor(
 
         _uiState.update { it.copy(currentMode = newMode, activeLight = updatedActiveLight) }
         saveState(_uiState.value)
+
+        // Handle mode-specific initialization
+        when (newMode) {
+            TrafficLightMode.RESPONSIVE_CHANGE -> {
+                if (!checkMicrophonePermission()) {
+                    // Trigger permission request through the service
+                    _uiState.update { it.copy(needsMicrophonePermission = true) }
+                } else {
+                    startMicrophoneMonitoring()
+                }
+            }
+            TrafficLightMode.MANUAL_CHANGE -> {
+                stopMicrophoneMonitoring()
+            }
+            TrafficLightMode.TIMED_CHANGE -> {
+                stopMicrophoneMonitoring()
+            }
+        }
     }
 
     fun toggleBlinking(isEnabled: Boolean) {
@@ -220,6 +271,162 @@ class TrafficLightViewModel @Inject constructor(
             )
         }
         saveState()
+    }
+
+    private var sequenceTimer: CountDownTimer? = null
+    private var timerJob: Job? = null
+
+    fun startTimedSequence() {
+        val currentState = _uiState.value
+        val sequenceId = currentState.activeSequenceId ?: return
+        val sequence = currentState.timedSequences.find { it.id == sequenceId } ?: return
+
+        if (sequence.steps.isEmpty()) return
+
+        _uiState.update {
+            it.copy(
+                isSequencePlaying = true,
+                currentStepIndex = 0,
+                elapsedStepSeconds = 0
+            )
+        }
+
+        startStepTimer()
+    }
+
+    fun pauseTimedSequence() {
+        sequenceTimer?.cancel()
+        timerJob?.cancel()
+        _uiState.update { it.copy(isSequencePlaying = false) }
+    }
+
+    fun resumeTimedSequence() {
+        if (_uiState.value.activeSequenceId != null) {
+            _uiState.update { it.copy(isSequencePlaying = true) }
+            startStepTimer()
+        }
+    }
+
+    fun resetTimedSequence() {
+        val currentState = _uiState.value
+        val wasPlaying = currentState.isSequencePlaying
+
+        sequenceTimer?.cancel()
+        timerJob?.cancel()
+
+        // Check if we're at the beginning of current step
+        if (currentState.elapsedStepSeconds == 0) {
+            // Reset to first step
+            _uiState.update {
+                it.copy(
+                    currentStepIndex = 0,
+                    elapsedStepSeconds = 0,
+                    isSequencePlaying = false
+                )
+            }
+        } else {
+            // Reset current step
+            _uiState.update {
+                it.copy(
+                    elapsedStepSeconds = 0,
+                    isSequencePlaying = false
+                )
+            }
+        }
+
+        // Blink effect
+        blinkCurrentLight()
+
+        if (wasPlaying) {
+            // Resume if was playing
+            viewModelScope.launch {
+                delay(300) // Wait for blink to complete
+                resumeTimedSequence()
+            }
+        }
+    }
+
+    private fun startStepTimer() {
+        sequenceTimer?.cancel()
+        timerJob?.cancel()
+
+        val currentState = _uiState.value
+        val sequence = currentState.timedSequences.find { it.id == currentState.activeSequenceId } ?: return
+        val currentStep = sequence.steps.getOrNull(currentState.currentStepIndex) ?: return
+
+        // Update active light for current step
+        _uiState.update { it.copy(activeLight = currentStep.color) }
+
+        val remainingSeconds = currentStep.durationSeconds - currentState.elapsedStepSeconds
+
+        timerJob = viewModelScope.launch {
+            for (i in 1..remainingSeconds) {
+                delay(1000)
+                if (!_uiState.value.isSequencePlaying) break
+
+                _uiState.update { state ->
+                    state.copy(elapsedStepSeconds = state.elapsedStepSeconds + 1)
+                }
+            }
+
+            if (_uiState.value.isSequencePlaying) {
+                moveToNextStep()
+            }
+        }
+    }
+
+    private fun moveToNextStep() {
+        val currentState = _uiState.value
+        val sequence = currentState.timedSequences.find { it.id == currentState.activeSequenceId } ?: return
+
+        val nextStepIndex = currentState.currentStepIndex + 1
+
+        if (nextStepIndex < sequence.steps.size) {
+            // Check if current and next step have same color
+            val currentColor = sequence.steps[currentState.currentStepIndex].color
+            val nextColor = sequence.steps[nextStepIndex].color
+
+            _uiState.update {
+                it.copy(
+                    currentStepIndex = nextStepIndex,
+                    elapsedStepSeconds = 0
+                )
+            }
+
+            if (currentColor == nextColor) {
+                // Blink twice if same color (spec 19.3.3)
+                blinkCurrentLight(times = 2)
+            }
+
+            startStepTimer()
+        } else {
+            // Sequence complete
+            sequenceComplete()
+        }
+    }
+
+    private fun sequenceComplete() {
+        sequenceTimer?.cancel()
+        timerJob?.cancel()
+
+        _uiState.update {
+            it.copy(
+                isSequencePlaying = false,
+                activeLight = null
+            )
+        }
+    }
+
+    private fun blinkCurrentLight(times: Int = 1) {
+        viewModelScope.launch {
+            val currentLight = _uiState.value.activeLight
+            repeat(times) {
+                _uiState.update { it.copy(activeLight = null) }
+                delay(300)
+                _uiState.update { it.copy(activeLight = currentLight) }
+                delay(300)
+            }
+        }
     }
 
     fun setActiveSequence(sequenceId: String?) {
@@ -295,6 +502,11 @@ class TrafficLightViewModel @Inject constructor(
                 if (result > 0) {
                     val maxAmplitude = audioBuffer.maxOrNull()?.toInt() ?: 0
                     val db = 20 * log10(maxAmplitude.toDouble() / 32767.0) + 90
+
+                    // Check for dangerous sound alert
+                    checkDecibelForDanger(db.toInt())
+
+                    // Update light based on decibel ranges
                     updateLightForDecibel(db.toInt())
                 }
                 Thread.sleep(2000) // Check every 2 seconds as per spec
@@ -302,6 +514,20 @@ class TrafficLightViewModel @Inject constructor(
         }
     }
 
+    private fun updateLightForDecibel(db: Int) {
+        val settings = _uiState.value.responsiveModeSettings
+        val newLight = when {
+            settings.redRange.minDb != null && db >= settings.redRange.minDb!! -> LightColor.RED
+            settings.yellowRange.minDb != null && db >= settings.yellowRange.minDb!! -> LightColor.YELLOW
+            settings.greenRange.minDb != null && db >= settings.greenRange.minDb!! -> LightColor.GREEN
+            else -> null
+        }
+
+        _uiState.update { it.copy(
+            activeLight = newLight,
+            currentDecibelLevel = db
+        )}
+    }
     private fun stopMicrophoneMonitoring() {
         isRecording = false
         recordingThread?.join()
@@ -492,11 +718,21 @@ class TrafficLightViewModel @Inject constructor(
         )
     }
 
-    // --- Cleanup ---
+    fun togglePlayPause() {
+        if (_uiState.value.isSequencePlaying) {
+            pauseTimedSequence()
+        } else {
+            if (_uiState.value.currentStepIndex == 0 && _uiState.value.elapsedStepSeconds == 0) {
+                startTimedSequence()
+            } else {
+                resumeTimedSequence()
+            }
+        }
+    }
+
     override fun onCleared() {
-        Log.d(TAG, "ViewModel cleared for instanceId: $instanceId")
-        // Persist final state before clearing? Usually done on state change.
-        // saveState(_uiState.value) // Consider if needed here
+        sequenceTimer?.cancel()
+        timerJob?.cancel()
         super.onCleared()
     }
 }
