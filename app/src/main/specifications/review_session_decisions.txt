@@ -22,6 +22,13 @@
   - Add an "initialize()" method to set the instance ID after creation
   - Remove the HiltViewModelFactory usage
  
+- **Reviewed**: 30 June 2025
+- **Architecture**: Change Traffic Light colors programmatically
+- **Key Decisions**:
+  - Use a single circle icon ic_circle_base
+  - Change the color of that icon programmatically
+  - Do not use tint values
+  - Do not use ic_circle_*_filled where * is color
   
   
   

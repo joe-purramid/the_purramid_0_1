@@ -277,6 +277,40 @@ class TrafficLightService : LifecycleService(), ViewModelStoreOwner {
             }
         }
         Log.d(TAG, "Started observing ViewModel for TrafficLight ID $instanceId")
+
+        // Observe snackbar events
+        viewModel.snackbarEvent.observe(this) { event ->
+            event.getContentIfNotHandled()?.let { message ->
+                // Show snackbar on the overlay view
+                activeTrafficLightViews[instanceId]?.let { view ->
+                    Snackbar.make(view, message, Snackbar.LENGTH_LONG).apply {
+                        if (message.contains("Microphone available")) {
+                            setAction("Switch") {
+                                viewModel.setMode(TrafficLightMode.RESPONSIVE_CHANGE)
+                            }
+                        }
+                        show()
+                    }
+                }
+            }
+        }
+
+        // Handle recovery snackbar
+        if (state.showMicrophoneRecoverySnackbar) {
+            activeTrafficLightViews[instanceId]?.let { view ->
+                Snackbar.make(
+                    view,
+                    "Microphone available. Tap to return to Responsive mode.",
+                    Snackbar.LENGTH_LONG
+                ).apply {
+                    setAction("Switch") {
+                        viewModel.setMode(TrafficLightMode.RESPONSIVE_CHANGE)
+                        viewModel.clearMicrophoneRecoverySnackbar()
+                    }
+                    show()
+                }
+            }
+        }
     }
 
     private fun addOrUpdateTrafficLightOverlayView(instanceId: Int, state: TrafficLightState) {
@@ -404,6 +438,13 @@ class TrafficLightService : LifecycleService(), ViewModelStoreOwner {
                         Log.d(TAG, "All instances have dismissed the dangerous sound alert")
                     }
                 }
+            }
+            override fun onPlayPauseClicked(id: Int) {
+                activeTrafficLightViewModels[id]?.togglePlayPause()
+            }
+
+            override fun onResetClicked(id: Int) {
+                activeTrafficLightViewModels[id]?.resetTimedSequence()
             }
             override fun onCloseRequested(id: Int) {
                 removeTrafficLightInstance(id)

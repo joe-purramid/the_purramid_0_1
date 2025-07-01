@@ -90,6 +90,9 @@ class TrafficLightOverlayView @JvmOverloads constructor(
     private var launchAnimator: AnimatorSet? = null
     private var isLaunchAnimationComplete = false
 
+    // Add threshold blinking animator
+    private var thresholdBlinkingAnimator: ObjectAnimator? = null
+
     // Danger alert
     private var dangerMessageViews: Map<LightColor, TextView>? = null
     private var dangerBlinkingAnimator: ObjectAnimator? = null
@@ -751,6 +754,72 @@ class TrafficLightOverlayView @JvmOverloads constructor(
             isResizingWithScale = false
             scaleFactor = 1.0f
         }
+    }
+
+    private fun updateResponsiveModeUI(state: TrafficLightState) {
+        if (state.currentMode != TrafficLightMode.RESPONSIVE_CHANGE) {
+            stopThresholdBlinking()
+            hideMicrophoneBanner()
+            return
+        }
+
+        // Handle threshold blinking
+        if (state.shouldBlinkForThreshold && state.activeLight != null) {
+            startThresholdBlinking(state.activeLight)
+        } else {
+            stopThresholdBlinking()
+        }
+
+        // Show grace period banner if needed
+        if (state.showMicrophoneGracePeriodBanner) {
+            showMicrophoneBanner(state.microphoneGracePeriodMessage)
+        } else {
+            hideMicrophoneBanner()
+        }
+    }
+
+    private fun startThresholdBlinking(color: LightColor) {
+        // Don't start if already blinking the same color
+        if (thresholdBlinkingAnimator?.isRunning == true && currentlyBlinkingView != null) {
+            return
+        }
+
+        val isVertical = binding.trafficLightVerticalContainerOverlay.isVisible
+        val view = when (color) {
+            LightColor.RED -> if (isVertical) binding.lightRedVerticalOverlay else binding.lightRedHorizontalOverlay
+            LightColor.YELLOW -> if (isVertical) binding.lightYellowVerticalOverlay else binding.lightYellowHorizontalOverlay
+            LightColor.GREEN -> if (isVertical) binding.lightGreenVerticalOverlay else binding.lightGreenHorizontalOverlay
+        }
+
+        stopThresholdBlinking()
+
+        thresholdBlinkingAnimator = ObjectAnimator.ofFloat(0f, 1f).apply {
+            duration = 500L // 0.5 seconds per spec
+            repeatCount = ValueAnimator.INFINITE
+            addUpdateListener { animator ->
+                val progress = animator.animatedValue as Float
+                updateLightColor(view, color, progress < 0.5f)
+            }
+            start()
+        }
+    }
+
+    private fun stopThresholdBlinking() {
+        thresholdBlinkingAnimator?.cancel()
+        thresholdBlinkingAnimator = null
+    }
+
+    private fun showMicrophoneBanner(message: String) {
+        // Add a banner view to show grace period message
+        // This would need to be added to the layout
+        binding.textMicrophoneBanner?.apply {
+            text = message
+            isVisible = true
+        }
+    }
+
+    private fun hideMicrophoneBanner() {
+        binding.textMicrophoneBanner?.isVisible = false
     }
 
     override fun onDetachedFromWindow() {

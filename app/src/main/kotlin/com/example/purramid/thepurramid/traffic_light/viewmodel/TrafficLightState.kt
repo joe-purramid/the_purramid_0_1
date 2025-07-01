@@ -33,6 +33,14 @@ data class TrafficLightState(
     val isSequencePlaying: Boolean = false,
     val showTimeRemaining: Boolean = false, // Default to false
     val showTimeline: Boolean = true,      // Default to true (as per layout)
+
+    // Responsive mode specific fields
+    val shouldBlinkForThreshold: Boolean = false,
+    val showMicrophoneGracePeriodBanner: Boolean = false,
+    val microphoneGracePeriodMessage: String = "",
+    val wasInResponsiveModeBeforeMicLoss: Boolean = false,
+    val showMicrophoneRecoverySnackbar: Boolean = false,
+
     // Add fields for window persistence state
     val windowX: Int = 0,
     val windowY: Int = 0,

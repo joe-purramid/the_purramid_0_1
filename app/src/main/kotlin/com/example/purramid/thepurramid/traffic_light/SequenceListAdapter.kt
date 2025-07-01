@@ -19,6 +19,8 @@ class SequenceListAdapter(
     private val onDeleteClick: (TimedSequence) -> Unit
 ) : ListAdapter<TimedSequence, SequenceListAdapter.SequenceViewHolder>(SequenceDiffCallback()) {
 
+    private var activeSequenceId: String? = null
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SequenceViewHolder {
         val binding = ItemSequenceListBinding.inflate(
             LayoutInflater.from(parent.context), parent, false
@@ -26,8 +28,13 @@ class SequenceListAdapter(
         return SequenceViewHolder(binding)
     }
 
+    fun submitList(list: List<TimedSequence>, activeId: String?) {
+        activeSequenceId = activeId
+        super.submitList(list)
+    }
+
     override fun onBindViewHolder(holder: SequenceViewHolder, position: Int) {
-        holder.bind(getItem(position))
+        holder.bind(getItem(position), activeSequenceId)
     }
 
     inner class SequenceViewHolder(
@@ -76,6 +83,16 @@ class SequenceListAdapter(
                     setColorFilter(tintColor, PorterDuff.Mode.SRC_IN)
                 }
                 binding.layoutColorPreview.addView(colorView)
+            }
+
+            // Show active indicator
+            val isActive = sequence.id == activeSequenceId
+            binding.imageActiveIndicator.apply {
+                isVisible = isActive
+                if (isActive) {
+                    // Programmatically set the color
+                    setColorFilter(0xFF00FF00.toInt(), PorterDuff.Mode.SRC_IN) // Green active color
+                }
             }
         }
     }

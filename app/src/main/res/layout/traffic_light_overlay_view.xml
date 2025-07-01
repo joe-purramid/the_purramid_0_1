@@ -213,6 +213,21 @@
     </LinearLayout>
 
     <TextView
+        android:id="@+id/text_microphone_banner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#FFF3CD"
+        android:textColor="#856404"
+        android:padding="8dp"
+        android:gravity="center"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        tools:text="Microphone temporarily unavailable. Reconnecting..."
+        tools:visibility="visible"/>
+
+    <TextView
         android:id="@+id/overlay_button_close"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

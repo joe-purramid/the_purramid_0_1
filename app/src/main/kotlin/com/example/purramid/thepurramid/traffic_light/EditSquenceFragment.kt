@@ -1,4 +1,4 @@
-// EditSquenceFragment.kt
+// EditSequenceFragment.kt
 package com.example.purramid.thepurramid.traffic_light
 
 import android.os.Bundle
@@ -11,17 +11,13 @@ import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import com.example.purramid.thepurramid.R
 import com.example.purramid.thepurramid.databinding.FragmentEditSequenceBinding
 import com.example.purramid.thepurramid.traffic_light.viewmodel.TimedSequence
 import com.example.purramid.thepurramid.traffic_light.viewmodel.TrafficLightViewModel
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
-import kotlin.io.root
 
 class EditSequenceFragment : DialogFragment() {
 
@@ -94,14 +90,25 @@ class EditSequenceFragment : DialogFragment() {
     }
 
     private fun showSequenceOptionsDialog(sequence: TimedSequence) {
+        val options = if (viewModel.uiState.value.activeSequenceId == sequence.id) {
+            arrayOf("Edit", "Deactivate", "Delete")
+        } else {
+            arrayOf("Edit", "Set as Active", "Delete")
+        }
+
         MaterialAlertDialogBuilder(requireContext())
             .setTitle(sequence.title)
-            .setItems(arrayOf("Edit", "Set as Active", "Delete")) { _, which ->
+            .setItems(options) { _, which ->
                 when (which) {
                     0 -> openSequenceEditor(sequence)
                     1 -> {
-                        viewModel.setActiveSequence(sequence.id)
-                        Snackbar.make(binding.root, "${sequence.title} set as active", Snackbar.LENGTH_SHORT).show()
+                        if (viewModel.uiState.value.activeSequenceId == sequence.id) {
+                            viewModel.setActiveSequence(null)
+                            Snackbar.make(binding.root, "Sequence deactivated", Snackbar.LENGTH_SHORT).show()
+                        } else {
+                            viewModel.setActiveSequence(sequence.id)
+                            Snackbar.make(binding.root, "${sequence.title} set as active", Snackbar.LENGTH_SHORT).show()
+                        }
                     }
                     2 -> confirmDeleteSequence(sequence)
                 }
@@ -109,9 +116,8 @@ class EditSequenceFragment : DialogFragment() {
             .show()
     }
 
-
-
     private fun updateSequenceList(sequences: List<TimedSequence>) {
+        val activeSequenceId = viewModel.uiState.value.activeSequenceId
         sequenceAdapter.submitList(sequences.sortedBy { it.title })
 
         // Show/hide empty state
