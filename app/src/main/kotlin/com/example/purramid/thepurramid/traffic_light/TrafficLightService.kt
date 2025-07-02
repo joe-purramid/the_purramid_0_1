@@ -1,6 +1,10 @@
 // TrafficLightService.kt
 package com.example.purramid.thepurramid.traffic_light
 
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
+import android.animation.AnimatorSet
+import android.animation.ObjectAnimator
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -9,6 +13,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.graphics.PixelFormat
+import android.Manifest
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -30,7 +35,7 @@ import androidx.lifecycle.lifecycleScope
 import com.example.purramid.thepurramid.MainActivity
 import com.example.purramid.thepurramid.R
 import com.example.purramid.thepurramid.data.db.TrafficLightDao
-import com.example.purramid.thepurramid.di.HiltViewModelFactory
+// import com.example.purramid.thepurramid.di.HiltViewModelFactory
 import com.example.purramid.thepurramid.di.TrafficLightPrefs
 import com.example.purramid.thepurramid.instance.InstanceManager
 import com.example.purramid.thepurramid.traffic_light.viewmodel.LightColor
@@ -70,6 +75,12 @@ class TrafficLightService : LifecycleService(), ViewModelStoreOwner {
     private val stateObserverJobs = ConcurrentHashMap<Int, Job>()
 
     private var isForeground = false
+
+    // Add a property to track which instance has settings open
+    private var settingsOpenForInstanceId: Int? = null
+
+    // Add property to track highlighted instance
+    private var highlightedInstanceId: Int? = null
 
     companion object {
         private const val TAG = "TrafficLightService"
@@ -117,12 +128,67 @@ class TrafficLightService : LifecycleService(), ViewModelStoreOwner {
         }
     }
 
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+
+        // Handle font scale changes
+        if (newConfig.fontScale != resources.configuration.fontScale) {
+            handleFontScaleChange()
+        }
+
+        // Handle keyboard availability changes
+        if (newConfig.keyboard != resources.configuration.keyboard ||
+            newConfig.keyboardHidden != resources.configuration.keyboardHidden) {
+            handleKeyboardChange(newConfig)
+        }
+    }
+
+    private fun handleFontScaleChange() {
+        // Refresh all overlay views to apply new text sizes
+        activeTrafficLightViews.forEach { (id, view) ->
+            val params = trafficLightLayoutParams[id]
+            val state = activeTrafficLightViewModels[id]?.uiState?.value
+
+            if (params != null && state != null && view.isAttachedToWindow) {
+                // Remove and re-add view to force layout refresh
+                windowManager.removeView(view)
+
+                // Recreate view with new font scale
+                val newView = TrafficLightOverlayView(this, instanceId = id).apply {
+                    interactionListener = createTrafficLightInteractionListener(id, this, params)
+                }
+
+                activeTrafficLightViews[id] = newView
+                windowManager.addView(newView, params)
+                newView.updateState(state)
+            }
+        }
+    }
+
+    private fun handleKeyboardChange(newConfig: Configuration) {
+        val isKeyboardAvailable = newConfig.keyboard != Configuration.KEYBOARD_NOKEYS
+
+        // Notify all ViewModels about keyboard availability
+        activeTrafficLightViewModels.values.forEach { viewModel ->
+            viewModel.setKeyboardAvailable(isKeyboardAvailable)
+        }
+    }
+
+    private fun requestMicrophonePermission() {
+        // Since this is a Service, we need to launch an Activity to request permission
+        val intent = Intent(this, TrafficLightActivity::class.java).apply {
+            action = "REQUEST_MICROPHONE_PERMISSION"
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        startActivity(intent)
+    }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
         val action = intent?.action
         Log.d(TAG, "onStartCommand: Action: $action")
 
-        when (action) {
+        when (intent?.action) {
             ACTION_START_TRAFFIC_LIGHT_SERVICE -> {
                 startForegroundServiceIfNeeded()
                 if (activeTrafficLightViewModels.isEmpty() && servicePrefs.getInt(KEY_ACTIVE_COUNT_FOR_ACTIVITY, 0) == 0) {
@@ -136,6 +202,17 @@ class TrafficLightService : LifecycleService(), ViewModelStoreOwner {
             }
             ACTION_STOP_TRAFFIC_LIGHT_SERVICE -> {
                 stopAllInstancesAndService()
+            }
+
+            "MICROPHONE_PERMISSION_GRANTED" -> {
+                // Notify ViewModels that permission is now available
+                activeTrafficLightViewModels.values.forEach { viewModel ->
+                    viewModel.onMicrophonePermissionGranted()
+                }
+            }
+
+            "SETTINGS_CLOSED" -> {
+                onSettingsClosed()
             }
         }
         return START_STICKY
@@ -167,11 +244,21 @@ class TrafficLightService : LifecycleService(), ViewModelStoreOwner {
     private fun initializeViewModel(id: Int, initialArgs: Bundle?): TrafficLightViewModel {
         return activeTrafficLightViewModels.computeIfAbsent(id) {
             Log.d(TAG, "Creating TrafficLightViewModel for ID: $id")
-            ViewModelProvider(this, HiltViewModelFactory(this, initialArgs ?: Bundle().apply { putInt(TrafficLightViewModel.KEY_INSTANCE_ID, id) }, viewModelFactory))
-                .get(TrafficLightViewModel::class.java)
-                .also { vm ->
-                    observeViewModelState(id, vm)
-                }
+
+            // Create unique key for this instance
+            val key = "TrafficLightViewModel_$id"
+
+            // Use standard ViewModelProvider with factory
+            val viewModel = ViewModelProvider(
+                this,
+                viewModelFactory
+            ).get(key, TrafficLightViewModel::class.java)
+
+            // Initialize with instance ID after creation
+            viewModel.initialize(id)
+
+            observeViewModelState(id, viewModel)
+            viewModel
         }
     }
 
@@ -180,10 +267,50 @@ class TrafficLightService : LifecycleService(), ViewModelStoreOwner {
         stateObserverJobs[instanceId] = lifecycleScope.launch {
             viewModel.uiState.collectLatest { state ->
                 Log.d(TAG, "State update for TrafficLight ID $instanceId: Mode=${state.currentMode}, Active=${state.activeLight}")
+                // Check if permission is needed
+                if (state.needsMicrophonePermission) {
+                    requestMicrophonePermission()
+                    // Reset the flag so we don't keep requesting
+                    viewModel.clearMicrophonePermissionRequest()
+                }
                 addOrUpdateTrafficLightOverlayView(instanceId, state)
             }
         }
         Log.d(TAG, "Started observing ViewModel for TrafficLight ID $instanceId")
+
+        // Observe snackbar events
+        viewModel.snackbarEvent.observe(this) { event ->
+            event.getContentIfNotHandled()?.let { message ->
+                // Show snackbar on the overlay view
+                activeTrafficLightViews[instanceId]?.let { view ->
+                    Snackbar.make(view, message, Snackbar.LENGTH_LONG).apply {
+                        if (message.contains("Microphone available")) {
+                            setAction("Switch") {
+                                viewModel.setMode(TrafficLightMode.RESPONSIVE_CHANGE)
+                            }
+                        }
+                        show()
+                    }
+                }
+            }
+        }
+
+        // Handle recovery snackbar
+        if (state.showMicrophoneRecoverySnackbar) {
+            activeTrafficLightViews[instanceId]?.let { view ->
+                Snackbar.make(
+                    view,
+                    "Microphone available. Tap to return to Responsive mode.",
+                    Snackbar.LENGTH_LONG
+                ).apply {
+                    setAction("Switch") {
+                        viewModel.setMode(TrafficLightMode.RESPONSIVE_CHANGE)
+                        viewModel.clearMicrophoneRecoverySnackbar()
+                    }
+                    show()
+                }
+            }
+        }
     }
 
     private fun addOrUpdateTrafficLightOverlayView(instanceId: Int, state: TrafficLightState) {
@@ -193,16 +320,23 @@ class TrafficLightService : LifecycleService(), ViewModelStoreOwner {
 
             if (view == null) {
                 Log.d(TAG, "Creating new TrafficLightOverlayView UI for ID: $instanceId")
+                // Pass the current state to createDefaultLayoutParams
                 params = createDefaultLayoutParams(state)
-                view = TrafficLightOverlayView(this, instanceId = instanceId).apply { // Pass instanceId
+                view = TrafficLightOverlayView(this, instanceId = instanceId).apply {
                     interactionListener = createTrafficLightInteractionListener(instanceId, this, params)
                 }
+
                 activeTrafficLightViews[instanceId] = view
                 trafficLightLayoutParams[instanceId] = params
 
                 try {
                     windowManager.addView(view, params)
-                    Log.d(TAG, "Added TrafficLightOverlayView ID $instanceId to WindowManager.")
+                    Log.d(TAG, "Added TrafficLightOverlayView ID $instanceId to WindowManager at (${params.x}, ${params.y}) with size ${params.width}x${params.height}")
+
+                    // Start launch animation for new views
+                    view.startLaunchAnimation {
+                        Log.d(TAG, "Launch animation complete for instance $instanceId")
+                    }
                 } catch (e: Exception) {
                     Log.e(TAG, "Error adding TrafficLightOverlayView ID $instanceId", e)
                     activeTrafficLightViews.remove(instanceId)
@@ -231,8 +365,11 @@ class TrafficLightService : LifecycleService(), ViewModelStoreOwner {
             }
 
             if (layoutNeedsUpdate && view.isAttachedToWindow) {
-                try { windowManager.updateViewLayout(view, params) }
-                catch (e: Exception) { Log.e(TAG, "Error updating WM layout for TL ID $instanceId", e) }
+                try {
+                    windowManager.updateViewLayout(view, params)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error updating WM layout for TL ID $instanceId", e)
+                }
             }
         }
     }
@@ -263,6 +400,19 @@ class TrafficLightService : LifecycleService(), ViewModelStoreOwner {
                 Log.d(TAG, "No active traffic lights left, stopping service.")
                 stopService()
             }
+
+            if (highlightedInstanceId == instanceId) {
+                highlightedInstanceId = null
+            }
+        }
+    }
+
+    fun triggerDangerousSoundAlert() {
+        Log.w(TAG, "DANGEROUS SOUND ALERT: 150+ dB detected!")
+
+        // Update all instances simultaneously
+        activeTrafficLightViewModels.values.forEach { viewModel ->
+            viewModel.activateDangerousAlert()
         }
     }
 
@@ -272,13 +422,49 @@ class TrafficLightService : LifecycleService(), ViewModelStoreOwner {
         params: WindowManager.LayoutParams
     ): TrafficLightOverlayView.InteractionListener {
         return object : TrafficLightOverlayView.InteractionListener {
-            override fun onLightTapped(id: Int, color: LightColor) { // id here is instanceId
-                activeTrafficLightViewModels[id]?.handleLightTap(color)
+            override fun onLightTapped(id: Int, color: LightColor) {
+                val viewModel = activeTrafficLightViewModels[id]
+                viewModel?.handleLightTap(color)
+
+                // If danger was dismissed, update all instances
+                if (viewModel?.uiState?.value?.isDangerousAlertActive == false) {
+                    // Check if this was the last instance to dismiss
+                    val anyStillActive = activeTrafficLightViewModels.values.any {
+                        it.uiState.value.isDangerousAlertActive
+                    }
+
+                    if (!anyStillActive) {
+                        // All instances have dismissed the alert
+                        Log.d(TAG, "All instances have dismissed the dangerous sound alert")
+                    }
+                }
+            }
+            override fun onPlayPauseClicked(id: Int) {
+                activeTrafficLightViewModels[id]?.togglePlayPause()
+            }
+
+            override fun onResetClicked(id: Int) {
+                activeTrafficLightViewModels[id]?.resetTimedSequence()
             }
             override fun onCloseRequested(id: Int) {
                 removeTrafficLightInstance(id)
             }
             override fun onSettingsRequested(id: Int) {
+                // Remove highlight from previous instance if any
+                settingsOpenForInstanceId?.let { previousId ->
+                    activeTrafficLightViews[previousId]?.setHighlighted(false)
+                    activeTrafficLightViewModels[previousId]?.setSettingsOpen(false)
+                }
+                highlightedInstanceId?.let { previousId ->
+                    activeTrafficLightViews[previousId]?.setHighlighted(false)
+                }
+
+                // Highlight the current instance
+                activeTrafficLightViews[id]?.setHighlighted(true)
+                activeTrafficLightViewModels[id]?.setSettingsOpen(true)
+                settingsOpenForInstanceId = id
+                highlightedInstanceId = id
+
                 val settingsIntent = Intent(this@TrafficLightService, TrafficLightActivity::class.java).apply {
                     action = TrafficLightActivity.ACTION_SHOW_SETTINGS
                     putExtra(EXTRA_TRAFFIC_LIGHT_INSTANCE_ID, id)
@@ -308,25 +494,64 @@ class TrafficLightService : LifecycleService(), ViewModelStoreOwner {
         }
     }
 
+    private fun updateLightForDecibel(db: Int) {
+        // Check for dangerous levels first
+        if (db >= 150) {
+            // Trigger alert for ALL traffic light instances via service
+            (context as? TrafficLightService)?.triggerDangerousSoundAlert()
+            return
+        }
+
+        // Normal responsive mode logic...
+    }
+
+    fun onSettingsClosed() {
+        settingsOpenForInstanceId?.let { id ->
+            activeTrafficLightViews[id]?.setHighlighted(false)
+            activeTrafficLightViewModels[id]?.setSettingsOpen(false)
+            settingsOpenForInstanceId = null
+        }
+    }
+
     private fun createDefaultLayoutParams(initialState: TrafficLightState?): WindowManager.LayoutParams {
         val displayMetrics = DisplayMetrics().also { windowManager.defaultDisplay.getMetrics(it) }
         val defaultWidth = resources.getDimensionPixelSize(R.dimen.traffic_light_default_width)
         val defaultHeight = resources.getDimensionPixelSize(R.dimen.traffic_light_default_height)
 
-        val width = initialState?.let { if (it.windowWidth > 0) it.windowWidth else defaultWidth } ?: defaultWidth
-        val height = initialState?.let { if (it.windowHeight > 0) it.windowHeight else defaultHeight } ?: defaultHeight
-        val x = initialState?.windowX ?: (displayMetrics.widthPixels / 2 - width / 2)
-        val y = initialState?.windowY ?: (displayMetrics.heightPixels / 2 - height / 2)
+        // Properly restore saved dimensions or use defaults
+        val width = when {
+            initialState != null && initialState.windowWidth > 0 -> initialState.windowWidth
+            initialState != null && initialState.windowWidth == -1 -> WindowManager.LayoutParams.WRAP_CONTENT
+            else -> defaultWidth
+        }
+
+        val height = when {
+            initialState != null && initialState.windowHeight > 0 -> initialState.windowHeight
+            initialState != null && initialState.windowHeight == -1 -> WindowManager.LayoutParams.WRAP_CONTENT
+            else -> defaultHeight
+        }
+
+        // Restore saved position or center on screen
+        val defaultX = (displayMetrics.widthPixels / 2 - (if (width > 0) width else defaultWidth) / 2)
+        val defaultY = (displayMetrics.heightPixels / 2 - (if (height > 0) height else defaultHeight) / 2)
+
+        val x = initialState?.windowX ?: defaultX
+        val y = initialState?.windowY ?: defaultY
 
         return WindowManager.LayoutParams(
-            width, height,
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY else WindowManager.LayoutParams.TYPE_SYSTEM_ALERT,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+            width,
+            height,
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+            else
+                WindowManager.LayoutParams.TYPE_SYSTEM_ALERT,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
-            this.x = x
-            this.y = y
+            this.x = x.coerceIn(0, displayMetrics.widthPixels - (if (width > 0) width else defaultWidth))
+            this.y = y.coerceIn(0, displayMetrics.heightPixels - (if (height > 0) height else defaultHeight))
         }
     }
 

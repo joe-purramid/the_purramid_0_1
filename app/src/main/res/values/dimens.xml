@@ -1,9 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Existing dimensions -->
     <dimen name="default_padding">16dp</dimen>
-
     <dimen name="large_screen_padding">32dp</dimen>
-	
-	<dimen name="coin_standard_size">60dp</dimen>
+    <dimen name="coin_standard_size">60dp</dimen>
 
-    </resources>
+    <!-- Traffic Light specific dimensions -->
+    <dimen name="traffic_light_min_size">100dp</dimen>
+    <dimen name="traffic_light_default_width">80dp</dimen>
+    <dimen name="traffic_light_default_height">220dp</dimen>
+
+    <!-- Common dimensions for adapters -->
+    <dimen name="small_color_indicator_size">24dp</dimen>
+    <dimen name="small_spacing">4dp</dimen>
+</resources>

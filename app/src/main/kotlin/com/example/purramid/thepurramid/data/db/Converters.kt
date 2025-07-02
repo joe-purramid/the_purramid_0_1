@@ -325,6 +325,58 @@ class Converters {
         }
     }
 
+    // Converter for MessageData
+    @TypeConverter
+    fun fromMessageData(value: MessageData?): String? {
+        return value?.let { gson.toJson(it) }
+    }
+
+    @TypeConverter
+    fun toMessageData(value: String?): MessageData? {
+        if (value.isNullOrEmpty()) return null
+        return try {
+            gson.fromJson(value, MessageData::class.java)
+        } catch (e: Exception) {
+            Log.e("Converters", "Failed to parse MessageData JSON: $value", e)
+            null
+        }
+    }
+
+    // Converter for TrafficLightMessages
+    @TypeConverter
+    fun fromTrafficLightMessages(value: TrafficLightMessages?): String? {
+        return value?.let { gson.toJson(it) }
+    }
+
+    @TypeConverter
+    fun toTrafficLightMessages(value: String?): TrafficLightMessages? {
+        if (value.isNullOrEmpty()) return null
+        return try {
+            gson.fromJson(value, TrafficLightMessages::class.java)
+        } catch (e: Exception) {
+            Log.e("Converters", "Failed to parse TrafficLightMessages JSON: $value", e)
+            TrafficLightMessages() // Return default instead of null
+        }
+    }
+
+    // Converter for List<TimedSequence>
+    @TypeConverter
+    fun fromTimedSequenceList(value: List<TimedSequence>?): String? {
+        return value?.let { gson.toJson(it) }
+    }
+
+    @TypeConverter
+    fun toTimedSequenceList(value: String?): List<TimedSequence>? {
+        if (value.isNullOrEmpty()) return emptyList()
+        return try {
+            val listType = object : TypeToken<List<TimedSequence>>() {}.type
+            gson.fromJson(value, listType)
+        } catch (e: Exception) {
+            Log.e("Converters", "Failed to parse TimedSequence list JSON: $value", e)
+            emptyList()
+        }
+    }
+
     // Optional: If you decide to store DbRange separately (not needed if part of Settings JSON)
     /*
     @TypeConverter

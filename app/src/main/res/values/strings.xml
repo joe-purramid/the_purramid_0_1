@@ -2,11 +2,10 @@
 
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <!-- `` MAIN APP VIEW `` -->
-    <string name="app_name">The <xliff:g id="tp" translatable="false">Purramid</xliff:g></string>
+    <string name="app_name"><xliff:g id="tp" translatable="false">Purramid</xliff:g> Class Tools</string>
     <string name="app_widget_description">Launch a Purramid class management tool</string>
-    <string name="enable_overlay">Enable Overlay</string>
-    <string name="overlay_permission_denied">Overlay permission denied</string>
     <string name="clock_title">Clock</string>
+    <string name="probabilities_title">Probabilities</string>
     <string name="randomizers_title">Randomizers</string>
     <string name="screen_mask_title">Screen Mask</string>
     <string name="spotlight_title">Spotlight</string>
@@ -15,6 +14,8 @@
     <string name="about">About this App</string>
 
     <!-- `` UNIVERSAL TERMS `` -->
+    <string name="enable_overlay">Enable Overlay</string>
+    <string name="overlay_permission_denied">Overlay permission denied</string>
     <string name="snackbar_action_ok">OK</string>
     <string name="pause">Pause Button</string>
     <string name="pause_accessible">A Pause button to temporarily stop time.</string>
@@ -374,81 +375,9 @@
     <string name="country_south_korea">South Korea</string>
     <string name="country_north_korea">North Korea</string>
 
-    <!-- `` RANDOMIZERS APP `` -->
-    <string name="randomizer_settings_title">Randomizer Settings</string>
-    <string name="select_list">Choose a List</string>
-    <string name="show_lists">Open a drop-down menu to select a list</string>
-    <string name="randomizer_mode">Randomizer Type</string>
-    <string name="list_editor">List Editor</string>
-    <string name="setting_spin_animation">Spin Animation</string>
-    <string name="add_new_list">Add New List</string>
-    <string name="list_title_hint">List Title</string>
-    <string name="delete_list">Delete List</string>
-    <string name="delete_list_title">Delete List?</string>
-    <string name="delete_list_confirmation">Are you sure you want to delete \'%1$s\'? This cannot be undone.</string>
-    <string name="add_item">Add New Item</string>
-    <string name="setting_announce">Announce Result</string>
-    <string name="add_another_randomizer">Add another Randomizer</string>
+    <!-- `` PROBABILITIES APP `` -->
 
-    <!-- `` RANDOMIZER SPIN MODE `` -->
-    <string name="randomizer_mode_spin">Spin Mode</string>
-    <string name="spin">Spin</string>
-    <string name="setting_celebrate">Celebrate Result</string>
-    <string name="setting_sequence">Sequence Results</string>
-    <string name="sequence_up">Previous sequence item</string>
-    <string name="sequence_down">Next sequence item</string>
-
-    <!-- `` Pre-loaded Randomizer Lists `` -->
-    <string name="default_list_title_colors">Colors</string>
-    <string name="default_list_title_consonants">Consonants (English)</string>
-    <string name="default_list_title_continents">Continents</string>
-    <string name="default_list_title_numbers">Numbers</string>
-    <string name="default_list_title_oceans">Oceans</string>
-    <string name="default_list_title_vowels">Vowels (English)</string>
-
-    <string-array name="default_list_items_colors">
-        <item>Red</item>
-        <item>Orange</item>
-        <item>Yellow</item>
-        <item>Green</item>
-        <item>Blue</item>
-        <item>Purple</item>
-    </string-array>
-
-    <string-array name="default_list_items_continents">
-        <item>Africa</item>
-        <item>Antarctica</item>
-        <item>Asia</item>
-        <item>Australia</item>
-        <item>Europe</item>
-        <item>North America</item>
-        <item>South America</item>
-    </string-array>
-
-    <string-array name="default_list_items_oceans">
-        <item>Arctic</item>
-        <item>Atlantic</item>
-        <item>Indian</item>
-        <item>Pacific</item>
-        <item>Southern</item>
-    </string-array>
-
-    <!-- `` RANDOMIZER SLOTS MODE `` -->
-    <string name="randomizer_mode_slots">Slots Mode</string>
-    <string name="lock_column">Lock Column</string>
-    <string name="unlock_column">Unlock Column</string>
-    <string name="item_image_placeholder">[Image]</string>
-    <string name="select_list_for_column">Select List for Column %1$d</string>
-    <string name="list_selection_clear">Clear Selection</string>
-    <string name="no_lists_available">No lists available to select.</string>
-    <string name="cannot_open_settings">Cannot open settings.</string>
-    <string name="item_image_content_description">Image representing list item</string>
-    <string name="item_image_content_description_secondary">Faded image representing adjacent list item</string>
-    <string name="setting_slots_num_columns">Number of Columns</string>
-    <string name="setting_slots_columns_3">3</string>
-    <string name="setting_slots_columns_5">5</string>
-
-    <!-- `` RANDOMIZER DICE MODE `` -->
+    <!-- `` DICE MODE `` -->
     <string name="randomizer_mode_dice">Dice Mode</string>
     <string name="roll">Roll</string>
     <string name="dice_pool">Dice Pool</string>
@@ -469,7 +398,7 @@
     <string name="setting_dice_configure_modifiers">Dice Modifiers</string>
     <string name="setting_dice_configure_modifiers_title">Configure Dice Modifiers</string>
 
-    <!-- `` RANDOMIZER COIN FLIP MODE `` -->
+    <!-- `` COIN FLIP MODE `` -->
     <string name="randomizer_mode_coin_flip">Coin Flip Mode</string>
     <string name="setting_coin_color">Coin Color</string>
     <string name="setting_coin_flip_animation">Flip Animation</string>
@@ -514,6 +443,8 @@
     <string name="desc_coin_color_picker">Select coin color</string>
     <string name="desc_coin_announcement_on">Coin result announcement is ON</string>
     <string name="desc_coin_announcement_off">Coin result announcement is OFF</string>
+    <string name="error_add_coins_to_flip">Add coins to your pool to flip!</string>
+    <string name="error_max_coins_reached">Maximum of %1$d %2$s coins reached.</string> <string name="loading_settings">Loading Settings…</string>
 
     <!-- `` GRAPHING FOR DICE AND COIN FLIP `` -->
     <string name="graph_distribution_placeholder">Graph will appear here</string>
@@ -532,6 +463,80 @@
     <string name="graph_coin_flip_heads">Frequency of Heads flips</string>
     <string name="graph_coin_flip_tails">Frequency of Tails flips</string>
 
+    <!-- `` RANDOMIZERS APP `` -->
+    <string name="randomizer_settings_title">Randomizer Settings</string>
+    <string name="select_list">Choose a List</string>
+    <string name="show_lists">Open a drop-down menu to select a list</string>
+    <string name="randomizer_mode">Randomizer Type</string>
+    <string name="list_editor">List Editor</string>
+    <string name="setting_spin_animation">Spin Animation</string>
+    <string name="add_new_list">Add New List</string>
+    <string name="list_title_hint">List Title</string>
+    <string name="delete_list">Delete List</string>
+    <string name="delete_list_title">Delete List?</string>
+    <string name="delete_list_confirmation">Are you sure you want to delete \'%1$s\'? This cannot be undone.</string>
+    <string name="add_item">Add New Item</string>
+    <string name="setting_announce">Announce Result</string>
+    <string name="add_another_randomizer">Add another Randomizer</string>
+
+    <!-- `` SPIN MODE `` -->
+    <string name="randomizer_mode_spin">Spin Mode</string>
+    <string name="spin">Spin</string>
+    <string name="setting_celebrate">Celebrate Result</string>
+    <string name="setting_sequence">Sequence Results</string>
+    <string name="sequence_up">Previous sequence item</string>
+    <string name="sequence_down">Next sequence item</string>
+
+    <!-- `` Pre-loaded Randomizer Lists `` -->
+    <string name="default_list_title_colors">Colors</string>
+    <string name="default_list_title_consonants">Consonants (English)</string>
+    <string name="default_list_title_continents">Continents</string>
+    <string name="default_list_title_numbers">Numbers</string>
+    <string name="default_list_title_oceans">Oceans</string>
+    <string name="default_list_title_vowels">Vowels (English)</string>
+
+    <string-array name="default_list_items_colors">
+        <item>Red</item>
+        <item>Orange</item>
+        <item>Yellow</item>
+        <item>Green</item>
+        <item>Blue</item>
+        <item>Purple</item>
+    </string-array>
+
+    <string-array name="default_list_items_continents">
+        <item>Africa</item>
+        <item>Antarctica</item>
+        <item>Asia</item>
+        <item>Australia</item>
+        <item>Europe</item>
+        <item>North America</item>
+        <item>South America</item>
+    </string-array>
+
+    <string-array name="default_list_items_oceans">
+        <item>Arctic</item>
+        <item>Atlantic</item>
+        <item>Indian</item>
+        <item>Pacific</item>
+        <item>Southern</item>
+    </string-array>
+
+    <!-- `` SLOTS MODE `` -->
+    <string name="randomizer_mode_slots">Slots Mode</string>
+    <string name="lock_column">Lock Column</string>
+    <string name="unlock_column">Unlock Column</string>
+    <string name="item_image_placeholder">[Image]</string>
+    <string name="select_list_for_column">Select List for Column %1$d</string>
+    <string name="list_selection_clear">Clear Selection</string>
+    <string name="no_lists_available">No lists available to select.</string>
+    <string name="cannot_open_settings">Cannot open settings.</string>
+    <string name="item_image_content_description">Image representing list item</string>
+    <string name="item_image_content_description_secondary">Faded image representing adjacent list item</string>
+    <string name="setting_slots_num_columns">Number of Columns</string>
+    <string name="setting_slots_columns_3">3</string>
+    <string name="setting_slots_columns_5">5</string>
+
     <!-- `` RANDOMIZER SNACKBARS `` -->
     <string name="max_randomizers_general_reached_snackbar">Maximum of <xliff:g id="count">%1$d</xliff:g> Randomizer windows reached.</string>
     <string name="max_randomizers_dice_reached_snackbar">Maximum of <xliff:g id="count">%1$d</xliff:g> Dice windows reached.</string>
@@ -543,17 +548,13 @@
     <string name="error_list_creator_update_item_failed">A naughty kitty has gotten underfoot. Failed to update item.</string>
     <string name="error_list_creator_delete_item_failed">A kitty says this toy belongs to them. Failed to delete item.</string>
     <string name="error_list_creator_delete_list_failed">A kitty says this toy belongs to them. Failed to delete list.</string>
-
     <string name="list_creator_cannot_save_title">Cannot Save List</string> <!-- This is the title of list_creator_min_items_message -->
     <string name="list_creator_min_items_message">Empty Lists cannot be saved. Please add two or more items or cancel this List creation.</string>
     <string name="list_creator_button_cancel_creation">Cancel Creation</string>
     <string name="list_creator_button_continue_editing">Continue Editing</string>
     <string name="delete_item_title">Delete Item?</string>
     <string name="delete_item_confirmation">Are you sure you want to delete this item starting with \'%1$s\'?</string>
-
     <string name="error_settings_not_loaded_cant_save">Settings not loaded, cannot save changes.</string>
-    <string name="error_add_coins_to_flip">Add coins to your pool to flip!</string>
-    <string name="error_max_coins_reached">Maximum of %1$d %2$s coins reached.</string> <string name="loading_settings">Loading Settings…</string>
 
 
     <!-- `` SCREEN MASK APP `` -->
@@ -594,11 +595,17 @@
     <string name="lap">Lap Times</string>
     <string name="no_laps_recorded">No laps recorded</string>
     <string name="sounds">Stopwatch sounds</string>
+    <string name="setting_add_another_timer">Add Another Timer</string>
+    <string name="max_timers_reached_snackbar">Maximum number of timers reached.</string>
+
 
     <!-- `` TRAFFIC LIGHT APP `` -->
     <string name="traffic_light_vertical_desc">A vertically oriented traffic light.</string>
     <string name="traffic_light_horizontal_desc">A horizontally oriented traffic light.</string>
     <string name="traffic_light_settings_title">Traffic Light Settings</string>
+    <string name="green_color_label">Green</string>
+    <string name="yellow_color_label">Yellow</string> <!-- Amber in UK -->
+    <string name="red_color_label">Red</string>
     <string name="setting_mode">Mode</string>
     <string name="setting_mode_manual">Manual Change</string>
     <string name="setting_mode_responsive">Responsive Change (Requires Microphone)</string>
@@ -607,12 +614,19 @@
     <string name="setting_adjust_values">Adjust Responsive Values</string>
     <string name="setting_edit_messages">Add/Edit Messages</string>
     <string name="setting_add_messages">Add Message</string>
+    <string name="setting_add_another_traffic_light">Add Another Traffic Light</string>
+
+    <!-- `` SEQUENCE MODE `` -->
+    <string name="sequence_title_hint">Sequence Title</string>
+    <string name="total_duration_format">Total: %1$s</string>
+    <string name="add_step">Add Step</string>
+    <string name="step_count_format">%1$d steps</string>
     <string name="setting_edit_sequence">Edit Timed Sequence</string>
     <string name="setting_add_title">Add Title</string>
     <string name="setting_show_time_remaining">Show Time Remaining (Timed Mode)</string>
     <string name="setting_show_timeline">Show Timeline (Timed Mode)</string>
-    <string name="setting_add_another">Add Another Traffic Light</string>
-    <string name="max_traffic_lights_reached_snackbar">Maximum number of traffic lights reached.</string>
+
+    <!-- `` RESPONSIVE MODE `` -->
     <string name="dialog_close">Close</string>
     <string name="min_db_label">Min:</string> <!-- Minimum -->
     <string name="max_db_label">Max:</string> <!-- Maximum -->
@@ -622,9 +636,16 @@
     <string name="dangerous_sound_alert_info_desc">Information about dangerous sound alert</string>
     <string name="dangerous_sound_alert_info_title">Dangerous Sound Alert Information</string>
     <string name="dangerous_sound_alert_info_message">"Check this box to display an alert that says \"Warning: Notify your instructor immediately.\" should your hardware\'s microphone report a sound of 150 decibels or higher. The US Occupational Safety and Health Organization projects the loudest classroom noise would reach 95 dB. 120 db is the sound of a car backfire. 150 dB is the sound of a gunshot. The <xliff:g id="tp" translatable="false">Purramid</xliff:g> is a software application dependent on the readings provided by your microphone. <xliff:g id="tp" translatable="false">Purramid Learning</xliff:g> makes no guarantee that the sound detected is 150 db or what made the sound is a firearm. But this is the reality that US students live in, and we are committed to providing teachers any tools possible to make their classrooms places of learning and not fear."</string>
-    <string name="green_color_label">Green</string>
-    <string name="yellow_color_label">Yellow</string> <!-- Amber in UK -->
-    <string name="red_color_label">Red</string>
+
+    <!-- `` TRAFFIC LIGHT SNACKBARS `` -->
+    <string name="max_traffic_lights_reached_snackbar">Maximum number of traffic lights reached.</string>
+    <string name="step_count_limit_format">%1$d/%2$d steps</string>
+    <string name="max_sequences_reached_snackbar">Maximum of %1$d sequences reached</string>
+    <string name="max_steps_reached_snackbar">Maximum of %1$d steps reached</string>
+    <string name="sequence_title_required">Please enter a sequence title</string>
+    <string name="sequence_step_invalid">Step %1$d: Please assign both color and duration</string>
+    <string name="sequence_empty_error">Please add at least one step to the sequence</string>
+
 
     <!-- `` ABOUT THIS APP `` -->
     <string name="version_number">Version 0.1</string> <!-- `` in dev `` -->

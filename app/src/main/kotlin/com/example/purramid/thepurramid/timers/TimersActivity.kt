@@ -7,21 +7,22 @@ import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.example.purramid.thepurramid.R
-import com.example.purramid.thepurramid.timers.ACTION_START_STOPWATCH
-import com.example.purramid.thepurramid.timers.ACTION_START_COUNTDOWN
-import com.example.purramid.thepurramid.timers.EXTRA_DURATION_MS
-import com.example.purramid.thepurramid.timers.EXTRA_TIMER_ID
-import com.example.purramid.thepurramid.timers.TimersService
+import com.example.purramid.thepurramid.databinding.ActivityTimersBinding
+import com.example.purramid.thepurramid.instance.InstanceManager
 import com.example.purramid.thepurramid.timers.ui.TimersSettingsFragment
 import com.example.purramid.thepurramid.timers.viewmodel.TimersViewModel
+import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class TimersActivity : AppCompatActivity() {
 
+    @Inject lateinit var instanceManager: InstanceManager
+    private lateinit var binding: ActivityTimersBinding
+
     companion object {
         private const val TAG = "TimersActivity"
-        // Action for the intent to show settings
         const val ACTION_SHOW_TIMER_SETTINGS = "com.example.purramid.timers.ACTION_SHOW_TIMER_SETTINGS"
     }
 
@@ -29,6 +30,9 @@ class TimersActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        binding = ActivityTimersBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
         Log.d(TAG, "onCreate - Intent Action: ${intent.action}")
 
         currentTimerId = intent.getIntExtra(EXTRA_TIMER_ID, 0)
@@ -42,11 +46,34 @@ class TimersActivity : AppCompatActivity() {
             }
         } else {
             // Default action: launch a new timer service instance
-            // Let the service handle getting a new instance ID from InstanceManager
-            Log.d(TAG, "Launching timer service")
-            startTimerService(currentTimerId, TimerType.STOPWATCH)
-            finish()
+            if (canCreateNewInstance()) {
+                Log.d(TAG, "Launching timer service")
+                startTimerService(currentTimerId, TimerType.STOPWATCH)
+                finish()
+            }
         }
+    }
+
+    private fun canCreateNewInstance(): Boolean {
+        if (currentTimerId != 0) {
+            // Existing timer ID, not creating new
+            return true
+        }
+
+        val activeCount = instanceManager.getActiveInstanceCount(InstanceManager.TIMERS)
+        if (activeCount >= 4) {
+            // Show Snackbar with the maximum reached message
+            Snackbar.make(
+                binding.root,
+                getString(R.string.max_timers_reached_snackbar),
+                Snackbar.LENGTH_LONG
+            ).show()
+
+            // Delay finish to allow Snackbar to be visible
+            binding.root.postDelayed({ finish() }, 2000)
+            return false
+        }
+        return true
     }
 
     private fun startTimerService(timerId: Int, type: TimerType, durationMs: Long? = null) {

@@ -33,8 +33,8 @@ class TimersViewModel @Inject constructor(
         private const val MAX_LAPS = 10 // As per specification
     }
 
-    // Get timerId passed via SavedStateHandle
-    private val timerId: Int = savedStateHandle[KEY_TIMER_ID] ?: 0
+    // Initialize timerId - will be set by setTimerId() from Service
+    private var timerId: Int = 0
 
     private val _uiState = MutableStateFlow(TimerState(timerId = timerId))
     val uiState: StateFlow<TimerState> = _uiState.asStateFlow()
@@ -43,11 +43,15 @@ class TimersViewModel @Inject constructor(
     private val gson = Gson()
 
     init {
-        Log.d(TAG, "Initializing ViewModel for timerId: $timerId")
-        if (timerId != 0) {
-            loadInitialState(timerId)
-        } else {
-            Log.e(TAG, "Invalid timerId (0), using default state without persistence.")
+        Log.d(TAG, "Initializing ViewModel")
+        // TimerId will be set by the Service
+    }
+
+    fun setTimerId(id: Int) {
+        if (timerId == 0 && id > 0) {
+            timerId = id
+            savedStateHandle[KEY_TIMER_ID] = id
+            loadInitialState(id)
         }
     }
 
@@ -66,7 +70,7 @@ class TimersViewModel @Inject constructor(
                         Log.d(TAG, "No saved state for timer $id, using defaults.")
                         val defaultState = TimerState(
                             timerId = id,
-                            uuid = UUID.randomUUID() // Generate new UUID
+                            uuid = UUID.randomUUID()
                         )
                         _uiState.value = defaultState
                         saveState(defaultState)
@@ -173,29 +177,9 @@ class TimersViewModel @Inject constructor(
         stopTicker()
         viewModelScope.launch(Dispatchers.Main) {
             _uiState.update { it.copy(isRunning = false, currentMillis = 0) }
-            if (_uiState.value.playSoundOnEnd) {
-                playFinishSound()
-            }
+            // Sound playing is handled by the Service observing this state change
+            Log.d(TAG, "Timer $timerId finished.")
             saveState(_uiState.value)
-        }
-    }
-
-    private fun playFinishSound() {
-        try {
-            // Use saved sound URI if available, otherwise use default
-            val soundUri = _uiState.value.selectedSoundUri
-            if (soundUri != null) {
-                // TODO: Implement playing custom sound URI
-                Log.d(TAG, "Timer $timerId finished - Play custom sound: $soundUri")
-            } else if (_uiState.value.musicUrl != null) {
-                // TODO: Implement playing music URL
-                Log.d(TAG, "Timer $timerId finished - Play music URL: ${_uiState.value.musicUrl}")
-            } else {
-                // Play default notification sound
-                Log.d(TAG, "Timer $timerId finished - Play default sound")
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error playing finish sound", e)
         }
     }
 

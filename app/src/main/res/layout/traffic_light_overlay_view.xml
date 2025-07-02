@@ -33,7 +33,7 @@
             android:id="@+id/light_red_vertical_overlay"
             android:layout_width="0dp"
             android:layout_height="0dp"
-            android:src="@drawable/ic_circle_red_filled"
+            android:src="@drawable/ic_circle_base"
             android:clickable="true"
             android:focusable="true"
             android:contentDescription="@string/red_color_label"
@@ -50,7 +50,7 @@
             android:id="@+id/light_yellow_vertical_overlay"
             android:layout_width="0dp"
             android:layout_height="0dp"
-            android:src="@drawable/ic_circle_yellow_filled"
+            android:src="@drawable/ic_circle_base"
             android:clickable="true"
             android:focusable="true"
             android:contentDescription="@string/yellow_color_label"
@@ -65,7 +65,7 @@
             android:id="@+id/light_green_vertical_overlay"
             android:layout_width="0dp"
             android:layout_height="0dp"
-            android:src="@drawable/ic_circle_green_filled"
+            android:src="@drawable/ic_circle_base"
             android:clickable="true"
             android:focusable="true"
             android:contentDescription="@string/green_color_label"
@@ -104,7 +104,7 @@
             android:id="@+id/light_red_horizontal_overlay"
             android:layout_width="0dp"
             android:layout_height="0dp"
-            android:src="@drawable/ic_circle_red_filled"
+            android:src="@drawable/ic_circle_base"
             android:clickable="true"
             android:focusable="true"
             android:contentDescription="@string/red_color_label"
@@ -121,7 +121,7 @@
             android:id="@+id/light_yellow_horizontal_overlay"
             android:layout_width="0dp"
             android:layout_height="0dp"
-            android:src="@drawable/ic_circle_yellow_filled"
+            android:src="@drawable/ic_circle_base"
             android:clickable="true"
             android:focusable="true"
             android:contentDescription="@string/yellow_color_label"
@@ -136,7 +136,7 @@
             android:id="@+id/light_green_horizontal_overlay"
             android:layout_width="0dp"
             android:layout_height="0dp"
-            android:src="@drawable/ic_circle_green_filled"
+            android:src="@drawable/ic_circle_base"
             android:clickable="true"
             android:focusable="true"
             android:contentDescription="@string/green_color_label"
@@ -149,6 +149,83 @@
             app:layout_constraintHorizontal_bias="0.82"/> 
 
     </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <LinearLayout
+        android:id="@+id/timed_mode_controls"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@id/traffic_light_vertical_container_overlay"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="8dp">
+
+        <ImageButton
+            android:id="@+id/button_play_pause"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:src="@drawable/ic_play"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/play"
+            android:layout_marginEnd="16dp"/>
+
+        <ImageButton
+            android:id="@+id/button_reset"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:src="@drawable/ic_reset"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/reset"/>
+    </LinearLayout>
+
+    <!-- Time remaining display -->
+    <TextView
+        android:id="@+id/text_time_remaining"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@id/timed_mode_controls"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="4dp"
+        tools:text="2:45:30"/>
+
+    <!-- Timeline container -->
+    <LinearLayout
+        android:id="@+id/timeline_container"
+        android:layout_width="wrap_content"
+        android:layout_height="0dp"
+        android:orientation="vertical"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="@id/traffic_light_vertical_container_overlay"
+        app:layout_constraintBottom_toBottomOf="@id/traffic_light_vertical_container_overlay"
+        app:layout_constraintEnd_toStartOf="@id/traffic_light_vertical_container_overlay"
+        android:layout_marginEnd="16dp">
+
+        <!-- Timeline will be drawn programmatically -->
+        <com.example.purramid.thepurramid.traffic_light.TimelineView
+            android:id="@+id/timeline_view"
+            android:layout_width="48dp"
+            android:layout_height="match_parent"/>
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/text_microphone_banner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#FFF3CD"
+        android:textColor="#856404"
+        android:padding="8dp"
+        android:gravity="center"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        tools:text="Microphone temporarily unavailable. Reconnecting..."
+        tools:visibility="visible"/>
 
     <TextView
         android:id="@+id/overlay_button_close"

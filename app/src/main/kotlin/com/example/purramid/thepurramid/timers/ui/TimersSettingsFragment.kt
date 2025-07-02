@@ -121,9 +121,6 @@ class TimersSettingsFragment : DialogFragment() {
 
     private fun setupListeners() {
         binding.buttonCloseSettings.setOnClickListener {
-            if (viewModel.uiState.value.type == TimerType.COUNTDOWN) {
-                saveDurationFromInput()
-            }
             dismiss()
         }
 
@@ -300,15 +297,10 @@ class TimersSettingsFragment : DialogFragment() {
         if (activeCount >= 4) {
             Toast.makeText(
                 requireContext(),
-                getString(R.string.max_timers_reached),
+                getString(R.string.max_timers_reached_snackbar),
                 Toast.LENGTH_LONG
             ).show()
             return
-        }
-
-        // Save current settings
-        if (viewModel.uiState.value.type == TimerType.COUNTDOWN) {
-            saveDurationFromInput()
         }
 
         // Launch new timer with current settings
@@ -327,6 +319,29 @@ class TimersSettingsFragment : DialogFragment() {
 
         // Dismiss settings
         dismiss()
+    }
+
+    private fun showSoundPicker() {
+        val currentSound = viewModel.uiState.value.selectedSoundUri
+        SoundPickerDialog.newInstance(currentSound) { selectedUri ->
+            if (selectedUri == "MUSIC_URL_OPTION") {
+                // Show music URL dialog
+                showMusicUrlDialog()
+            } else {
+                viewModel.setSelectedSound(selectedUri)
+            }
+        }.show(childFragmentManager, "SoundPickerDialog")
+    }
+
+    private fun showMusicUrlDialog() {
+        val currentUrl = viewModel.uiState.value.musicUrl
+        val recentUrls = viewModel.uiState.value.recentMusicUrls
+
+        MusicUrlDialog.newInstance(currentUrl, recentUrls) { url ->
+            viewModel.setMusicUrl(url)
+            // Clear selected sound URI when using music URL
+            viewModel.setSelectedSound(null)
+        }.show(childFragmentManager, "MusicUrlDialog")
     }
 
     private fun showSetCountdownDialog() {

@@ -53,7 +53,7 @@ abstract class PurramidDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: PurramidDatabase? = null
 
-        // Migration from 11 to 12: Add UUID to screen_mask_state
+        // Migration from 13 to 14: Add UUID to screen_mask_state
         private val MIGRATION_13_14 = object : Migration(13, 14) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("ALTER TABLE screen_mask_state ADD COLUMN uuid TEXT NOT NULL DEFAULT '${UUID.randomUUID()}'")
@@ -69,8 +69,7 @@ abstract class PurramidDatabase : RoomDatabase() {
         }
 
         // Future migrations would be added here:
-        // private val MIGRATION_12_13 = object : Migration(12, 13) { ... }
-        // private val MIGRATION_13_14 = object : Migration(13, 14) { ... }
+        // private val MIGRATION_14_15 = object : Migration(12, 13) { ... }
 
         fun getDatabase(context: Context): PurramidDatabase {
             return INSTANCE ?: synchronized(this) {
@@ -80,10 +79,8 @@ abstract class PurramidDatabase : RoomDatabase() {
                     "purramid_database"
                 )
                     .addMigrations(
-                        MIGRATION_11_12,
-                        MIGRATION_12_13,
-                        Migration_13_14
-                        // Add future migrations here: MIGRATION_12_13, MIGRATION_13_14, etc.
+                        MIGRATION_13_14
+                        // Add future migrations here: MIGRATION_14_15, etc.
                     )
                     .fallbackToDestructiveMigrationOnDowngrade() // Only destroy on downgrade
                     .build()
