@@ -4,8 +4,6 @@
     <!-- `` MAIN APP VIEW `` -->
     <string name="app_name"><xliff:g id="tp" translatable="false">Purramid</xliff:g> Class Tools</string>
     <string name="app_widget_description">Launch a Purramid class management tool</string>
-    <string name="enable_overlay">Enable Overlay</string>
-    <string name="overlay_permission_denied">Overlay permission denied</string>
     <string name="clock_title">Clock</string>
     <string name="probabilities_title">Probabilities</string>
     <string name="randomizers_title">Randomizers</string>
@@ -16,6 +14,8 @@
     <string name="about">About this App</string>
 
     <!-- `` UNIVERSAL TERMS `` -->
+    <string name="enable_overlay">Enable Overlay</string>
+    <string name="overlay_permission_denied">Overlay permission denied</string>
     <string name="snackbar_action_ok">OK</string>
     <string name="pause">Pause Button</string>
     <string name="pause_accessible">A Pause button to temporarily stop time.</string>
@@ -548,14 +548,12 @@
     <string name="error_list_creator_update_item_failed">A naughty kitty has gotten underfoot. Failed to update item.</string>
     <string name="error_list_creator_delete_item_failed">A kitty says this toy belongs to them. Failed to delete item.</string>
     <string name="error_list_creator_delete_list_failed">A kitty says this toy belongs to them. Failed to delete list.</string>
-
     <string name="list_creator_cannot_save_title">Cannot Save List</string> <!-- This is the title of list_creator_min_items_message -->
     <string name="list_creator_min_items_message">Empty Lists cannot be saved. Please add two or more items or cancel this List creation.</string>
     <string name="list_creator_button_cancel_creation">Cancel Creation</string>
     <string name="list_creator_button_continue_editing">Continue Editing</string>
     <string name="delete_item_title">Delete Item?</string>
     <string name="delete_item_confirmation">Are you sure you want to delete this item starting with \'%1$s\'?</string>
-
     <string name="error_settings_not_loaded_cant_save">Settings not loaded, cannot save changes.</string>
 
 
@@ -600,10 +598,14 @@
     <string name="setting_add_another_timer">Add Another Timer</string>
     <string name="max_timers_reached_snackbar">Maximum number of timers reached.</string>
 
+
     <!-- `` TRAFFIC LIGHT APP `` -->
     <string name="traffic_light_vertical_desc">A vertically oriented traffic light.</string>
     <string name="traffic_light_horizontal_desc">A horizontally oriented traffic light.</string>
     <string name="traffic_light_settings_title">Traffic Light Settings</string>
+    <string name="green_color_label">Green</string>
+    <string name="yellow_color_label">Yellow</string> <!-- Amber in UK -->
+    <string name="red_color_label">Red</string>
     <string name="setting_mode">Mode</string>
     <string name="setting_mode_manual">Manual Change</string>
     <string name="setting_mode_responsive">Responsive Change (Requires Microphone)</string>
@@ -612,12 +614,19 @@
     <string name="setting_adjust_values">Adjust Responsive Values</string>
     <string name="setting_edit_messages">Add/Edit Messages</string>
     <string name="setting_add_messages">Add Message</string>
+    <string name="setting_add_another_traffic_light">Add Another Traffic Light</string>
+
+    <!-- `` SEQUENCE MODE `` -->
+    <string name="sequence_title_hint">Sequence Title</string>
+    <string name="total_duration_format">Total: %1$s</string>
+    <string name="add_step">Add Step</string>
+    <string name="step_count_format">%1$d steps</string>
     <string name="setting_edit_sequence">Edit Timed Sequence</string>
     <string name="setting_add_title">Add Title</string>
     <string name="setting_show_time_remaining">Show Time Remaining (Timed Mode)</string>
     <string name="setting_show_timeline">Show Timeline (Timed Mode)</string>
-    <string name="setting_add_another_traffic_light">Add Another Traffic Light</string>
-    <string name="max_traffic_lights_reached_snackbar">Maximum number of traffic lights reached.</string>
+
+    <!-- `` RESPONSIVE MODE `` -->
     <string name="dialog_close">Close</string>
     <string name="min_db_label">Min:</string> <!-- Minimum -->
     <string name="max_db_label">Max:</string> <!-- Maximum -->
@@ -627,9 +636,16 @@
     <string name="dangerous_sound_alert_info_desc">Information about dangerous sound alert</string>
     <string name="dangerous_sound_alert_info_title">Dangerous Sound Alert Information</string>
     <string name="dangerous_sound_alert_info_message">"Check this box to display an alert that says \"Warning: Notify your instructor immediately.\" should your hardware\'s microphone report a sound of 150 decibels or higher. The US Occupational Safety and Health Organization projects the loudest classroom noise would reach 95 dB. 120 db is the sound of a car backfire. 150 dB is the sound of a gunshot. The <xliff:g id="tp" translatable="false">Purramid</xliff:g> is a software application dependent on the readings provided by your microphone. <xliff:g id="tp" translatable="false">Purramid Learning</xliff:g> makes no guarantee that the sound detected is 150 db or what made the sound is a firearm. But this is the reality that US students live in, and we are committed to providing teachers any tools possible to make their classrooms places of learning and not fear."</string>
-    <string name="green_color_label">Green</string>
-    <string name="yellow_color_label">Yellow</string> <!-- Amber in UK -->
-    <string name="red_color_label">Red</string>
+
+    <!-- `` TRAFFIC LIGHT SNACKBARS `` -->
+    <string name="max_traffic_lights_reached_snackbar">Maximum number of traffic lights reached.</string>
+    <string name="step_count_limit_format">%1$d/%2$d steps</string>
+    <string name="max_sequences_reached_snackbar">Maximum of %1$d sequences reached</string>
+    <string name="max_steps_reached_snackbar">Maximum of %1$d steps reached</string>
+    <string name="sequence_title_required">Please enter a sequence title</string>
+    <string name="sequence_step_invalid">Step %1$d: Please assign both color and duration</string>
+    <string name="sequence_empty_error">Please add at least one step to the sequence</string>
+
 
     <!-- `` ABOUT THIS APP `` -->
     <string name="version_number">Version 0.1</string> <!-- `` in dev `` -->

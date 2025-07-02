@@ -1,16 +1,19 @@
-// AddMessagesFragment.kt
 package com.example.purramid.thepurramid.traffic_light
 
+import android.app.Activity
+import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.PorterDuff
 import android.net.Uri
 import android.os.Bundle
+import android.provider.MediaStore
 import android.text.Editable
 import android.text.InputFilter
 import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.isVisible
 import androidx.fragment.app.DialogFragment
@@ -28,6 +31,8 @@ import com.example.purramid.thepurramid.traffic_light.viewmodel.TrafficLightView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
+import java.io.ByteArrayOutputStream
+import java.io.FileOutputStream
 
 class AddMessagesFragment : DialogFragment() {
 
@@ -40,7 +45,12 @@ class AddMessagesFragment : DialogFragment() {
 
     private val viewModel: TrafficLightViewModel by activityViewModels()
 
-    // Image picker for each color
+    // Track temporary message states
+    private var tempRedMessage = MessageData()
+    private var tempYellowMessage = MessageData()
+    private var tempGreenMessage = MessageData()
+
+    // Image picker launchers
     private val imagePickerRed = registerForActivityResult(
         ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -59,8 +69,16 @@ class AddMessagesFragment : DialogFragment() {
         uri?.let { handleImageSelected(LightColor.GREEN, it) }
     }
 
-    // Emoji picker result (simplified - in real app would use emoji picker library)
     private var currentEmojiColor: LightColor? = null
+
+    companion object {
+        const val TAG = "AddMessagesDialog"
+        private const val MAX_IMAGE_SIZE = 3 * 1024 * 1024 // 3MB
+
+        fun newInstance(): AddMessagesFragment {
+            return AddMessagesFragment()
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -68,7 +86,6 @@ class AddMessagesFragment : DialogFragment() {
     ): View {
         _binding = FragmentAddMessagesBinding.inflate(inflater, container, false)
 
-        // Bind included layouts
         redMessageBinding = ItemMessageEditorBinding.bind(binding.includeRedMessage.root)
         yellowMessageBinding = ItemMessageEditorBinding.bind(binding.includeYellowMessage.root)
         greenMessageBinding = ItemMessageEditorBinding.bind(binding.includeGreenMessage.root)
@@ -79,12 +96,18 @@ class AddMessagesFragment : DialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        // Initialize temp messages from current state
+        val currentMessages = viewModel.uiState.value.messages
+        tempRedMessage = currentMessages.redMessage.copy()
+        tempYellowMessage = currentMessages.yellowMessage.copy()
+        tempGreenMessage = currentMessages.greenMessage.copy()
+
         setupViews()
         observeViewModel()
     }
 
     private fun setupViews() {
-        // Set color indicators using the base drawable with tint
+        // Set color indicators
         redMessageBinding.imageColorIndicator.apply {
             setImageResource(R.drawable.ic_circle_base)
             setColorFilter(0xFFFF0000.toInt(), PorterDuff.Mode.SRC_IN)
@@ -116,7 +139,7 @@ class AddMessagesFragment : DialogFragment() {
     private fun setupMessageEditor(
         editorBinding: ItemMessageEditorBinding,
         color: LightColor,
-        imagePicker: ActivityResultLauncher<String>
+        imagePicker: ActivityResultContracts.GetContent.() -> Unit
     ) {
         // Character limit
         editorBinding.editTextMessage.filters = arrayOf(
@@ -130,6 +153,9 @@ class AddMessagesFragment : DialogFragment() {
             override fun afterTextChanged(s: Editable?) {
                 val count = s?.length ?: 0
                 editorBinding.textCharacterCount.text = "$count/${MessageData.MAX_CHARACTERS}"
+
+                // Update temp message
+                updateTempMessageText(color, s.toString())
             }
         })
 
@@ -141,46 +167,72 @@ class AddMessagesFragment : DialogFragment() {
 
         // Image button
         editorBinding.buttonAddImage.setOnClickListener {
-            imagePicker.launch("image/*")
+            when (color) {
+                LightColor.RED -> imagePickerRed.launch("image/*")
+                LightColor.YELLOW -> imagePickerYellow.launch("image/*")
+                LightColor.GREEN -> imagePickerGreen.launch("image/*")
+            }
         }
 
         // Clear image button
         editorBinding.buttonClearImage.setOnClickListener {
             clearImage(color)
         }
+
+        // Initialize with current values
+        val currentMessage = getTempMessage(color)
+        editorBinding.editTextMessage.setText(currentMessage.text)
+        updateEmojiDisplay(editorBinding, currentMessage)
+        updateImageDisplay(editorBinding, currentMessage)
     }
 
     private fun observeViewModel() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.uiState.collect { state ->
-                    updateMessageDisplays(state.messages)
+                    // Only update if dialog is being opened fresh
+                    if (!isResumed) {
+                        tempRedMessage = state.messages.redMessage.copy()
+                        tempYellowMessage = state.messages.yellowMessage.copy()
+                        tempGreenMessage = state.messages.greenMessage.copy()
+
+                        updateAllDisplays()
+                    }
                 }
             }
         }
     }
 
-    private fun updateMessageDisplays(messages: TrafficLightMessages) {
-        updateSingleMessageDisplay(redMessageBinding, messages.redMessage)
-        updateSingleMessageDisplay(yellowMessageBinding, messages.yellowMessage)
-        updateSingleMessageDisplay(greenMessageBinding, messages.greenMessage)
+    private fun updateAllDisplays() {
+        updateMessageDisplay(redMessageBinding, tempRedMessage)
+        updateMessageDisplay(yellowMessageBinding, tempYellowMessage)
+        updateMessageDisplay(greenMessageBinding, tempGreenMessage)
     }
 
-    private fun updateSingleMessageDisplay(
+    private fun updateMessageDisplay(
         editorBinding: ItemMessageEditorBinding,
         message: MessageData
     ) {
-        // Set text
         if (editorBinding.editTextMessage.text.toString() != message.text) {
             editorBinding.editTextMessage.setText(message.text)
         }
+        updateEmojiDisplay(editorBinding, message)
+        updateImageDisplay(editorBinding, message)
+    }
 
-        // Show emojis
+    private fun updateEmojiDisplay(
+        editorBinding: ItemMessageEditorBinding,
+        message: MessageData
+    ) {
         editorBinding.textEmojiDisplay.text = message.emojis.joinToString("")
         editorBinding.textEmojiDisplay.isVisible = message.emojis.isNotEmpty()
         editorBinding.textEmojiCount.text = "${message.emojis.size}/${MessageData.MAX_EMOJIS}"
+    }
 
-        // Show image
+    private fun updateImageDisplay(
+        editorBinding: ItemMessageEditorBinding,
+        message: MessageData
+    ) {
         message.imageUri?.let { uri ->
             editorBinding.imagePreview.setImageURI(uri)
             editorBinding.imagePreview.isVisible = true
@@ -192,8 +244,10 @@ class AddMessagesFragment : DialogFragment() {
     }
 
     private fun showEmojiPicker() {
-        // Simplified emoji picker - in production use emoji picker library
-        val emojis = listOf("😀", "😎", "🎉", "👍", "❤️", "⭐", "🔥", "✅", "🎯", "👏")
+        val emojis = listOf(
+            "😀", "😎", "🎉", "👍", "❤️", "⭐", "🔥", "✅", "🎯", "👏",
+            "🎈", "🎊", "💪", "🌟", "🏆", "💯", "👌", "🙌", "💫", "🎁"
+        )
 
         MaterialAlertDialogBuilder(requireContext())
             .setTitle("Select Emoji")
@@ -206,8 +260,7 @@ class AddMessagesFragment : DialogFragment() {
     }
 
     private fun addEmoji(color: LightColor, emoji: String) {
-        val currentMessages = viewModel.uiState.value.messages
-        val currentMessage = currentMessages.getMessageForColor(color)
+        val currentMessage = getTempMessage(color)
 
         if (currentMessage.emojis.size >= MessageData.MAX_EMOJIS) {
             Snackbar.make(binding.root, "Maximum emojis reached", Snackbar.LENGTH_SHORT).show()
@@ -218,71 +271,125 @@ class AddMessagesFragment : DialogFragment() {
             emojis = currentMessage.emojis + emoji
         )
 
-        updateMessageForColor(color, updatedMessage)
+        updateTempMessage(color, updatedMessage)
+        updateMessageDisplay(getBindingForColor(color), updatedMessage)
     }
 
     private fun handleImageSelected(color: LightColor, uri: Uri) {
         // Check image size
         val size = getImageSize(uri)
-        if (size > 3 * 1024 * 1024) { // 3MB limit
-            Snackbar.make(
-                binding.root,
-                getString(R.string.image_too_large_message),
-                Snackbar.LENGTH_LONG
-            ).show()
+        if (size > MAX_IMAGE_SIZE) {
+            showImageOptimizeDialog(color, uri)
             return
         }
 
-        val currentMessages = viewModel.uiState.value.messages
-        val currentMessage = currentMessages.getMessageForColor(color)
-
+        val currentMessage = getTempMessage(color)
         val updatedMessage = currentMessage.copy(imageUri = uri)
-        updateMessageForColor(color, updatedMessage)
+
+        updateTempMessage(color, updatedMessage)
+        updateMessageDisplay(getBindingForColor(color), updatedMessage)
+    }
+
+    private fun showImageOptimizeDialog(color: LightColor, uri: Uri) {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.image_too_large_title)
+            .setMessage(R.string.image_too_large_message)
+            .setPositiveButton(R.string.optimize) { _, _ ->
+                optimizeAndSaveImage(color, uri)
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun optimizeAndSaveImage(color: LightColor, uri: Uri) {
+        try {
+            val bitmap = MediaStore.Images.Media.getBitmap(requireContext().contentResolver, uri)
+            val optimized = compressBitmap(bitmap)
+
+            // Save to internal storage
+            val filename = "message_image_${color.name}_${System.currentTimeMillis()}.jpg"
+            val file = requireContext().openFileOutput(filename, Activity.MODE_PRIVATE)
+            file.use {
+                optimized.compress(Bitmap.CompressFormat.JPEG, 85, it)
+            }
+
+            val internalUri = Uri.fromFile(requireContext().getFileStreamPath(filename))
+
+            val currentMessage = getTempMessage(color)
+            val updatedMessage = currentMessage.copy(imageUri = internalUri)
+
+            updateTempMessage(color, updatedMessage)
+            updateMessageDisplay(getBindingForColor(color), updatedMessage)
+
+        } catch (e: Exception) {
+            Snackbar.make(binding.root, R.string.compression_failed, Snackbar.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun compressBitmap(bitmap: Bitmap): Bitmap {
+        var quality = 100
+        var streamLength = MAX_IMAGE_SIZE + 1
+        val bmpStream = ByteArrayOutputStream()
+
+        while (streamLength >= MAX_IMAGE_SIZE && quality > 5) {
+            bmpStream.reset()
+            bitmap.compress(Bitmap.CompressFormat.JPEG, quality, bmpStream)
+            streamLength = bmpStream.toByteArray().size
+            quality -= 5
+        }
+
+        return bitmap
     }
 
     private fun clearImage(color: LightColor) {
-        val currentMessages = viewModel.uiState.value.messages
-        val currentMessage = currentMessages.getMessageForColor(color)
-
+        val currentMessage = getTempMessage(color)
         val updatedMessage = currentMessage.copy(imageUri = null)
-        updateMessageForColor(color, updatedMessage)
+
+        updateTempMessage(color, updatedMessage)
+        updateMessageDisplay(getBindingForColor(color), updatedMessage)
     }
 
-    private fun updateMessageForColor(color: LightColor, message: MessageData) {
-        val currentMessages = viewModel.uiState.value.messages
-        val updatedMessages = when (color) {
-            LightColor.RED -> currentMessages.copy(redMessage = message)
-            LightColor.YELLOW -> currentMessages.copy(yellowMessage = message)
-            LightColor.GREEN -> currentMessages.copy(greenMessage = message)
+    private fun getTempMessage(color: LightColor): MessageData {
+        return when (color) {
+            LightColor.RED -> tempRedMessage
+            LightColor.YELLOW -> tempYellowMessage
+            LightColor.GREEN -> tempGreenMessage
         }
+    }
 
-        viewModel.updateMessages(updatedMessages)
+    private fun updateTempMessage(color: LightColor, message: MessageData) {
+        when (color) {
+            LightColor.RED -> tempRedMessage = message
+            LightColor.YELLOW -> tempYellowMessage = message
+            LightColor.GREEN -> tempGreenMessage = message
+        }
+    }
+
+    private fun updateTempMessageText(color: LightColor, text: String) {
+        when (color) {
+            LightColor.RED -> tempRedMessage = tempRedMessage.copy(text = text)
+            LightColor.YELLOW -> tempYellowMessage = tempYellowMessage.copy(text = text)
+            LightColor.GREEN -> tempGreenMessage = tempGreenMessage.copy(text = text)
+        }
+    }
+
+    private fun getBindingForColor(color: LightColor): ItemMessageEditorBinding {
+        return when (color) {
+            LightColor.RED -> redMessageBinding
+            LightColor.YELLOW -> yellowMessageBinding
+            LightColor.GREEN -> greenMessageBinding
+        }
     }
 
     private fun saveMessages() {
-        // Collect all message data
-        val redMessage = MessageData(
-            text = redMessageBinding.editTextMessage.text.toString(),
-            emojis = viewModel.uiState.value.messages.redMessage.emojis,
-            imageUri = viewModel.uiState.value.messages.redMessage.imageUri
+        val messages = TrafficLightMessages(
+            redMessage = tempRedMessage,
+            yellowMessage = tempYellowMessage,
+            greenMessage = tempGreenMessage
         )
-
-        val yellowMessage = MessageData(
-            text = yellowMessageBinding.editTextMessage.text.toString(),
-            emojis = viewModel.uiState.value.messages.yellowMessage.emojis,
-            imageUri = viewModel.uiState.value.messages.yellowMessage.imageUri
-        )
-
-        val greenMessage = MessageData(
-            text = greenMessageBinding.editTextMessage.text.toString(),
-            emojis = viewModel.uiState.value.messages.greenMessage.emojis,
-            imageUri = viewModel.uiState.value.messages.greenMessage.imageUri
-        )
-
-        val messages = TrafficLightMessages(redMessage, yellowMessage, greenMessage)
 
         viewModel.updateMessages(messages)
-        viewModel.saveState() // Trigger save
+        viewModel.saveState()
         dismiss()
     }
 
@@ -299,12 +406,5 @@ class AddMessagesFragment : DialogFragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
-    }
-
-    companion object {
-        const val TAG = "AddMessagesDialog"
-        fun newInstance(): AddMessagesFragment {
-            return AddMessagesFragment()
-        }
     }
 }

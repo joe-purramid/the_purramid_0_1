@@ -236,11 +236,24 @@ class SequenceEditorFragment : DialogFragment() {
         }
 
         // Validate all steps
-        val invalidSteps = editedSteps.filter { !it.isValid() }
+        val invalidSteps = editedSteps.withIndex().filter { !it.value.isValid() }
         if (invalidSteps.isNotEmpty()) {
+            val firstInvalidIndex = invalidSteps.first().index
             Snackbar.make(
                 binding.root,
-                "Please assign color and duration to all steps",
+                "Step ${firstInvalidIndex + 1}: Please assign both color and duration",
+                Snackbar.LENGTH_LONG
+            ).show()
+
+            // Scroll to first invalid step
+            binding.recyclerViewSteps.smoothScrollToPosition(firstInvalidIndex)
+            return
+        }
+
+        if (editedSteps.isEmpty()) {
+            Snackbar.make(
+                binding.root,
+                "Please add at least one step to the sequence",
                 Snackbar.LENGTH_SHORT
             ).show()
             return
@@ -257,6 +270,9 @@ class SequenceEditorFragment : DialogFragment() {
         } else {
             viewModel.addSequence(sequence)
         }
+
+        // Save immediately
+        viewModel.saveState()
 
         dismiss()
     }

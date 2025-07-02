@@ -83,7 +83,7 @@ class EditSequenceFragment : DialogFragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.uiState.collect { state ->
-                    updateSequenceList(state.timedSequences)
+                    updateSequenceList(state.timedSequences, state.activeSequenceId)
                 }
             }
         }
@@ -116,9 +116,8 @@ class EditSequenceFragment : DialogFragment() {
             .show()
     }
 
-    private fun updateSequenceList(sequences: List<TimedSequence>) {
-        val activeSequenceId = viewModel.uiState.value.activeSequenceId
-        sequenceAdapter.submitList(sequences.sortedBy { it.title })
+    private fun updateSequenceList(sequences: List<TimedSequence>, activeSequenceId: String?) {
+        sequenceAdapter.submitList(sequences.sortedBy { it.title }, activeSequenceId)
 
         // Show/hide empty state
         binding.textEmptyState.isVisible = sequences.isEmpty()

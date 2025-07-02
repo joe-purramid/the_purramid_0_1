@@ -1,22 +1,22 @@
-// AdjustValuesFragment.kt
 package com.example.purramid.thepurramid.traffic_light
 
 import android.app.Dialog
 import android.graphics.PorterDuff
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.DialogFragment
-import androidx.fragment.app.activityViewModels // If sharing with Activity
+import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.example.purramid.thepurramid.R
 import com.example.purramid.thepurramid.databinding.FragmentAdjustValuesBinding
-import com.example.purramid.thepurramid.databinding.ItemDbRangeEditorBinding // For included layouts
+import com.example.purramid.thepurramid.databinding.ItemDbRangeEditorBinding
 import com.example.purramid.thepurramid.traffic_light.viewmodel.DbRange
 import com.example.purramid.thepurramid.traffic_light.viewmodel.ResponsiveModeSettings
 import com.example.purramid.thepurramid.traffic_light.viewmodel.TrafficLightViewModel
@@ -28,7 +28,6 @@ class AdjustValuesFragment : DialogFragment() {
     private var _binding: FragmentAdjustValuesBinding? = null
     private val binding get() = _binding!!
 
-    // Bindings for included layouts
     private lateinit var greenRangeBinding: ItemDbRangeEditorBinding
     private lateinit var yellowRangeBinding: ItemDbRangeEditorBinding
     private lateinit var redRangeBinding: ItemDbRangeEditorBinding
@@ -36,31 +35,40 @@ class AdjustValuesFragment : DialogFragment() {
     private val viewModel: TrafficLightViewModel by activityViewModels()
     private var blockListeners: Boolean = false
 
+    enum class ColorForRange { GREEN, YELLOW, RED }
+
+    companion object {
+        const val TAG = "AdjustValuesDialog"
+        private const val COLOR_RED_ACTIVE = 0xFFFF0000.toInt()
+        private const val COLOR_YELLOW_ACTIVE = 0xFFFFFF00.toInt()
+        private const val COLOR_GREEN_ACTIVE = 0xFF00FF00.toInt()
+
+        fun newInstance(): AdjustValuesFragment {
+            return AdjustValuesFragment()
+        }
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
         _binding = FragmentAdjustValuesBinding.inflate(inflater, container, false)
-        // Inflate/bind included layouts
         greenRangeBinding = ItemDbRangeEditorBinding.bind(binding.includeGreenRange.root)
         yellowRangeBinding = ItemDbRangeEditorBinding.bind(binding.includeYellowRange.root)
         redRangeBinding = ItemDbRangeEditorBinding.bind(binding.includeRedRange.root)
         return binding.root
     }
 
-    // For a full-screen dialog or more control, you might override onCreateDialog
-    // For now, letting DialogFragment manage it as a standard dialog.
-
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        dialog?.setTitle(R.string.setting_adjust_values) // Set title if not using MaterialAlertDialogBuilder in onCreateDialog
+        dialog?.setTitle(R.string.setting_adjust_values)
 
         setupViews()
         observeViewModel()
     }
 
     private fun setupViews() {
-        // Set color indicators using the base drawable with tint
+        // Set color indicators
         greenRangeBinding.imageColorIndicator.apply {
             setImageResource(R.drawable.ic_circle_base)
             setColorFilter(COLOR_GREEN_ACTIVE, PorterDuff.Mode.SRC_IN)
@@ -74,7 +82,7 @@ class AdjustValuesFragment : DialogFragment() {
             setColorFilter(COLOR_RED_ACTIVE, PorterDuff.Mode.SRC_IN)
         }
 
-        // Setup TextWatchers for EditTexts - THIS IS IMPORTANT!
+        // Setup text watchers
         setupEditTextListener(greenRangeBinding.editTextMinDb, ColorForRange.GREEN, true)
         setupEditTextListener(greenRangeBinding.editTextMaxDb, ColorForRange.GREEN, false)
         setupEditTextListener(yellowRangeBinding.editTextMinDb, ColorForRange.YELLOW, true)
@@ -82,6 +90,7 @@ class AdjustValuesFragment : DialogFragment() {
         setupEditTextListener(redRangeBinding.editTextMinDb, ColorForRange.RED, true)
         setupEditTextListener(redRangeBinding.editTextMaxDb, ColorForRange.RED, false)
 
+        // Dangerous sound alert checkbox
         binding.checkboxDangerousSoundAlert.setOnCheckedChangeListener { _, isChecked ->
             if (blockListeners) return@setOnCheckedChangeListener
             viewModel.setDangerousSoundAlert(isChecked)
@@ -92,27 +101,11 @@ class AdjustValuesFragment : DialogFragment() {
         }
 
         binding.buttonSaveAdjustments.setOnClickListener {
-            // Logic to commit changes if not already live, then dismiss
-            // For now, changes are live via ViewModel.
             dismiss()
         }
 
         binding.buttonCancelAdjustments.setOnClickListener {
-            // TODO: Optionally revert to original values if changes aren't live.
-            // For now, just dismiss. ViewModel holds the state.
             dismiss()
-        }
-    }
-
-    companion object {
-        const val TAG = "AdjustValuesDialog"
-        // Add color constants
-        private const val COLOR_RED_ACTIVE = 0xFFFF0000.toInt()
-        private const val COLOR_YELLOW_ACTIVE = 0xFFFFFF00.toInt()
-        private const val COLOR_GREEN_ACTIVE = 0xFF00FF00.toInt()
-
-        fun newInstance(): AdjustValuesFragment {
-            return AdjustValuesFragment()
         }
     }
 
@@ -124,7 +117,8 @@ class AdjustValuesFragment : DialogFragment() {
                     updateDbRangeUI(greenRangeBinding, state.responsiveModeSettings.greenRange)
                     updateDbRangeUI(yellowRangeBinding, state.responsiveModeSettings.yellowRange)
                     updateDbRangeUI(redRangeBinding, state.responsiveModeSettings.redRange)
-                    binding.checkboxDangerousSoundAlert.isChecked = state.responsiveModeSettings.dangerousSoundAlertEnabled
+                    binding.checkboxDangerousSoundAlert.isChecked =
+                        state.responsiveModeSettings.dangerousSoundAlertEnabled
                     blockListeners = false
                 }
             }
@@ -145,30 +139,183 @@ class AdjustValuesFragment : DialogFragment() {
         }
     }
 
-    private enum class ColorForRange { GREEN, YELLOW, RED }
-
     private fun setupEditTextListener(editText: EditText, color: ColorForRange, isMin: Boolean) {
         editText.doAfterTextChanged { text ->
             if (blockListeners) return@doAfterTextChanged
             if (text.toString() == getString(R.string.na_value)) return@doAfterTextChanged
 
             val value = text.toString().toIntOrNull()
-            // Call ViewModel to update, e.g., viewModel.updateDbValue(color, isMin, value)
-            // The ViewModel will handle linked logic and update the state, which then flows back to UI.
-            // For now, this is a placeholder for the more complex update logic.
-             viewModel.updateSpecificDbValue(
-                 colorForRange = color,
-                 isMinField = isMin,
-                 newValue = value
-             )
+
+            // Validate range (0-149 per spec)
+            if (value != null && (value < 0 || value > 149)) {
+                editText.error = "Value must be between 0 and 149"
+                return@doAfterTextChanged
+            }
+
+            // Update ViewModel with complex linked logic
+            updateLinkedRanges(color, isMin, value)
         }
     }
 
+    private fun updateLinkedRanges(color: ColorForRange, isMin: Boolean, newValue: Int?) {
+        val currentSettings = viewModel.uiState.value.responsiveModeSettings
+        val newSettings = when (color) {
+            ColorForRange.GREEN -> updateGreenRange(currentSettings, isMin, newValue)
+            ColorForRange.YELLOW -> updateYellowRange(currentSettings, isMin, newValue)
+            ColorForRange.RED -> updateRedRange(currentSettings, isMin, newValue)
+        }
+
+        if (newSettings != currentSettings) {
+            viewModel.updateResponsiveSettings(newSettings)
+        }
+    }
+
+    private fun updateGreenRange(
+        settings: ResponsiveModeSettings,
+        isMin: Boolean,
+        newValue: Int?
+    ): ResponsiveModeSettings {
+        var newGreen = settings.greenRange
+        var newYellow = settings.yellowRange
+        var newRed = settings.redRange
+
+        if (isMin) {
+            // Green min changed - should always be 0
+            newGreen = newGreen.copy(minDb = 0)
+        } else {
+            // Green max changed
+            newValue?.let { value ->
+                newGreen = newGreen.copy(maxDb = value)
+
+                // Yellow min should be green max + 1
+                val yellowMin = value + 1
+                if (yellowMin <= 149) {
+                    newYellow = newYellow.copy(minDb = yellowMin)
+
+                    // Check if yellow range is now invalid
+                    if (newYellow.maxDb != null && yellowMin > newYellow.maxDb!!) {
+                        // Yellow range collapsed, make it N/A
+                        newYellow = DbRange.NA_RANGE
+
+                        // If red min was based on yellow max, adjust it
+                        if (newRed.minDb != null) {
+                            newRed = newRed.copy(minDb = yellowMin)
+                        }
+                    }
+                } else {
+                    // No room for yellow or red
+                    newYellow = DbRange.NA_RANGE
+                    newRed = DbRange.NA_RANGE
+                }
+            }
+        }
+
+        return settings.copy(
+            greenRange = newGreen,
+            yellowRange = newYellow,
+            redRange = newRed
+        )
+    }
+
+    private fun updateYellowRange(
+        settings: ResponsiveModeSettings,
+        isMin: Boolean,
+        newValue: Int?
+    ): ResponsiveModeSettings {
+        var newGreen = settings.greenRange
+        var newYellow = settings.yellowRange
+        var newRed = settings.redRange
+
+        if (isMin) {
+            // Yellow min changed
+            newValue?.let { value ->
+                newYellow = newYellow.copy(minDb = value)
+
+                // Green max should be yellow min - 1
+                if (value > 0) {
+                    newGreen = newGreen.copy(maxDb = value - 1)
+                }
+
+                // Check if yellow still has valid range
+                if (newYellow.maxDb != null && value > newYellow.maxDb!!) {
+                    newYellow = DbRange.NA_RANGE
+                }
+            }
+        } else {
+            // Yellow max changed
+            newValue?.let { value ->
+                newYellow = newYellow.copy(maxDb = value)
+
+                // Red min should be yellow max + 1
+                val redMin = value + 1
+                if (redMin <= 149) {
+                    newRed = newRed.copy(minDb = redMin)
+
+                    // Check if red range is still valid
+                    if (newRed.maxDb != null && redMin > newRed.maxDb!!) {
+                        newRed = newRed.copy(maxDb = 149)
+                    }
+                } else {
+                    // No room for red
+                    newRed = DbRange.NA_RANGE
+                }
+            }
+        }
+
+        return settings.copy(
+            greenRange = newGreen,
+            yellowRange = newYellow,
+            redRange = newRed
+        )
+    }
+
+    private fun updateRedRange(
+        settings: ResponsiveModeSettings,
+        isMin: Boolean,
+        newValue: Int?
+    ): ResponsiveModeSettings {
+        var newGreen = settings.greenRange
+        var newYellow = settings.yellowRange
+        var newRed = settings.redRange
+
+        if (isMin) {
+            // Red min changed
+            newValue?.let { value ->
+                newRed = newRed.copy(minDb = value)
+
+                // Yellow max should be red min - 1
+                if (value > 0) {
+                    val yellowMax = value - 1
+                    newYellow = if (newYellow.minDb != null && yellowMax >= newYellow.minDb!!) {
+                        newYellow.copy(maxDb = yellowMax)
+                    } else {
+                        DbRange.NA_RANGE
+                    }
+
+                    // If yellow became N/A, green might need to extend
+                    if (newYellow.isNa() && value > 1) {
+                        newGreen = newGreen.copy(maxDb = value - 1)
+                    }
+                }
+            }
+        } else {
+            // Red max changed - should be capped at 149
+            newValue?.let { value ->
+                newRed = newRed.copy(maxDb = minOf(value, 149))
+            }
+        }
+
+        return settings.copy(
+            greenRange = newGreen,
+            yellowRange = newYellow,
+            redRange = newRed
+        )
+    }
 
     private fun showDangerousSoundInfoDialog() {
         MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.dangerous_sound_alert_info_title)
-            .setMessage(R.string.dangerous_sound_alert_info_message) // Purramid brand name will be in this string
+            .setMessage(R.string.dangerous_sound_alert_info_message)
             .setPositiveButton(android.R.string.ok, null)
             .show()
     }
@@ -176,12 +323,5 @@ class AdjustValuesFragment : DialogFragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
-    }
-
-    companion object {
-        const val TAG = "AdjustValuesDialog"
-        fun newInstance(): AdjustValuesFragment {
-            return AdjustValuesFragment()
-        }
     }
 }
