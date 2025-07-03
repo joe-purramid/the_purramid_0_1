@@ -21,6 +21,7 @@ import android.view.View
 import android.view.ViewConfiguration
 import android.view.animation.LinearInterpolator
 import android.widget.FrameLayout
+import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
@@ -111,6 +112,7 @@ class TrafficLightOverlayView @JvmOverloads constructor(
         fun onPlayPauseClicked(instanceId: Int)
         fun onResetClicked(instanceId: Int)
         fun onLightTapped(instanceId: Int, color: LightColor)
+        fun onSequenceSelected(instanceId: Int, sequenceId: String)
         fun onCloseRequested(instanceId: Int)
         fun onSettingsRequested(instanceId: Int)
         fun onMove(instanceId: Int, rawDeltaX: Float, rawDeltaY: Float)
@@ -118,6 +120,13 @@ class TrafficLightOverlayView @JvmOverloads constructor(
         fun onResize(instanceId: Int, newWidth: Int, newHeight: Int)
         fun onResizeFinished(instanceId: Int, finalWidth: Int, finalHeight: Int)
     }
+
+    // Timed Change marquee
+    private val sequenceMarquee: LinearLayout by lazy { binding.sequenceMarquee }
+    private val sequenceTitleText: TextView by lazy { binding.textSequenceTitle }
+    private val marqueeArrow: ImageView by lazy { binding.imageMarqueeArrow }
+    private var sequenceDropdownPopup: PopupMenu? = null
+    private var isDropdownOpen = false
 
     init {
         binding = TrafficLightOverlayViewBinding.inflate(LayoutInflater.from(context), this, true)
@@ -127,6 +136,7 @@ class TrafficLightOverlayView @JvmOverloads constructor(
         setupDangerMessageViews()
         initializeLightColors()
         setupTimedModeListeners()
+        setupSequenceMarquee()
     }
 
     private fun initializeLightColors() {
@@ -145,16 +155,6 @@ class TrafficLightOverlayView @JvmOverloads constructor(
         updateLightColor(binding.lightRedHorizontalOverlay, LightColor.RED, false)
         updateLightColor(binding.lightYellowHorizontalOverlay, LightColor.YELLOW, false)
         updateLightColor(binding.lightGreenHorizontalOverlay, LightColor.GREEN, false)
-    }
-
-    private fun setupTimedModeListeners() {
-        playPauseButton.setOnClickListener {
-            interactionListener?.onPlayPauseClicked(instanceId)
-        }
-
-        resetButton.setOnClickListener {
-            interactionListener?.onResetClicked(instanceId)
-        }
     }
 
     private fun updateLightColor(lightView: ImageView, color: LightColor, isActive: Boolean) {
@@ -182,6 +182,114 @@ class TrafficLightOverlayView @JvmOverloads constructor(
         binding.overlayButtonSettings.setOnClickListener { interactionListener?.onSettingsRequested(instanceId) }
     }
 
+    private fun setupTimedModeListeners() {
+        playPauseButton.setOnClickListener {
+            interactionListener?.onPlayPauseClicked(instanceId)
+        }
+
+        resetButton.setOnClickListener {
+            interactionListener?.onResetClicked(instanceId)
+        }
+    }
+
+    private fun setupSequenceMarquee() {
+        sequenceMarquee.setOnClickListener {
+            if (_uiState.value.timedSequences.isNotEmpty()) {
+                toggleSequenceDropdown()
+            }
+        }
+    }
+
+    private fun toggleSequenceDropdown() {
+        if (isDropdownOpen) {
+            closeSequenceDropdown()
+        } else {
+            openSequenceDropdown()
+        }
+    }
+
+    private fun openSequenceDropdown() {
+        val state = _uiState.value
+        if (state.timedSequences.isEmpty()) return
+
+        isDropdownOpen = true
+        marqueeArrow.setImageResource(R.drawable.ic_arrow_drop_up)
+
+        // Create popup menu
+        sequenceDropdownPopup = PopupMenu(context, sequenceMarquee).apply {
+            // Add sequences in order: active first, then alphabetical
+            val activeSequence = state.timedSequences.find { it.id == state.activeSequenceId }
+            val otherSequences = state.timedSequences
+                .filter { it.id != state.activeSequenceId }
+                .sortedBy { it.title }
+
+            // Add active sequence first if exists
+            activeSequence?.let {
+                menu.add(0, 0, 0, it.title).apply {
+                    // Could add a checkmark icon to show it's active
+                    setIcon(R.drawable.ic_check)
+                }
+            }
+
+            // Add separator if there was an active sequence
+            if (activeSequence != null && otherSequences.isNotEmpty()) {
+                menu.add(0, -1, 1, "").apply {
+                    isEnabled = false
+                }
+            }
+
+            // Add other sequences
+            otherSequences.forEachIndexed { index, sequence ->
+                val order = if (activeSequence != null) index + 2 else index
+                menu.add(0, index + 1, order, sequence.title)
+            }
+
+            setOnMenuItemClickListener { menuItem ->
+                when {
+                    menuItem.itemId == 0 -> {
+                        // Active sequence clicked - keep it active
+                        activeSequence?.let {
+                            interactionListener?.onSequenceSelected(instanceId, it.id)
+                        }
+                    }
+                    menuItem.itemId > 0 -> {
+                        // Other sequence clicked
+                        val selectedSequence = otherSequences.getOrNull(menuItem.itemId - 1)
+                        selectedSequence?.let {
+                            interactionListener?.onSequenceSelected(instanceId, it.id)
+                        }
+                    }
+                }
+                closeSequenceDropdown()
+                true
+            }
+
+            setOnDismissListener {
+                closeSequenceDropdown()
+            }
+
+            // Show with animation
+            try {
+                val popup = PopupMenu::class.java.getDeclaredField("mPopup")
+                popup.isAccessible = true
+                val menu = popup.get(this)
+                menu.javaClass.getDeclaredMethod("setForceShowIcon", Boolean::class.java)
+                    .invoke(menu, true)
+            } catch (e: Exception) {
+                // Ignore - just won't show icons
+            }
+
+            show()
+        }
+    }
+
+    private fun closeSequenceDropdown() {
+        isDropdownOpen = false
+        marqueeArrow.setImageResource(R.drawable.ic_arrow_drop_down)
+        sequenceDropdownPopup?.dismiss()
+        sequenceDropdownPopup = null
+    }
+
     fun updateState(state: TrafficLightState) {
         val isVertical = state.orientation == Orientation.VERTICAL
         binding.trafficLightVerticalContainerOverlay.isVisible = isVertical
@@ -206,7 +314,18 @@ class TrafficLightOverlayView @JvmOverloads constructor(
 
         timedModeControls.isVisible = isTimedMode
 
+        // Show/hide marquee
+        sequenceMarquee.isVisible = isTimedMode && state.timedSequences.isNotEmpty()
+
         if (isTimedMode) {
+            // Update marquee title
+            val activeSequence = state.timedSequences.find { it.id == state.activeSequenceId }
+            sequenceTitleText.text = activeSequence?.title ?: ""
+
+            // Disable marquee if no sequences
+            sequenceMarquee.isEnabled = state.timedSequences.isNotEmpty()
+            marqueeArrow.isVisible = state.timedSequences.isNotEmpty()
+
             // Update play/pause button
             playPauseButton.setImageResource(
                 if (state.isSequencePlaying) R.drawable.ic_pause else R.drawable.ic_play
@@ -505,9 +624,9 @@ class TrafficLightOverlayView @JvmOverloads constructor(
             binding.trafficLightHorizontalContainerOverlay
 
         val messages = mapOf(
-            LightColor.RED to "Warning",
-            LightColor.YELLOW to "Notify your instructor immediately.",
-            LightColor.GREEN to "Double-tap green to dismiss this alert."
+            LightColor.RED to R.string.warning_message,
+            LightColor.YELLOW to R.string.notify_instructor_message,
+            LightColor.GREEN to R.string.dismiss_alert_message
         )
 
         val messageViews = mutableMapOf<LightColor, TextView>()
@@ -827,6 +946,7 @@ class TrafficLightOverlayView @JvmOverloads constructor(
         launchAnimator?.cancel()
         blinkingAnimator?.cancel()
         dangerBlinkingAnimator?.cancel()
+        closeSequenceDropdown()
         launchAnimator = null
         blinkingAnimator = null
         dangerBlinkingAnimator = null

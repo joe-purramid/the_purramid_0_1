@@ -80,6 +80,7 @@ The traffic light is a vector image of a common traffic light with three colored
 			(4.2.2.1) The red light is on the left.
 			(4.2.2.2) The yellow light is in the middle.
 			(4.2.2.3) The green light is on the right.
+	(4.3) When in Timed Change mode, a sequence marquee appears at the bottom of the traffic light.
 (5) A Settings button is positioned in the bottom left corner.
 	(5.1) Default icon state uses ic_settings.xml.
 	(5.2) Active state: Programmatically change fill colors for default state icons to #808080.
@@ -481,6 +482,32 @@ The traffic light is a vector image of a common traffic light with three colored
             (19.5.4.1) Pressing reset once sets time to the beginning of the last sequence step.
             (19.5.4.2) Pressing reset a second time would set time to the beginning of the first sequence step.
             (19.5.4.3) In both examples, timing is paused after the reset.
+	(19.6) When Traffic Light is set to Timed Change mode, a sequence marquee appears at the bottom of the traffic light.
+		(19.6.1) The marquee is a rectangle with rounded corners.
+		(19.6.2) The marquee displays the active sequence title.
+			(19.6.2.1) If the user has not manually selected a sequence, the active sequence is the last sequence edited.
+			(19.6.2.2) If the user has not yet created a sequence
+				(19.6.2.2.1) No title is displayed
+				(19.6.2.2.2) No drop-down is opened if the marquee is tapped (19.6.5)
+		(19.6.3) The sequence title is bold font.
+		(19.6.4) Following the title (but within the marquee rectangle) is a downward facing arrow button
+			(19.6.4.1) The marquee arrow default state is ic_arrow_drop_down.xml.
+			(19.6.4.2) The marquee arrow active state is ic_arrow_drop_up.xml
+		(19.6.5) When the user taps on the sequence title or the marquee arrow:
+			(19.6.5.1) the marquee arrow changes to its active state
+			(19.6.5.2) A drop-down menu opens with a smooth animation
+			(19.6.5.3) A list of existing sequence titles displays
+				(19.6.5.3.1) The active sequence is at the top of the list
+				(19.6.5.3.2) The remaining titles appear below the active sequence in alphanumeric order
+		(19.6.6) When a user taps a sequence title from the drop-down menu
+			(19.6.6.1) that sequence becomes the active sequence
+				(19.6.6.1.1) If the user tapped the currently active sequence, that sequence remains active and (19.6.6.2) and (19.6.6.3) occur
+			(19.6.6.2) the drop-down menu closes with a smooth animation
+			(19.6.6.3) the marquee arrow changes to its default state.
+		(19.6.7) If a user taps outside an open marquee
+			(19.6.7.1) the drop-down menu closes with a smooth animation
+			(19.6.7.2) the marquee arrow changes to its default state
+    
 
 (20) ``CLOSE``
 	(20.1) When a user touches the Close button, its icon changes from (6.1) Default to (6.2) Active.

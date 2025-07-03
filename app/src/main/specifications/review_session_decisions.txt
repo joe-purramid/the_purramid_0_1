@@ -30,6 +30,20 @@
   - Do not use tint values
   - Do not use ic_circle_*_filled where * is color
   
+- **Reviewed**: 3 July 2025
+- **Architecture**: Add a sequence selection marquee to traffic light UI
+- **Key Decisions**:
+  - Do not use edit sequence for sequence selection
+    - Remove selection functionality from settings
+  - Add a marquee (a rectangle with rounded corners, as used in Randomizers) to the bottom of the traffic light
+    - The marquee is only present when in Timed Change mode
+	- The marquee shows the title of the active sequence
+	- If the teacher has not manually selected a sequence, the active sequence is the last one edited
+	- The marquee includes a drop down triangle that opens a drop down list
+  - The drop down list shows all available sequences
+    - The active sequence is the top option
+	- All other options are listed in alphanumeric order
+  
   
   
   

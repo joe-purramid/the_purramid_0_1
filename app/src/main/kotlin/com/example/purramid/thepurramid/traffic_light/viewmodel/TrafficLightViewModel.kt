@@ -16,6 +16,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.purramid.thepurramid.R
 import com.example.purramid.thepurramid.data.db.TrafficLightDao
 import com.example.purramid.thepurramid.data.db.TrafficLightStateEntity
 import com.example.purramid.thepurramid.traffic_light.AdjustValuesFragment
@@ -232,7 +233,9 @@ class TrafficLightViewModel @Inject constructor(
         if (currentSequences.size >= TimedSequence.MAX_SEQUENCES) return
 
         _uiState.update {
-            it.copy(timedSequences = currentSequences + sequence)
+            it.copy(
+                timedSequences = currentSequences + sequence,
+                activeSequenceId = sequence.id)
         }
         saveState()
     }
@@ -244,7 +247,9 @@ class TrafficLightViewModel @Inject constructor(
         if (index >= 0) {
             currentSequences[index] = sequence
             _uiState.update {
-                it.copy(timedSequences = currentSequences)
+                it.copy(
+                    timedSequences = currentSequences,
+                    activeSequenceId = sequence.id)
             }
             saveState()
         }
@@ -545,7 +550,7 @@ class TrafficLightViewModel @Inject constructor(
 
         stopMicrophoneMonitoring()
 
-        _snackbarEvent.value = Event("Microphone disconnected. Switched to Manual mode.")
+        _snackbarEvent.value = Event(context.getString(R.string.microphone_disconnected_snackbar))
 
         if (wasResponsive) {
             startAutomaticRecoveryCheck()
@@ -599,7 +604,7 @@ class TrafficLightViewModel @Inject constructor(
             activeLight = null
         )}
 
-        _snackbarEvent.value = Event("No microphone detected.")
+        _snackbarEvent.value = Event(context.getString(R.string.no_microphone_detected))
     }
 
     // Timed mode functions

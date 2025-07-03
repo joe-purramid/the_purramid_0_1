@@ -155,7 +155,7 @@ class SequenceEditorFragment : DialogFragment() {
         if (editedSteps.size >= TimedSequence.MAX_STEPS) {
             Snackbar.make(
                 binding.root,
-                "Maximum of ${TimedSequence.MAX_STEPS} steps reached",
+                getString(R.string.max_steps_reached_snackbar, TimedSequence.MAX_STEPS),
                 Snackbar.LENGTH_SHORT
             ).show()
             return
@@ -201,11 +201,11 @@ class SequenceEditorFragment : DialogFragment() {
     }
 
     private fun showColorPicker(position: Int, step: SequenceStep) {
-        val colors = arrayOf("Red", "Yellow", "Green")
+        val colors = arrayOf(getString(R.string.red_color_label), getString(R.string.yellow_color_label), getString(R.string.green_color_label))
         val colorValues = arrayOf(LightColor.RED, LightColor.YELLOW, LightColor.GREEN)
 
         MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Select Color")
+            .setTitle(getString(R.string.select_color))
             .setItems(colors) { _, which ->
                 editedSteps[position] = step.copy(color = colorValues[which])
                 updateStepList()
@@ -231,7 +231,7 @@ class SequenceEditorFragment : DialogFragment() {
         val title = binding.editTextTitle.text.toString().trim()
 
         if (title.isEmpty()) {
-            Snackbar.make(binding.root, "Please enter a sequence title", Snackbar.LENGTH_SHORT).show()
+            Snackbar.make(binding.root, getString(R.string.sequence_title_required), Snackbar.LENGTH_SHORT).show()
             return
         }
 
@@ -241,7 +241,7 @@ class SequenceEditorFragment : DialogFragment() {
             val firstInvalidIndex = invalidSteps.first().index
             Snackbar.make(
                 binding.root,
-                "Step ${firstInvalidIndex + 1}: Please assign both color and duration",
+                getString(R.string.sequence_step_invalid, firstInvalidIndex + 1),
                 Snackbar.LENGTH_LONG
             ).show()
 
@@ -253,7 +253,7 @@ class SequenceEditorFragment : DialogFragment() {
         if (editedSteps.isEmpty()) {
             Snackbar.make(
                 binding.root,
-                "Please add at least one step to the sequence",
+                getString(R.string.sequence_empty_error),
                 Snackbar.LENGTH_SHORT
             ).show()
             return

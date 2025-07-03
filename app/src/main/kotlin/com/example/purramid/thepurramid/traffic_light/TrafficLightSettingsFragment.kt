@@ -208,7 +208,7 @@ class TrafficLightSettingsFragment : DialogFragment() { // Or AppCompatDialogFra
         // Enable/disable responsive mode based on microphone availability
         binding.radioResponsive.isEnabled = state.isMicrophoneAvailable
         if (!state.isMicrophoneAvailable) {
-            binding.radioResponsive.text = getString(R.string.setting_mode_responsive) + " (No microphone)"
+            binding.radioResponsive.text = getString(R.string.setting_mode_responsive) + " " + getString(R.string.responsive_mode_no_mic)
         } else {
             binding.radioResponsive.text = getString(R.string.setting_mode_responsive)
         }

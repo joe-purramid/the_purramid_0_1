@@ -179,6 +179,43 @@
             android:contentDescription="@string/reset"/>
     </LinearLayout>
 
+    <LinearLayout
+        android:id="@+id/sequence_marquee"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="@drawable/marquee_background"
+        android:padding="8dp"
+        android:gravity="center_vertical"
+        android:visibility="gone"
+        android:clickable="true"
+        android:focusable="true"
+        app:layout_constraintTop_toBottomOf="@id/timed_mode_controls"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="8dp">
+
+        <TextView
+            android:id="@+id/text_sequence_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textStyle="bold"
+            android:textSize="16sp"
+            android:maxWidth="200dp"
+            android:ellipsize="end"
+            android:singleLine="true"
+            tools:text="Morning Routine"/>
+
+        <ImageView
+            android:id="@+id/image_marquee_arrow"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginStart="4dp"
+            android:src="@drawable/ic_arrow_drop_down"
+            android:contentDescription="@string/show_sequence_list"/>
+
+    </LinearLayout>
+
     <!-- Time remaining display -->
     <TextView
         android:id="@+id/text_time_remaining"

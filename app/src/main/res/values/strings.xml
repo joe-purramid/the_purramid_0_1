@@ -45,6 +45,7 @@
     <string name="back">Back</string>
     <string name="cancel">Cancel</string>
     <string name="delete">Delete</string>
+    <string name="edit">Edit</string>
     <string name="optimize">Optimize</string>
 
     <!-- `` CLOCK APP `` -->
@@ -602,10 +603,8 @@
     <!-- `` TRAFFIC LIGHT APP `` -->
     <string name="traffic_light_vertical_desc">A vertically oriented traffic light.</string>
     <string name="traffic_light_horizontal_desc">A horizontally oriented traffic light.</string>
+    <string name="traffic_light_active_notification">A traffic light overlay is active.</string>
     <string name="traffic_light_settings_title">Traffic Light Settings</string>
-    <string name="green_color_label">Green</string>
-    <string name="yellow_color_label">Yellow</string> <!-- Amber in UK -->
-    <string name="red_color_label">Red</string>
     <string name="setting_mode">Mode</string>
     <string name="setting_mode_manual">Manual Change</string>
     <string name="setting_mode_responsive">Responsive Change (Requires Microphone)</string>
@@ -614,19 +613,34 @@
     <string name="setting_adjust_values">Adjust Responsive Values</string>
     <string name="setting_edit_messages">Add/Edit Messages</string>
     <string name="setting_add_messages">Add Message</string>
+    <string name="max_emojis_reached">Maximum emojis reached</string>
+    <string name="add_emoji">Add Emoji</string>
+    <string name="add_image">Add Image</string>
+    <string name="clear_emojis">Clear emojis</string>
+    <string name="clear_image">Clear image</string>
+    <string name="select_emoji">Select Emoji</string>
     <string name="setting_add_another_traffic_light">Add Another Traffic Light</string>
 
     <!-- `` SEQUENCE MODE `` -->
-    <string name="sequence_title_hint">Sequence Title</string>
+    <string name="show_sequence_list">Show sequence list</string>
+    <string name="no_sequences_created_marquee">No sequences</string>    <string name="sequence_title_hint">Sequence Title</string>
     <string name="total_duration_format">Total: %1$s</string>
     <string name="add_step">Add Step</string>
+    <string name="step_message_title">Step Message</string>
     <string name="step_count_format">%1$d steps</string>
     <string name="setting_edit_sequence">Edit Timed Sequence</string>
     <string name="setting_add_title">Add Title</string>
+    <string name="select_color">Select Color</string>
+    <string name="green_color_label">Green</string>
+    <string name="yellow_color_label">Yellow</string> <!-- Amber in UK -->
+    <string name="red_color_label">Red</string>
+    <string name="set_duration">Set Duration</string>
+    <string name="set">Set</string>
     <string name="setting_show_time_remaining">Show Time Remaining (Timed Mode)</string>
     <string name="setting_show_timeline">Show Timeline (Timed Mode)</string>
 
     <!-- `` RESPONSIVE MODE `` -->
+    <string name="responsive_mode_no_mic">(No microphone)</string>
     <string name="dialog_close">Close</string>
     <string name="min_db_label">Min:</string> <!-- Minimum -->
     <string name="max_db_label">Max:</string> <!-- Maximum -->
@@ -636,6 +650,9 @@
     <string name="dangerous_sound_alert_info_desc">Information about dangerous sound alert</string>
     <string name="dangerous_sound_alert_info_title">Dangerous Sound Alert Information</string>
     <string name="dangerous_sound_alert_info_message">"Check this box to display an alert that says \"Warning: Notify your instructor immediately.\" should your hardware\'s microphone report a sound of 150 decibels or higher. The US Occupational Safety and Health Organization projects the loudest classroom noise would reach 95 dB. 120 db is the sound of a car backfire. 150 dB is the sound of a gunshot. The <xliff:g id="tp" translatable="false">Purramid</xliff:g> is a software application dependent on the readings provided by your microphone. <xliff:g id="tp" translatable="false">Purramid Learning</xliff:g> makes no guarantee that the sound detected is 150 db or what made the sound is a firearm. But this is the reality that US students live in, and we are committed to providing teachers any tools possible to make their classrooms places of learning and not fear."</string>
+    <string name="warning_message">Warning</string>
+    <string name="notify_instructor_message">Notify your instructor immediately.</string>
+    <string name="dismiss_alert_message">Double-tap green to dismiss this alert.</string>
 
     <!-- `` TRAFFIC LIGHT SNACKBARS `` -->
     <string name="max_traffic_lights_reached_snackbar">Maximum number of traffic lights reached.</string>
@@ -645,6 +662,13 @@
     <string name="sequence_title_required">Please enter a sequence title</string>
     <string name="sequence_step_invalid">Step %1$d: Please assign both color and duration</string>
     <string name="sequence_empty_error">Please add at least one step to the sequence</string>
+    <string name="microphone_disconnected_snackbar">Microphone disconnected. Switched to Manual mode.</string>
+    <string name="no_microphone_detected">No microphone detected.</string>
+    <string name="value_range_error">Value must be between %1$d and %2$d</string>
+    <string name="microphone_available_snackbar">Microphone available. Tap to return to Responsive mode.</string>
+    <string name="switch_mode">Switch</string>
+    <string name="delete_sequence_title">Delete Sequence?</string>
+    <string name="delete_sequence_confirmation">Are you sure you want to delete \'%1$s\'?</string>
 
 
     <!-- `` ABOUT THIS APP `` -->

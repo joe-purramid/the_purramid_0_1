@@ -42,15 +42,15 @@ class StepMessageFragment : DialogFragment() {
         setupViews()
         
         return MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Step Message")
+            .setTitle(getString(R.string.step_message_title))
             .setView(binding.root)
-            .setPositiveButton("Set") { _, _ ->
+            .setPositiveButton(getString(R.string.set)) { _, _ ->
                 val finalMessage = currentMessage.copy(
                     text = binding.editTextMessage.text.toString()
                 )
                 onMessageSet?.invoke(finalMessage)
             }
-            .setNegativeButton("Cancel", null)
+            .setNegativeButton(getString(R.string.cancel), null)
             .create()
     }
     
@@ -99,7 +99,7 @@ class StepMessageFragment : DialogFragment() {
         val emojis = listOf("😀", "😎", "🎉", "👍", "❤️", "⭐", "🔥", "✅", "🎯", "👏")
         
         MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Select Emoji")
+            .setTitle(getString(R.string.select_emoji))
             .setItems(emojis.toTypedArray()) { _, which ->
                 if (currentMessage.emojis.size < MessageData.MAX_EMOJIS) {
                     currentMessage = currentMessage.copy(
@@ -107,7 +107,7 @@ class StepMessageFragment : DialogFragment() {
                     )
                     updateEmojiDisplay()
                 } else {
-                    Snackbar.make(binding.root, "Maximum emojis reached", Snackbar.LENGTH_SHORT).show()
+                    Snackbar.make(binding.root, getString(R.string.max_emojis_reached), Snackbar.LENGTH_SHORT).show()
                 }
             }
             .show()
@@ -118,7 +118,7 @@ class StepMessageFragment : DialogFragment() {
         if (size > 3 * 1024 * 1024) { // 3MB limit
             Snackbar.make(
                 binding.root,
-                "Image too large. Maximum size is 3MB.",
+                getString(R.string.image_too_large_message),
                 Snackbar.LENGTH_LONG
             ).show()
             return

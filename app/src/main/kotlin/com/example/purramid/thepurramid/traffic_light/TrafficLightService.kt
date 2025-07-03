@@ -39,8 +39,10 @@ import com.example.purramid.thepurramid.data.db.TrafficLightDao
 import com.example.purramid.thepurramid.di.TrafficLightPrefs
 import com.example.purramid.thepurramid.instance.InstanceManager
 import com.example.purramid.thepurramid.traffic_light.viewmodel.LightColor
+import com.example.purramid.thepurramid.traffic_light.viewmodel.TrafficLightMode
 import com.example.purramid.thepurramid.traffic_light.viewmodel.TrafficLightState
 import com.example.purramid.thepurramid.traffic_light.viewmodel.TrafficLightViewModel
+import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -284,8 +286,8 @@ class TrafficLightService : LifecycleService(), ViewModelStoreOwner {
                 // Show snackbar on the overlay view
                 activeTrafficLightViews[instanceId]?.let { view ->
                     Snackbar.make(view, message, Snackbar.LENGTH_LONG).apply {
-                        if (message.contains("Microphone available")) {
-                            setAction("Switch") {
+                        if (message.contains(getString(R.string.microphone_available_snackbar))) {
+                            setAction(getString(R.string.switch_mode)) {
                                 viewModel.setMode(TrafficLightMode.RESPONSIVE_CHANGE)
                             }
                         }
@@ -300,10 +302,10 @@ class TrafficLightService : LifecycleService(), ViewModelStoreOwner {
             activeTrafficLightViews[instanceId]?.let { view ->
                 Snackbar.make(
                     view,
-                    "Microphone available. Tap to return to Responsive mode.",
+                    getString(R.string.microphone_available_snackbar),
                     Snackbar.LENGTH_LONG
                 ).apply {
-                    setAction("Switch") {
+                    setAction(getString(R.string.switch_mode)) {
                         viewModel.setMode(TrafficLightMode.RESPONSIVE_CHANGE)
                         viewModel.clearMicrophoneRecoverySnackbar()
                     }
@@ -439,10 +441,12 @@ class TrafficLightService : LifecycleService(), ViewModelStoreOwner {
                     }
                 }
             }
+            override fun onSequenceSelected(id: Int, sequenceId: String) {
+                activeTrafficLightViewModels[id]?.setActiveSequence(sequenceId)
+            }
             override fun onPlayPauseClicked(id: Int) {
                 activeTrafficLightViewModels[id]?.togglePlayPause()
             }
-
             override fun onResetClicked(id: Int) {
                 activeTrafficLightViewModels[id]?.resetTimedSequence()
             }
@@ -583,8 +587,8 @@ class TrafficLightService : LifecycleService(), ViewModelStoreOwner {
         val pendingIntentFlags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         val pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, pendingIntentFlags)
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Traffic Light Active")
-            .setContentText("A traffic light overlay is active.")
+            .setContentTitle(getString(R.string.traffic_light_title))
+            .setContentText(getString(R.string.traffic_light_active_notification))
             .setSmallIcon(R.drawable.ic_traffic_light) // Ensure this icon exists
             .setContentIntent(pendingIntent)
             .setPriority(NotificationCompat.PRIORITY_LOW)

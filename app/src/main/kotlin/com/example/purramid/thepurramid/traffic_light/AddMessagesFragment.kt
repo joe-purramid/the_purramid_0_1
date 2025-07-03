@@ -250,7 +250,7 @@ class AddMessagesFragment : DialogFragment() {
         )
 
         MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Select Emoji")
+            .setTitle(getString(R.string.select_emoji))
             .setItems(emojis.toTypedArray()) { _, which ->
                 currentEmojiColor?.let { color ->
                     addEmoji(color, emojis[which])
@@ -263,7 +263,7 @@ class AddMessagesFragment : DialogFragment() {
         val currentMessage = getTempMessage(color)
 
         if (currentMessage.emojis.size >= MessageData.MAX_EMOJIS) {
-            Snackbar.make(binding.root, "Maximum emojis reached", Snackbar.LENGTH_SHORT).show()
+            Snackbar.make(binding.root, getString(R.string.max_emojis_reached), Snackbar.LENGTH_SHORT).show()
             return
         }
 

@@ -148,7 +148,7 @@ class AdjustValuesFragment : DialogFragment() {
 
             // Validate range (0-149 per spec)
             if (value != null && (value < 0 || value > 149)) {
-                editText.error = "Value must be between 0 and 149"
+                editText.error = getString(R.string.value_range_error, 0, 149)
                 return@doAfterTextChanged
             }
 

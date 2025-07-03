@@ -8,6 +8,7 @@ import android.text.TextWatcher
 import android.view.LayoutInflater
 import androidx.core.view.isVisible
 import androidx.fragment.app.DialogFragment
+import com.example.purramid.thepurramid.R
 import com.example.purramid.thepurramid.databinding.DialogDurationPickerBinding
 import com.example.purramid.thepurramid.traffic_light.viewmodel.TimedSequence
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -30,13 +31,13 @@ class DurationPickerFragment : DialogFragment() {
         setupViews()
 
         return MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Set Duration")
+            .setTitle(getString(R.string.set_duration))
             .setView(binding.root)
-            .setPositiveButton("Set") { _, _ ->
+            .setPositiveButton(getString(R.string.set)) { _, _ ->
                 val duration = parseDuration()
                 onDurationSet?.invoke(duration)
             }
-            .setNegativeButton("Cancel", null)
+            .setNegativeButton(getString(R.string.cancel), null)
             .create()
     }
 

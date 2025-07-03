@@ -12,6 +12,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.purramid.thepurramid.R
 import com.example.purramid.thepurramid.databinding.FragmentEditSequenceBinding
 import com.example.purramid.thepurramid.traffic_light.viewmodel.TimedSequence
 import com.example.purramid.thepurramid.traffic_light.viewmodel.TrafficLightViewModel
@@ -65,7 +66,7 @@ class EditSequenceFragment : DialogFragment() {
             if (sequences.size >= TimedSequence.MAX_SEQUENCES) {
                 Snackbar.make(
                     binding.root,
-                    "Maximum of ${TimedSequence.MAX_SEQUENCES} sequences reached",
+                    R.string.max_sequences_reached_snackbar,
                     Snackbar.LENGTH_SHORT
                 ).show()
                 return@setOnClickListener
@@ -90,27 +91,14 @@ class EditSequenceFragment : DialogFragment() {
     }
 
     private fun showSequenceOptionsDialog(sequence: TimedSequence) {
-        val options = if (viewModel.uiState.value.activeSequenceId == sequence.id) {
-            arrayOf("Edit", "Deactivate", "Delete")
-        } else {
-            arrayOf("Edit", "Set as Active", "Delete")
-        }
+        val options = arrayOf(R.string.edit, R.string.delete)
 
         MaterialAlertDialogBuilder(requireContext())
             .setTitle(sequence.title)
             .setItems(options) { _, which ->
                 when (which) {
                     0 -> openSequenceEditor(sequence)
-                    1 -> {
-                        if (viewModel.uiState.value.activeSequenceId == sequence.id) {
-                            viewModel.setActiveSequence(null)
-                            Snackbar.make(binding.root, "Sequence deactivated", Snackbar.LENGTH_SHORT).show()
-                        } else {
-                            viewModel.setActiveSequence(sequence.id)
-                            Snackbar.make(binding.root, "${sequence.title} set as active", Snackbar.LENGTH_SHORT).show()
-                        }
-                    }
-                    2 -> confirmDeleteSequence(sequence)
+                    1 -> confirmDeleteSequence(sequence)
                 }
             }
             .show()
@@ -136,12 +124,12 @@ class EditSequenceFragment : DialogFragment() {
 
     private fun confirmDeleteSequence(sequence: TimedSequence) {
         MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Delete Sequence?")
-            .setMessage("Are you sure you want to delete '${sequence.title}'?")
-            .setPositiveButton("Delete") { _, _ ->
+            .setTitle(R.string.delete_sequence_title)
+            .setMessage(R.string.delete_sequence_confirmation)
+            .setPositiveButton(R.string.delete) { _, _ ->
                 viewModel.deleteSequence(sequence.id)
             }
-            .setNegativeButton("Cancel", null)
+            .setNegativeButton(R.string.cancel, null)
             .show()
     }
 
