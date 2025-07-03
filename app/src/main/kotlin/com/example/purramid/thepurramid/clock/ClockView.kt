@@ -76,7 +76,7 @@ class ClockView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
     private var currentlyMovingHand: Hand? = null
     private enum class Hand { HOUR, MINUTE, SECOND }
 
-    // Define the fixed colors from ClockSettingsActivity for mapping
+    // Define the fixed colors from ClockActivity for mapping
     private object PaletteColors {
         val WHITE = Color.WHITE
         val BLACK = Color.BLACK

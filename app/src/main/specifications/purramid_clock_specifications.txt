@@ -4,7 +4,7 @@ Clock is a collection of timekeeping services that allows teachers to demonstrat
 
 
 ## Technical Implementation Notes
-- Service/Activity type: Foreground Service (ClockOverlayService) + Settings Activity (ClockSettingsActivity)
+- Service/Activity type: Foreground Service (ClockOverlayService) + Settings Activity (ClockActivity)
 - Multi-window support: Yes (up to 4 simultaneous clocks)
 - Window tracking: UUID per clock window
 - Shares single service: Yes

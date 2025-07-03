@@ -68,7 +68,7 @@ import java.lang.ref.WeakReference
 const val ACTION_START_CLOCK_SERVICE = "com.example.purramid.clock.ACTION_START_SERVICE" // More generic start
 const val ACTION_STOP_CLOCK_SERVICE = "com.example.purramid.clock.ACTION_STOP_SERVICE"
 
-// Existing actions from ClockSettingsActivity, keep if they target specific instances via EXTRA_CLOCK_ID
+// Existing actions from ClockActivity, keep if they target specific instances via EXTRA_CLOCK_ID
 const val ACTION_ADD_NEW_CLOCK = "com.example.purramid.thepurramid.ACTION_ADD_NEW_CLOCK" // From settings
 const val ACTION_UPDATE_CLOCK_SETTING = "com.example.purramid.thepurramid.ACTION_UPDATE_CLOCK_SETTING"
 const val ACTION_NEST_CLOCK = "com.example.purramid.thepurramid.ACTION_NEST_CLOCK"

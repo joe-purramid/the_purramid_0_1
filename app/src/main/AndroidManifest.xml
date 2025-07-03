@@ -5,9 +5,12 @@
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
-    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
 
     <application
         android:name=".PurramidApplication"
@@ -28,6 +31,7 @@
             </intent-filter>
         </activity>
 
+        <!-- CLOCK -->
         <activity android:name=".clock.ClockActivity"
             android:exported="false"
             android:label="@string/clock_title"
@@ -48,7 +52,7 @@
             </intent-filter>
         </service>
 
-        <activity android:name=".clock.ClockSettingsActivity"
+        <activity android:name=".clock.ClockActivity"
             android:exported="false"
             android:label="@string/clock_settings_title"
             android:parentActivityName=".MainActivity"
@@ -62,7 +66,7 @@
         <activity android:name=".clock.ui.TimeZoneGlobeActivity"
             android:exported="false"
             android:label="@string/set_time_zone"
-            android:parentActivityName=".clock.ClockSettingsActivity"
+            android:parentActivityName=".clock.ClockActivity"
             android:resizeableActivity="true"
             android:windowLayoutInDisplayCutoutMode="shortEdges">
             <layout android:defaultWidth="1000dp"
@@ -70,6 +74,20 @@
                 android:gravity="center" />
         </activity>
 
+        <!-- PROBABILITIES -->
+        <activity
+            android:name=".probabilities.ProbabilitiesHostActivity"
+            android:exported="false"
+            android:label="@string/probabilities_title"
+            android:resizeableActivity="true"
+            android:windowLayoutInDisplayCutoutMode="shortEdges">
+            <layout
+                android:defaultWidth="840dp"
+                android:defaultHeight="700dp"
+                android:gravity="center" />
+        </activity>
+
+        <!-- RANDOMIZERS -->
         <activity
             android:name=".randomizers.RandomizersHostActivity"
             android:exported="false"
@@ -93,6 +111,7 @@
                 android:gravity="center" />
         </activity>
 
+        <!-- SCREEN MASK -->
         <activity android:name=".screen_mask.ScreenMaskActivity"
             android:exported="true"
             android:label="@string/screen_mask_title"
@@ -101,8 +120,8 @@
             android:resizeableActivity="true"
             android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation"
             android:windowLayoutInDisplayCutoutMode="shortEdges">
-            <layout android:defaultWidth="420dp"
-                android:defaultHeight="500dp" android:gravity="center" />
+            <layout android:defaultWidth="960dp"
+                android:defaultHeight="540dp" android:gravity="center" />
         </activity>
 
         <service android:name=".screen_mask.ScreenMaskService"
@@ -110,6 +129,7 @@
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
+        <!-- SPOTLIGHT -->
         <receiver
             android:name=".spotlight.SpotlightBootReceiver"
             android:enabled="true"
@@ -137,6 +157,7 @@
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
+        <!-- TIMERS -->
         <activity android:name=".timers.TimersActivity"
             android:exported="false"
             android:label="@string/timers_title"
@@ -153,6 +174,7 @@
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
+        <!-- TRAFFIC LIGHT -->
         <activity android:name=".traffic_light.TrafficLightActivity"
             android:exported="false"
             android:label="@string/traffic_light_title"
@@ -171,6 +193,7 @@
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
+        <!-- ABOUT -->
         <activity android:name=".AboutActivity"
             android:exported="false"
             android:label="@string/about"
@@ -183,6 +206,7 @@
                 android:gravity="center" />
         </activity>
 
+        <!-- WIDGET -->
         <receiver android:name=".PurramidWidgetProvider"
             android:exported="false"
             android:label="@string/app_name">
