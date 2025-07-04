@@ -17,8 +17,8 @@ interface ClockAlarmDao {
     @Update
     suspend fun updateAlarm(alarm: ClockAlarmEntity)
     
-    @Query("SELECT * FROM clock_alarms WHERE clockId = :clockId ORDER BY time ASC")
-    fun getAlarmsForClock(clockId: Int): Flow<List<ClockAlarmEntity>>
+    @Query("SELECT * FROM clock_alarms WHERE instanceId = :instanceId ORDER BY time ASC")
+    fun getAlarmsForClock(instanceId: Int): Flow<List<ClockAlarmEntity>>
     
     @Query("SELECT * FROM clock_alarms WHERE isEnabled = 1 ORDER BY time ASC")
     fun getAllActiveAlarms(): Flow<List<ClockAlarmEntity>>
@@ -29,8 +29,8 @@ interface ClockAlarmDao {
     @Query("DELETE FROM clock_alarms WHERE alarmId = :alarmId")
     suspend fun deleteAlarm(alarmId: Long)
     
-    @Query("DELETE FROM clock_alarms WHERE clockId = :clockId")
-    suspend fun deleteAlarmsForClock(clockId: Int)
+    @Query("DELETE FROM clock_alarms WHERE instanceId = :instanceId")
+    suspend fun deleteAlarmsForClock(instanceId: Int)
     
     @Query("UPDATE clock_alarms SET isEnabled = :enabled WHERE alarmId = :alarmId")
     suspend fun setAlarmEnabled(alarmId: Long, enabled: Boolean)

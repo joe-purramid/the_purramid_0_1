@@ -30,7 +30,6 @@ import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import com.example.purramid.thepurramid.R
 import com.example.purramid.thepurramid.data.db.ScreenMaskDao // For restoring state
-import com.example.purramid.thepurramid.di.HiltViewModelFactory // Assuming Hilt Factory for custom creation
 import com.example.purramid.thepurramid.instance.InstanceManager
 import com.example.purramid.thepurramid.screen_mask.ui.MaskView
 import com.example.purramid.thepurramid.screen_mask.viewmodel.ScreenMaskViewModel
@@ -299,7 +298,6 @@ class ScreenMaskService : LifecycleService(), ViewModelStoreOwner, SavedStateReg
             // Create a unique key for each instance
             val key = "screen_mask_$id"
 
-            // Use standard ViewModelProvider with factory (not HiltViewModelFactory)
             val viewModel = ViewModelProvider(
                 this,
                 viewModelFactory  // Use the injected factory directly

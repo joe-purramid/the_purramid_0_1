@@ -48,8 +48,8 @@ class ClockActivity : AppCompatActivity() {
     private fun handleIntent(currentIntent: Intent?) {
         Log.d(TAG, "handleIntent - Action: ${currentIntent?.action}")
         if (currentIntent?.action == ACTION_SHOW_CLOCK_SETTINGS) {
-            val clockIdForSettings = currentIntent.getIntExtra(ClockOverlayService.EXTRA_CLOCK_ID, 0)
-            showSettingsFragment(clockIdForSettings)
+            val instanceId = currentIntent.getIntExtra(ClockOverlayService.EXTRA_CLOCK_ID, 0)
+            showSettingsFragment(instanceIdForSettings)
         } else {
             // Default launch path if not showing settings
             handleDefaultLaunch()
@@ -72,11 +72,11 @@ class ClockActivity : AppCompatActivity() {
         }
     }
 
-    private fun showSettingsFragment(clockId: Int) {
+    private fun showSettingsFragment(instanceId: Int) {
         if (supportFragmentManager.findFragmentByTag(ClockSettingsFragment.TAG_FRAGMENT) == null) {
-            Log.d(TAG, "Showing Clock settings fragment for clock ID: $clockId")
+            Log.d(TAG, "Showing Clock settings fragment for clock ID: $instanceId")
             supportFragmentManager.beginTransaction()
-                .replace(R.id.clock_fragment_container, ClockSettingsFragment.newInstance(clockId), ClockSettingsFragment.TAG_FRAGMENT)
+                .replace(R.id.clock_fragment_container, ClockSettingsFragment.newInstance(instanceId), ClockSettingsFragment.TAG_FRAGMENT)
                 .commit()
         }
     }
@@ -86,8 +86,8 @@ class ClockActivity : AppCompatActivity() {
         setIntent(intent) // Update the activity's intent
         Log.d(TAG, "onNewIntent - Action: ${intent?.action}")
         if (intent?.action == ACTION_SHOW_CLOCK_SETTINGS) {
-            val clockIdForSettings = intent.getIntExtra(ClockOverlayService.EXTRA_CLOCK_ID, 0)
-            showSettingsFragment(clockIdForSettings)
+            val instanceIdForSettings = intent.getIntExtra(ClockOverlayService.EXTRA_CLOCK_ID, 0)
+            showSettingsFragment(instanceIdForSettings)
         }
     }
 }

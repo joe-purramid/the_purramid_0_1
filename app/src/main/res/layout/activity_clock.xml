@@ -5,7 +5,7 @@
     android:orientation="vertical"
     android:gravity="center">
 
-    <com.example.thepurramid0_1.ClockView
+    <com.example.purramid.thepurramid.clock.ClockView
         android:id="@+id/clockView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content" />

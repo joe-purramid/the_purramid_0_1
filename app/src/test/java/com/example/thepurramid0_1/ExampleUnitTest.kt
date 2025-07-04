@@ -1,4 +1,4 @@
-package com.example.thepurramid0_1
+package com.example.purramid.thepurramid
 
 import org.junit.Test
 

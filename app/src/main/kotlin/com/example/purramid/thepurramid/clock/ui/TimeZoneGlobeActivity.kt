@@ -44,6 +44,7 @@ import com.example.purramid.thepurramid.clock.ui.TimeZoneGlobeViewModel
 import com.example.purramid.thepurramid.clock.ui.TimeZoneOverlayInfo
 import com.example.purramid.thepurramid.clock.ui.RotationDirection // Import Enum
 import com.google.android.material.snackbar.Snackbar
+import java.util.concurrent.ConcurrentHashMap
 
 @AndroidEntryPoint // Enable Hilt Injection
 class TimeZoneGlobeActivity : AppCompatActivity(R.layout.activity_time_zone_globe) { // Use constructor injection for layout
@@ -75,7 +76,7 @@ class TimeZoneGlobeActivity : AppCompatActivity(R.layout.activity_time_zone_glob
     private var overlayParentNode: Node? = null // Parent for overlays, attached to globeNode
 
     // Material cache
-    private val materialCache = mutableMapOf<Int, CompletableDeferred<MaterialInstance>>()
+    private val materialCache = ConcurrentHashMap<Int, CompletableDeferred<MaterialInstance>>()
 
     // Touch rotation state
     private var lastX: Float = 0f
@@ -86,6 +87,7 @@ class TimeZoneGlobeActivity : AppCompatActivity(R.layout.activity_time_zone_glob
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_time_zone_globe)
 
         // Bind Views
         sceneView = findViewById(R.id.sceneView)
@@ -249,12 +251,12 @@ class TimeZoneGlobeActivity : AppCompatActivity(R.layout.activity_time_zone_glob
                     .bufferCount(1).vertexCount(vertices.size)
                     .attribute(VertexBuffer.VertexAttribute.POSITION, 0, VertexBuffer.AttributeType.FLOAT3, 0, 0)
                     .build(engine)
-                vertexBuffer.setBufferAt(engine, 0, Float3.toFloatBuffer(vertices))
+                vertexBuffer.setBufferAt(engine, 0, float3ListToFloatBuffer(vertices))
 
                 val indexBuffer = IndexBuffer.Builder()
                     .indexCount(indices.size).bufferType(IndexBuffer.Builder.IndexType.UINT)
                     .build(engine)
-                indexBuffer.setBuffer(engine, IntArray(indices.size) { indices[it] }.toBuffer())
+                indexBuffer.setBuffer(engine, intArrayToBuffer(IntArray(indices.size) { indices[it] }))
 
                 val bounds = calculateBounds(vertices)
                 val renderableEntity = engine.entityManager.create()
@@ -522,16 +524,22 @@ class TimeZoneGlobeActivity : AppCompatActivity(R.layout.activity_time_zone_glob
 }
 
 // --- Buffer Utils (Outside Activity) ---
-fun Float3.Companion.toFloatBuffer(list: List<Float3>): FloatBuffer {
+private fun float3ListToFloatBuffer(list: List<Float3>): FloatBuffer {
     val buffer = java.nio.ByteBuffer.allocateDirect(list.size * 3 * 4)
-        .order(java.nio.ByteOrder.nativeOrder()).asFloatBuffer()
+        .order(java.nio.ByteOrder.nativeOrder())
+        .asFloatBuffer()
     list.forEach { buffer.put(it.toFloatArray()) }
-    buffer.rewind(); return buffer
+    buffer.rewind()
+    return buffer
 }
-fun IntArray.toBuffer(): IntBuffer {
-    val buffer = java.nio.ByteBuffer.allocateDirect(this.size * 4)
-        .order(java.nio.ByteOrder.nativeOrder()).asIntBuffer()
-    buffer.put(this); buffer.rewind(); return buffer
+
+private fun intArrayToBuffer(array: IntArray): IntBuffer {
+    val buffer = java.nio.ByteBuffer.allocateDirect(array.size * 4)
+        .order(java.nio.ByteOrder.nativeOrder())
+        .asIntBuffer()
+    buffer.put(array)
+    buffer.rewind()
+    return buffer
 }
 
 // --- Animation Support ---

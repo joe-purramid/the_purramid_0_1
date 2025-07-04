@@ -4,6 +4,7 @@ package com.example.purramid.thepurramid.instance
 
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.util.Collections
 import javax.inject.Inject
 import javax.inject.Singleton
 import java.util.concurrent.ConcurrentHashMap
@@ -51,14 +52,19 @@ class InstanceManager @Inject constructor(
             else -> 4
         }
 
-        val active = activeInstances.getOrPut(appIntent) { mutableSetOf() }
+        // Synchronize access to the MutableSet
+        synchronized(activeInstances) {
+            val active = activeInstances.getOrPut(appIntent) {
+                Collections.synchronizedSet(mutableSetOf())
+            }
 
-        // Find the lowest available ID
-        for (id in 1..maxInstances) {
-            if (!active.contains(id)) {
-                active.add(id)
-                saveState(appIntent) // Persist the change
-                return id
+            // Find the lowest available ID
+            for (id in 1..maxInstances) {
+                if (!active.contains(id)) {
+                    active.add(id)
+                    saveState(appIntent) // This should also be thread-safe
+                    return id
+                }
             }
         }
 

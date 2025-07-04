@@ -35,7 +35,6 @@ import androidx.lifecycle.lifecycleScope
 import com.example.purramid.thepurramid.MainActivity
 import com.example.purramid.thepurramid.R
 import com.example.purramid.thepurramid.data.db.TrafficLightDao
-// import com.example.purramid.thepurramid.di.HiltViewModelFactory
 import com.example.purramid.thepurramid.di.TrafficLightPrefs
 import com.example.purramid.thepurramid.instance.InstanceManager
 import com.example.purramid.thepurramid.traffic_light.viewmodel.LightColor

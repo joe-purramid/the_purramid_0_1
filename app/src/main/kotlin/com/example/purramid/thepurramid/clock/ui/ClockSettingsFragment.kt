@@ -6,7 +6,6 @@ import android.content.SharedPreferences
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
-import android.provider.AlarmClock
 import android.util.Log
 import android.util.TypedValue
 import android.view.LayoutInflater
@@ -19,7 +18,6 @@ import androidx.fragment.app.Fragment
 import com.example.purramid.thepurramid.R
 import com.example.purramid.thepurramid.clock.ClockOverlayService
 import com.example.purramid.thepurramid.clock.ClockAlarmActivity
-import com.example.purramid.thepurramid.clock.ui.TimeZoneGlobeActivity
 import com.example.purramid.thepurramid.databinding.FragmentClockSettingsBinding
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
@@ -38,16 +36,16 @@ class ClockSettingsFragment : Fragment() {
         const val PREFS_NAME = ClockOverlayService.PREFS_NAME_FOR_ACTIVITY
         const val KEY_ACTIVE_COUNT = ClockOverlayService.KEY_ACTIVE_COUNT_FOR_ACTIVITY
 
-        fun newInstance(clockId: Int): ClockSettingsFragment {
+        fun newInstance(instanceId: Int): ClockSettingsFragment {
             return ClockSettingsFragment().apply {
                 arguments = Bundle().apply {
-                    putInt(ARG_CLOCK_ID, clockId)
+                    putInt(ARG_CLOCK_ID, instanceId)
                 }
             }
         }
     }
 
-    private var currentClockIdForConfig: Int = -1
+    private var currentInstanceIdForConfig: Int = -1
     private var selectedColor: Int = Color.WHITE
     private var selectedColorView: View? = null
     private lateinit var uiStatePrefs: SharedPreferences
@@ -59,9 +57,9 @@ class ClockSettingsFragment : Fragment() {
         if (result.resultCode == android.app.Activity.RESULT_OK) {
             val selectedTimeZoneId = result.data?.getStringExtra("selected_time_zone_id")
             selectedTimeZoneId?.let {
-                Log.d(TAG, "Time zone selected: $it for clock $currentClockIdForConfig")
+                Log.d(TAG, "Time zone selected: $it for clock $currentInstanceIdForConfig")
                 sendUpdateIntentToService("time_zone", it)
-                uiStatePrefs.edit().putString("clock_${currentClockIdForConfig}_time_zone_id", it).apply()
+                uiStatePrefs.edit().putString("clock_${currentInstanceIdForConfig}_time_zone_id", it).apply()
             }
         }
     }
@@ -76,8 +74,8 @@ class ClockSettingsFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        currentClockIdForConfig = arguments?.getInt(ARG_CLOCK_ID, 0) ?: 0
-        Log.d(TAG, "Configuring settings for clock ID: $currentClockIdForConfig (0 means general or first)")
+        currentInstanceIdForConfig = arguments?.getInt(ARG_CLOCK_ID, 0) ?: 0
+        Log.d(TAG, "Configuring settings for clock ID: $currentInstanceIdForConfig (0 means general or first)")
 
         uiStatePrefs = requireContext().getSharedPreferences("clock_settings_ui_prefs", Context.MODE_PRIVATE)
         serviceStatePrefs = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -88,7 +86,7 @@ class ClockSettingsFragment : Fragment() {
     }
 
     private fun loadInitialUiState() {
-        val idToLoad = if (currentClockIdForConfig > 0) currentClockIdForConfig else 0
+        val idToLoad = if (currentInstanceIdForConfig > 0) currentInstanceIdForConfig else 0
         val savedMode = uiStatePrefs.getString("clock_${idToLoad}_mode", "digital")
         binding.modeToggleButton.isChecked = (savedMode == "analog")
         setupColorPalette()
@@ -120,7 +118,7 @@ class ClockSettingsFragment : Fragment() {
                     selectedColor = colorValue
                     updateColorSelectionInUI(this)
                     sendUpdateIntentToService("color", colorValue)
-                    uiStatePrefs.edit().putInt("clock_${if(currentClockIdForConfig > 0) currentClockIdForConfig else 0}_color", colorValue).apply()
+                    uiStatePrefs.edit().putInt("clock_${if(currentInstanceIdForConfig > 0) currentInstanceIdForConfig else 0}_color", colorValue).apply()
                 }
             }
             binding.colorPalette.addView(colorView)
@@ -140,37 +138,37 @@ class ClockSettingsFragment : Fragment() {
         binding.modeToggleButton.setOnCheckedChangeListener { _, isChecked ->
             val newMode = if (isChecked) "analog" else "digital"
             sendUpdateIntentToService("mode", newMode)
-            uiStatePrefs.edit().putString("clock_${if(currentClockIdForConfig > 0) currentClockIdForConfig else 0}_mode", newMode).apply()
+            uiStatePrefs.edit().putString("clock_${if(currentInstanceIdForConfig > 0) currentInstanceIdForConfig else 0}_mode", newMode).apply()
         }
         binding.twentyFourHourToggleButton.setOnCheckedChangeListener { _, isChecked ->
             sendUpdateIntentToService("24hour", isChecked)
-            uiStatePrefs.edit().putBoolean("clock_${if(currentClockIdForConfig > 0) currentClockIdForConfig else 0}_24hour", isChecked).apply()
+            uiStatePrefs.edit().putBoolean("clock_${if(currentInstanceIdForConfig > 0) currentInstanceIdForConfig else 0}_24hour", isChecked).apply()
         }
         binding.setTimeZoneButton.setOnClickListener {
             val intent = Intent(requireContext(), TimeZoneGlobeActivity::class.java)
-            val currentZoneId = uiStatePrefs.getString("clock_${if(currentClockIdForConfig > 0) currentClockIdForConfig else 0}_time_zone_id", ZoneId.systemDefault().id)
+            val currentZoneId = uiStatePrefs.getString("clock_${if(currentInstanceIdForConfig > 0) currentInstanceIdForConfig else 0}_time_zone_id", ZoneId.systemDefault().id)
             intent.putExtra("current_time_zone_id", currentZoneId)
             timeZoneResultLauncher.launch(intent)
         }
         binding.secondsToggleButton.setOnCheckedChangeListener { _, isChecked ->
             sendUpdateIntentToService("seconds", isChecked)
-            uiStatePrefs.edit().putBoolean("clock_${if(currentClockIdForConfig > 0) currentClockIdForConfig else 0}_display_seconds", isChecked).apply()
+            uiStatePrefs.edit().putBoolean("clock_${if(currentInstanceIdForConfig > 0) currentInstanceIdForConfig else 0}_display_seconds", isChecked).apply()
         }
         binding.setAlarmButton.setOnClickListener {
             val alarmIntent = Intent(requireContext(), ClockAlarmActivity::class.java).apply {
-                putExtra(ClockAlarmActivity.EXTRA_CLOCK_ID, currentClockIdForConfig)
+                putExtra(ClockAlarmActivity.EXTRA_CLOCK_ID, currentInstanceIdForConfig)
             }
             startActivity(alarmIntent)
         }
         binding.nestToggleButton.setOnCheckedChangeListener { _, isChecked ->
-            if (currentClockIdForConfig > 0) {
+            if (currentInstanceIdForConfig > 0) {
                 val serviceIntent = Intent(requireContext(), ClockOverlayService::class.java).apply {
                     action = ClockOverlayService.ACTION_NEST_CLOCK
-                    putExtra(ClockOverlayService.EXTRA_CLOCK_ID, currentClockIdForConfig)
+                    putExtra(ClockOverlayService.EXTRA_CLOCK_ID, currentInstanceIdForConfig)
                     putExtra(ClockOverlayService.EXTRA_NEST_STATE, isChecked)
                 }
                 ContextCompat.startForegroundService(requireContext(), serviceIntent)
-                uiStatePrefs.edit().putBoolean("clock_${currentClockIdForConfig}_nest", isChecked).apply()
+                uiStatePrefs.edit().putBoolean("clock_${currentInstanceIdForConfig}_nest", isChecked).apply()
             } else {
                 Snackbar.make(binding.root, "Select a clock to nest.", Snackbar.LENGTH_SHORT).show()
                 binding.nestToggleButton.isChecked = !isChecked
@@ -193,7 +191,7 @@ class ClockSettingsFragment : Fragment() {
     private fun sendUpdateIntentToService(key: String, value: Any) {
         val serviceIntent = Intent(requireContext(), ClockOverlayService::class.java).apply {
             action = ClockOverlayService.ACTION_UPDATE_CLOCK_SETTING
-            putExtra(ClockOverlayService.EXTRA_CLOCK_ID, currentClockIdForConfig)
+            putExtra(ClockOverlayService.EXTRA_CLOCK_ID, currentInstanceIdForConfig)
             putExtra(ClockOverlayService.EXTRA_SETTING_TYPE, key)
             when (value) {
                 is String -> putExtra(ClockOverlayService.EXTRA_SETTING_VALUE, value)
@@ -203,7 +201,7 @@ class ClockSettingsFragment : Fragment() {
             }
         }
         ContextCompat.startForegroundService(requireContext(), serviceIntent)
-        Log.d(TAG, "Sent update to service: $key = $value for clock $currentClockIdForConfig")
+        Log.d(TAG, "Sent update to service: $key = $value for clock $currentInstanceIdForConfig")
     }
 
     private fun dpToPx(dp: Int): Int {

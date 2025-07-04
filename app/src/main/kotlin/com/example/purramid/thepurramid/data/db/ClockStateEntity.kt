@@ -10,7 +10,7 @@ import java.util.UUID
 @Entity(tableName = "clock_state")
 data class ClockStateEntity(
     @PrimaryKey // Use the unique clock ID managed by the service
-    val clockId: Int,
+    val instanceId: Int,
     val uuid: UUID = UUID.randomUUID(),
 
     val timeZoneId: String = ZoneId.systemDefault().id, // Store ZoneId as String, provide default
