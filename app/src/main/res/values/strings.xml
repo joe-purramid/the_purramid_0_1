@@ -687,7 +687,7 @@
     <string name="cities_database_attribution_text">"World Cities Database" (https://simplemaps.com/data/world-cities) by <xliff:g id="sm" translatable="false">simplemaps</xliff:g> is also licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).</string>
 
     <string name="data_privacy_title">Data Privacy (USA &amp; EU)</string>
-    <string name="data_privacy_statement">At <xliff:g is="tpl" translatable="false">Purramid Learning, Inc.</xliff:g>, we are committed to your privacy. This application, The <xliff:g id="tp" translatable="false">Purramid</xliff:g>, does not collect, share, or transmit any personal data away from the device on which it is installed. All data generated and used within the application remains solely on your device.</string>
+    <string name="data_privacy_statement">At <xliff:g is="tpl" translatable="false">Purramid Learning, Inc.</xliff:g>, we are committed to your privacy. This application, <xliff:g id="tp" translatable="false">Purramid</xliff:g> Class Tools, does not collect, share, or transmit any personal data away from the device on which it is installed. All data generated and used within the application remains solely on your device.</string>
 
     <string name="best_practices_title">Best Practices for Responsible Use</string>
     <string name="best_practices_content">While The <xliff:g id="tp1" translatable="false">Purramid</xliff:g> application is designed to operate locally and does not collect or transmit personal data, we encourage users to adopt responsible practices when using the application, especially in educational or collaborative settings. We recommend the following:
