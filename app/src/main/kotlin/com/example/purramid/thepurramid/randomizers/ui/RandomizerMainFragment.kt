@@ -7,6 +7,7 @@ import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
 import android.graphics.Color // Import color for placeholder
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.accessibility.AccessibilityManager
 import android.view.View
@@ -25,6 +26,7 @@ import com.example.purramid.thepurramid.data.db.SpinListEntity
 import com.example.purramid.thepurramid.databinding.FragmentRandomizerMainBinding // Use Fragment binding
 import com.example.purramid.thepurramid.randomizers.viewmodel.RandomizerViewModel
 import com.example.purramid.thepurramid.randomizers.SpinItemType
+import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
 import java.util.concurrent.TimeUnit // Import TimeUnit
 import nl.dionsegijn.konfetti.core.Party
@@ -100,10 +102,34 @@ class RandomizerMainFragment : Fragment() {
             activity?.finish() // Or use NavController popBackStack if appropriate
         }
         binding.settingsButton.setOnClickListener {
-            // Navigate using NavController
-            // Need to define action and destination in nav graph
-            // findNavController().navigate(R.id.action_randomizerMainFragment_to_randomizerSettingsFragment) // Example
-             Toast.makeText(requireContext(), "Navigate to Settings (TODO)", Toast.LENGTH_SHORT).show()
+            viewModel.instanceId?.let { id ->
+                try {
+                    val bundle = Bundle().apply {
+                        putInt(RandomizerViewModel.KEY_INSTANCE_ID, id)
+                    }
+                    // Navigate using NavController from NavHostFragment
+                    val navController = (requireActivity().supportFragmentManager
+                        .findFragmentById(R.id.nav_host_fragment_randomizers) as NavHostFragment)
+                        .navController
+                    navController.navigate(
+                        R.id.action_randomizerMainFragment_to_randomizerSettingsFragment,
+                        bundle
+                    )
+                } catch (e: Exception) {
+                    Log.e("RandomizerMainFragment", "Navigation to Settings failed", e)
+                    Snackbar.make(
+                        binding.root,
+                        getString(R.string.error_cannot_open_settings),
+                        Snackbar.LENGTH_SHORT
+                    ).show()
+                }
+            } ?: run {
+                Snackbar.make(
+                    binding.root,
+                    getString(R.string.error_settings_invalid_id),
+                    Snackbar.LENGTH_SHORT
+                ).show()
+            }
         }
         binding.spinButton.setOnClickListener {
             clearAnnounceCelebrate()

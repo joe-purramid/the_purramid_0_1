@@ -93,7 +93,7 @@ class RandomizerSettingsViewModel @Inject constructor(
 
     fun updateNumSlotsColumns(numColumns: Int) {
         if (numColumns == 3 || numColumns == 5) {
-            updateSettingsField { it.copy(numSlotsColumns = numColumns) }
+            updateSettingsField { it.copy(slotsColumnCount = numColumns) }
         }
     }
 

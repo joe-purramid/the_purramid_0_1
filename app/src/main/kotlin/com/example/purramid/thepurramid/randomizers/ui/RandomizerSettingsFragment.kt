@@ -1,7 +1,6 @@
 // RandomizerSettingsFragment.kt
 package com.example.purramid.thepurramid.randomizers.ui
 
-import android.content.Intent
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
@@ -10,7 +9,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.CompoundButton
-import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
@@ -18,7 +16,6 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
-import androidx.navigation.fragment.navArgs
 import com.example.purramid.thepurramid.MainActivity
 import com.example.purramid.thepurramid.R
 import com.example.purramid.thepurramid.data.db.RandomizerDao
@@ -26,10 +23,9 @@ import com.example.purramid.thepurramid.data.db.RandomizerInstanceEntity
 import com.example.purramid.thepurramid.data.db.SpinSettingsEntity
 import com.example.purramid.thepurramid.databinding.FragmentRandomizerSettingsBinding
 import com.example.purramid.thepurramid.randomizers.RandomizerMode
-import com.example.purramid.thepurramid.randomizers.RandomizersHostActivity
 import com.example.purramid.thepurramid.randomizers.viewmodel.RandomizerSettingsViewModel
-import com.example.purramid.thepurramid.ui.PurramidPalette
-import com.google.android.material.chip.Chip
+import com.example.purramid.thepurramid.randomizers.viewmodel.RandomizerViewModel
+import com.github.dhaval2404.colorpicker.MaterialColorPickerDialog
 import com.google.android.material.colorpicker.MaterialColorPickerDialog
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
@@ -45,7 +41,6 @@ class RandomizerSettingsFragment : Fragment() {
     private val binding get() = _binding!!
 
     private val settingsViewModel: RandomizerSettingsViewModel by activityViewModels()
-    private val args: RandomizerSettingsFragmentArgs by navArgs()
 
     private lateinit var currentSettingsEntity: SpinSettingsEntity
     private var initialBackgroundColor: Int = Color.BLACK
@@ -59,7 +54,8 @@ class RandomizerSettingsFragment : Fragment() {
     }
 
     override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
+        inflater: LayoutInflater,
+        container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
         _binding = FragmentRandomizerSettingsBinding.inflate(inflater, container, false)
@@ -68,7 +64,18 @@ class RandomizerSettingsFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        Log.d(TAG, "onViewCreated for instanceId: ${args.instanceId}")
+
+        // Get instance ID from arguments
+        val instanceId = arguments?.getInt(RandomizerViewModel.KEY_INSTANCE_ID) ?: 0
+
+        if (instanceId == 0) {
+            Log.e(TAG, "No instance ID provided")
+            // Handle error - maybe navigate back
+            findNavController().popBackStack()
+            return
+        }
+
+        Log.d(TAG, "onViewCreated for instanceId: $instanceId")
 
         observeSettings()
         setupListeners()
@@ -140,11 +147,11 @@ class RandomizerSettingsFragment : Fragment() {
         // Populate Slots Settings
         if (currentSettingsEntity.mode == RandomizerMode.SLOTS) {
             binding.switchSlotsSound.isChecked = currentSettingsEntity.isSlotsSoundEnabled
-            binding.switchSlotsResultAnnouncement.isChecked = currentSettingsEntity.isSlotsAnnounceResultEnabled
-            binding.textFieldSlotsSpinDuration.setText(currentSettingsEntity.slotsSpinDuration.toString())
-            binding.textFieldSlotsReelVariation.setText(currentSettingsEntity.slotsReelStopVariation.toString())
+            binding.switchSlotsResultAnnouncement.isChecked = currentSettingsEntity.isSlotsAnnounceEnabled
+            binding.textFieldSlotsSpinDuration.setText(currentSettingsEntity.slotsSpinDurationMillis.toString())
+            binding.textFieldSlotsReelVariation.setText(currentSettingsEntity.slotsReelStopVariationMillis.toString())
         }
-        when (currentSettingsEntity.numSlotsColumns) {
+        when (currentSettingsEntity.slotsColumnCount) {
             3 -> binding.toggleSlotsColumns.check(R.id.buttonSlotsColumns3)
             5 -> binding.toggleSlotsColumns.check(R.id.buttonSlotsColumns5)
             else -> binding.toggleSlotsColumns.check(R.id.buttonSlotsColumns3) // Default
@@ -232,19 +239,27 @@ class RandomizerSettingsFragment : Fragment() {
 
         // Slots Settings Listeners
         binding.switchSlotsSound.setOnCheckedChangeListener { _, isChecked -> if (::currentSettingsEntity.isInitialized) currentSettingsEntity = currentSettingsEntity.copy(isSlotsSoundEnabled = isChecked) }
-        binding.switchSlotsResultAnnouncement.setOnCheckedChangeListener { _, isChecked -> if (::currentSettingsEntity.isInitialized) currentSettingsEntity = currentSettingsEntity.copy(isSlotsAnnounceResultEnabled = isChecked) }
-        binding.textFieldSlotsSpinDuration.doAfterTextChanged { text -> if (::currentSettingsEntity.isInitialized) currentSettingsEntity = currentSettingsEntity.copy(slotsSpinDuration = text.toString().toLongOrNull() ?: 1000L) }
-        binding.textFieldSlotsReelVariation.doAfterTextChanged { text -> if (::currentSettingsEntity.isInitialized) currentSettingsEntity = currentSettingsEntity.copy(slotsReelStopVariation = text.toString().toLongOrNull() ?: 200L) }
-        binding.buttonEditSlotsLists.setOnClickListener { /* TODO: Navigate to Slots List Editor */ }
-        binding.toggleSlotsColumns.addOnButtonCheckedListener { group, checkedId, isChecked ->
+        binding.switchSlotsResultAnnouncement.setOnCheckedChangeListener { _, isChecked -> if (::currentSettingsEntity.isInitialized) currentSettingsEntity = currentSettingsEntity.copy(isSlotsAnnounceEnabled = isChecked) }
+        binding.textFieldSlotsSpinDuration.doAfterTextChanged { text -> if (::currentSettingsEntity.isInitialized) currentSettingsEntity = currentSettingsEntity.copy(slotsSpinDurationMillis = text.toString().toLongOrNull() ?: 1000L) }
+        binding.textFieldSlotsReelVariation.doAfterTextChanged { text -> if (::currentSettingsEntity.isInitialized) currentSettingsEntity = currentSettingsEntity.copy(slotsReelStopVariationMillis = text.toString().toLongOrNull() ?: 200L) }
+        binding.buttonEditSlotsLists.setOnClickListener {
+            if (!::currentSettingsEntity.isInitialized) return@setOnClickListener
+            val instanceIdInt = currentSettingsEntity.instanceId
+            val listIdToEdit = currentSettingsEntity.currentSlotsListId
+            val action = RandomizerSettingsFragmentDirections.actionRandomizerSettingsFragmentToListEditorActivity(
+                instanceId = instanceIdInt,
+                listId = listIdToEdit ?: -1L
+            )
+            findNavController().navigate(action)
+        }        binding.toggleSlotsColumns.addOnButtonCheckedListener { group, checkedId, isChecked ->
             if (isChecked && ::currentSettingsEntity.isInitialized) {
                 val newColumnCount = when (checkedId) {
                     R.id.buttonSlotsColumns3 -> 3
                     R.id.buttonSlotsColumns5 -> 5
-                    else -> currentSettingsEntity.numSlotsColumns
+                    else -> currentSettingsEntity.slotsColumnCount
                 }
-                if (currentSettingsEntity.numSlotsColumns != newColumnCount) {
-                    currentSettingsEntity = currentSettingsEntity.copy(numSlotsColumns = newColumnCount)
+                if (currentSettingsEntity.slotsColumnCount != newColumnCount) {
+                    currentSettingsEntity = currentSettingsEntity.copy(slotsColumnCount = newColumnCount)
                 }
             }
         }
@@ -260,7 +275,7 @@ class RandomizerSettingsFragment : Fragment() {
     private fun openColorPicker() {
         val initialColor = currentSettingsEntity.backgroundColor
         val colorPicker = MaterialColorPickerDialog.Builder(requireContext())
-            .setTitle("Choose Background Color")
+            .setTitle(getString(R.string.app_color))
             .setColor(initialColor)
             .setListener { color, _ ->
                 currentSettingsEntity = currentSettingsEntity.copy(backgroundColor = color)

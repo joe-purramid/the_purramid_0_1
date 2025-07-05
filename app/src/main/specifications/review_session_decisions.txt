@@ -44,7 +44,18 @@
     - The active sequence is the top option
 	- All other options are listed in alphanumeric order
   
+- **Reviewed**: 5 July 2025
+- **Architecture**: Window Management for Activities
+- **Key Decisions**:
+  - Randomziers and Probabilities use ui.WindowState.kt to manage windows
+    - Services continue to use WindowManager.LayoutParams
+TODO: Determine if this is the best approach
   
+- **Reviewed**: 5 July 2025
+- **Architecture**: Randomizer Spin Animation Duration
+- **Key Decisions**:
+  - Randomziers spin animation has a cap of 3 seconds for lists that have 30 items or more.
+    - Previously it was 1 second for every ten items, rounded up, which meant max time could be five seconds.
   
   
   

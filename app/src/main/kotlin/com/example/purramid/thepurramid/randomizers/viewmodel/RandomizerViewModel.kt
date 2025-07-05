@@ -9,20 +9,16 @@ import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
-import com.example.purramid.thepurramid.data.db.DEFAULT_SETTINGS_ID
-import com.example.purramid.thepurramid.data.db.RandomizerDao
 import com.example.purramid.thepurramid.data.db.RandomizerInstanceEntity
 import com.example.purramid.thepurramid.data.db.SpinItemEntity
 import com.example.purramid.thepurramid.data.db.SpinListEntity
 import com.example.purramid.thepurramid.data.db.SpinSettingsEntity
-import com.example.purramid.thepurramid.randomizers.RandomizerInstanceManager
+import com.example.purramid.thepurramid.randomizers.data.RandomizerRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.util.UUID
 import javax.inject.Inject
 import kotlin.random.Random
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch // keep this one for viewModelScope.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 
 // Data structure to hold data needed by SpinDialView (can stay here or move to own file)
 data class SpinDialViewData(
@@ -32,7 +28,7 @@ data class SpinDialViewData(
 
 @HiltViewModel
 class RandomizerViewModel @Inject constructor(
-    private val randomizerDao: RandomizerDao,
+    private val randomizerRepository: RandomizerRepository,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -47,7 +43,7 @@ class RandomizerViewModel @Inject constructor(
     private val _currentListId = savedStateHandle.getLiveData<String?>("currentListId")
         .map { it?.let { uuidString -> UUID.fromString(uuidString) } }
 
-    val allSpinLists: LiveData<List<SpinListEntity>> = randomizerDao.getAllSpinLists()
+    val allSpinLists: LiveData<List<SpinListEntity>> = randomizerRepository.getAllSpinLists()
 
     private val _spinDialData = MutableLiveData<SpinDialViewData>()
     val spinDialData: LiveData<SpinDialViewData> = _spinDialData
@@ -78,7 +74,7 @@ class RandomizerViewModel @Inject constructor(
         if (_spinDialData.value == null) {
             _spinDialData.value = SpinDialViewData()
         }
-        
+
         if (instanceId > 0) {
             loadDataForInstance(instanceId)
         } else {
@@ -120,26 +116,22 @@ class RandomizerViewModel @Inject constructor(
     }
 
     private fun loadDataForInstance(idToLoad: Int) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val settings = randomizerDao.getSettingsForInstance(idToLoad)
-            withContext(Dispatchers.Main) {
-                _spinDialData.value = _spinDialData.value?.copy(settings = settings)
-                if (_currentListId.value == null && settings?.currentListId != null) {
-                    savedStateHandle["currentListId"] = settings.currentListId.toString()
-                } else {
-                    _currentListId.value?.let { loadItemsForList(it) }
-                }
+        viewModelScope.launch {
+            val settings = randomizerRepository.getSettingsForInstance(idToLoad)
+            _spinDialData.value = _spinDialData.value?.copy(settings = settings)
+            if (_currentListId.value == null && settings?.currentListId != null) {
+                savedStateHandle["currentListId"] = settings.currentListId.toString()
+            } else {
+                _currentListId.value?.let { loadItemsForList(it) }
             }
         }
     }
 
     private fun loadItemsForList(listId: UUID) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val items = randomizerDao.getItemsForList(listId)
+        viewModelScope.launch {
+            val items = randomizerRepository.getItemsForList(listId)
             val randomizedItems = items.shuffled()
-            withContext(Dispatchers.Main) {
-                _spinDialData.value = _spinDialData.value?.copy(items = randomizedItems)
-            }
+            _spinDialData.value = _spinDialData.value?.copy(items = randomizedItems)
         }
     }
 
@@ -173,7 +165,6 @@ class RandomizerViewModel @Inject constructor(
     }
 
     fun setSpinResult(result: SpinItemEntity?) {
-        // ... (implementation remains the same) ...
         _spinResult.value = result
         val currentSettings = _spinDialData.value?.settings
         if (result != null && currentSettings?.isSequenceEnabled == true) {
@@ -182,12 +173,10 @@ class RandomizerViewModel @Inject constructor(
     }
 
     fun clearSpinResult() {
-        // ... (implementation remains the same) ...
         _spinResult.value = null
     }
 
     fun toggleListDropdown() {
-        // ... (implementation remains the same) ...
         _isDropdownVisible.value = !(_isDropdownVisible.value ?: false)
     }
 
@@ -195,44 +184,36 @@ class RandomizerViewModel @Inject constructor(
         clearSequence()
         savedStateHandle["currentListId"] = listId.toString()
         _isDropdownVisible.value = false
-        viewModelScope.launch(Dispatchers.IO) { // Add Dispatcher
-            val settings = randomizerDao.getSettingsForInstance(instanceId)
+        viewModelScope.launch {
+            val settings = randomizerRepository.getSettingsForInstance(instanceId)
             settings?.let {
                 val updatedSettings = it.copy(currentListId = listId)
-                randomizerDao.saveSettings(updatedSettings)
-                withContext(Dispatchers.Main) {
-                    _spinDialData.value = _spinDialData.value?.copy(settings = updatedSettings)
-                }
+                randomizerRepository.saveSettings(updatedSettings)
+                _spinDialData.value = _spinDialData.value?.copy(settings = updatedSettings)
             }
         }
     }
 
     // --- Sequence Logic Functions ---
     private fun generateSequence(firstItem: SpinItemEntity) {
-        // ... (implementation remains the same) ...
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             val listId = firstItem.listId
-            val allItemsForList = randomizerDao.getItemsForList(listId)
+            val allItemsForList = randomizerRepository.getItemsForList(listId)
             if (allItemsForList.size <= 1) {
-                withContext(Dispatchers.Main) {
-                    _sequenceList.value = allItemsForList
-                    _sequenceIndex.value = 0
-                }
+                _sequenceList.value = allItemsForList
+                _sequenceIndex.value = 0
                 return@launch
             }
             val remainingItems = allItemsForList.toMutableList()
             remainingItems.remove(firstItem)
             remainingItems.shuffle()
             val finalSequence = listOf(firstItem) + remainingItems
-            withContext(Dispatchers.Main) {
-                _sequenceList.value = finalSequence
-                _sequenceIndex.value = 0
-            }
+            _sequenceList.value = finalSequence
+            _sequenceIndex.value = 0
         }
     }
 
     fun showNextSequenceItem() {
-        // ... (implementation remains the same) ...
         val currentList = _sequenceList.value ?: return
         val currentIndex = _sequenceIndex.value ?: 0
         if (currentIndex < currentList.size - 1) {
@@ -241,7 +222,6 @@ class RandomizerViewModel @Inject constructor(
     }
 
     fun showPreviousSequenceItem() {
-        // ... (implementation remains the same) ...
         val currentIndex = _sequenceIndex.value ?: 0
         if (currentIndex > 0) {
             _sequenceIndex.value = currentIndex - 1
@@ -249,7 +229,6 @@ class RandomizerViewModel @Inject constructor(
     }
 
     fun clearSequence() {
-        // ... (implementation remains the same) ...
         _sequenceList.value = null
         _sequenceIndex.value = 0
     }
@@ -261,10 +240,10 @@ class RandomizerViewModel @Inject constructor(
     fun handleManualClose() {
         if (instanceId > 0) {
             Log.d(TAG, "handleManualClose called for instanceId: $instanceId")
-            viewModelScope.launch(Dispatchers.IO) {
+            viewModelScope.launch {
                 try {
-                    randomizerDao.deleteSettingsForInstance(instanceId)
-                    randomizerDao.deleteInstance(RandomizerInstanceEntity(instanceId = instanceId))
+                    randomizerRepository.deleteSettingsForInstance(instanceId)
+                    randomizerRepository.deleteInstance(instanceId)
                     Log.d(TAG, "Successfully deleted settings and instance record for $instanceId from DB.")
                 } catch (e: Exception) {
                     Log.e(TAG, "Error deleting data for instance $instanceId from DB", e)
@@ -282,7 +261,7 @@ class RandomizerViewModel @Inject constructor(
 
     // --- Settings Update ---
     fun updateSettings(newSettings: SpinSettingsEntity) {
-        viewModelScope.launch(Dispatchers.IO) { // Add Dispatcher
+        viewModelScope.launch {
             // Corrected logic for applying sequence check
             var settingsToModify = newSettings.copy(instanceId = instanceId)
             if (settingsToModify.isSequenceEnabled) {
@@ -292,43 +271,37 @@ class RandomizerViewModel @Inject constructor(
                 )
             }
             else if (!settingsToModify.isAnnounceEnabled) {
-                 settingsToModify = settingsToModify.copy(
-                     isCelebrateEnabled = false
-                 )
+                settingsToModify = settingsToModify.copy(
+                    isCelebrateEnabled = false
+                )
             }
-            
+
             // Save the potentially modified settings
-            randomizerDao.saveSettings(settingsToModify)
-            // Update LiveData on main thread
-            withContext(Dispatchers.Main) {
-                if (_spinDialData.value == null) { _spinDialData.value = SpinDialViewData() }
-                _spinDialData.value = _spinDialData.value?.copy(settings = settingsToModify)
-            }
+            randomizerRepository.saveSettings(settingsToModify)
+            // Update LiveData
+            if (_spinDialData.value == null) { _spinDialData.value = SpinDialViewData() }
+            _spinDialData.value = _spinDialData.value?.copy(settings = settingsToModify)
         }
     }
 
-
     // --- List and Item Modification Functions ---
     fun addList(title: String) {
-        viewModelScope.launch(Dispatchers.IO) { // Add Dispatcher
+        viewModelScope.launch {
             val newList = SpinListEntity(id = UUID.randomUUID(), title = title)
-            randomizerDao.insertSpinList(newList)
+            randomizerRepository.insertSpinList(newList)
         }
     }
 
     fun deleteList(list: SpinListEntity) {
-        viewModelScope.launch(Dispatchers.IO) { // Add Dispatcher
+        viewModelScope.launch {
             val wasCurrentList = (_currentListId.value == list.id) // Check before deleting
-            randomizerDao.deleteItemsForList(list.id)
-            randomizerDao.deleteSpinList(list)
+            randomizerRepository.deleteSpinList(list) // Repository handles deleting items first
             if (wasCurrentList) {
-                // Update SavedStateHandle on main thread
-                withContext(Dispatchers.Main) {
-                    savedStateHandle["currentListId"] = null
-                }
+                // Update SavedStateHandle
+                savedStateHandle["currentListId"] = null
                 // Also clear settings in DB
-                randomizerDao.getSettingsForInstance(instanceId)?.let {
-                    randomizerDao.saveSettings(it.copy(currentListId = null))
+                randomizerRepository.getSettingsForInstance(instanceId)?.let {
+                    randomizerRepository.saveSettings(it.copy(currentListId = null))
                     // No need to update _spinDialData here, _currentListId observer handles it
                 }
             }
@@ -336,9 +309,9 @@ class RandomizerViewModel @Inject constructor(
     }
 
     fun updateListTitle(listId: UUID, newTitle: String) {
-        viewModelScope.launch(Dispatchers.IO) { // Add Dispatcher
-            randomizerDao.getSpinListById(listId)?.let { list ->
-                randomizerDao.updateSpinList(list.copy(title = newTitle))
+        viewModelScope.launch {
+            randomizerRepository.getSpinListById(listId)?.let { list ->
+                randomizerRepository.updateSpinList(list.copy(title = newTitle))
             }
         }
     }
@@ -346,18 +319,18 @@ class RandomizerViewModel @Inject constructor(
     fun addItemToList(listId: UUID, item: SpinItemEntity) {
         // Assign new ID on add
         val itemToAdd = item.copy(listId = listId, id = UUID.randomUUID())
-        viewModelScope.launch(Dispatchers.IO) { // Add Dispatcher
-            randomizerDao.insertSpinItem(itemToAdd)
+        viewModelScope.launch {
+            randomizerRepository.insertSpinItem(itemToAdd)
             if (_currentListId.value == listId) {
-                // Reload items which posts back to main thread
+                // Reload items which triggers observer update
                 loadItemsForList(listId)
             }
         }
     }
 
     fun updateItem(item: SpinItemEntity) {
-        viewModelScope.launch(Dispatchers.IO) { // Add Dispatcher
-            randomizerDao.updateSpinItem(item)
+        viewModelScope.launch {
+            randomizerRepository.updateSpinItem(item)
             if (_currentListId.value == item.listId) {
                 loadItemsForList(item.listId)
             }
@@ -365,12 +338,11 @@ class RandomizerViewModel @Inject constructor(
     }
 
     fun deleteItem(item: SpinItemEntity) {
-        viewModelScope.launch(Dispatchers.IO) { // Add Dispatcher
-            randomizerDao.deleteSpinItem(item)
+        viewModelScope.launch {
+            randomizerRepository.deleteSpinItem(item)
             if (_currentListId.value == item.listId) {
                 loadItemsForList(item.listId)
             }
         }
     }
 }
-

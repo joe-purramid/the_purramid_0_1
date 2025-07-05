@@ -4,6 +4,7 @@ package com.example.purramid.thepurramid.randomizers.ui
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.core.widget.doAfterTextChanged
 import androidx.recyclerview.widget.DiffUtil

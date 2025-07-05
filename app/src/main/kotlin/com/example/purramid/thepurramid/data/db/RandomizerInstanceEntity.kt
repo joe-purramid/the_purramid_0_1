@@ -17,5 +17,6 @@ data class RandomizerInstanceEntity(
     val windowY: Int = 0,
     val windowWidth: Int = -1,  // -1 indicates WRAP_CONTENT
     val windowHeight: Int = -1, // -1 indicates WRAP_CONTENT
+    val windowState: String = "normal", // "normal", "minimized", "maximized"
     val isActive: Boolean = true
 )

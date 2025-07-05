@@ -11,13 +11,15 @@ import java.util.UUID
 data class SpinSettingsEntity(
     @PrimaryKey val instanceId: Int,
 
+    // General settings
     var mode: RandomizerMode = RandomizerMode.SPIN,
+    var currentListId: UUID? = null,
+    var backgroundColor: Int = 0xFF000000.toInt(),
 
-    // --- Multi-mode settings ---
-    var currentListId: UUID? = null, // ID of the currently selected list
+
+    // Shared settings
     var isAnnounceEnabled: Boolean = false,
     var isCelebrateEnabled: Boolean = false,
-    var backgroundColor: Int = 0xFF000000.toInt(), // Default black background
 
     // --- Spin Specific ---
     var isSpinEnabled: Boolean = true,
@@ -29,11 +31,11 @@ data class SpinSettingsEntity(
     val currentSpinListId: Long? = null, // Assuming Long is the type of your List ID
 
     // --- Slots Specific ---
-    val numSlotsColumns: Int = 3, // Default to 3 columns
+    val slotsColumnCount: Int = 3, // Default to 3 columns
     var slotsColumnStates: List<SlotsColumnState> = emptyList(), // List to hold state for each column
     var isSlotsSoundEnabled: Boolean = true,
-    var isSlotsAnnounceResultEnabled: Boolean = false,
-    var slotsSpinDuration: Long = 1000L,
-    var slotsReelStopVariation: Long = 200L,
+    var isSlotsAnnounceEnabled: Boolean = false,
+    var slotsSpinDurationMillis: Long = 1000L,
+    var slotsReelStopVariationMillis: Long = 200L,
     val currentSlotsListId: Long? = null
 )

@@ -2,17 +2,16 @@
 package com.example.purramid.thepurramid
 
 import android.app.Application
+import android.content.Context
 import androidx.core.provider.FontRequest
 import androidx.emoji2.text.EmojiCompat
 import androidx.emoji2.text.FontRequestEmojiCompatConfig
-import androidx.preference.PreferenceManager // Or use DataStore if preferred
 import com.example.purramid.thepurramid.data.db.PurramidDatabase
 import com.example.purramid.thepurramid.data.db.RandomizerDao
 import com.example.purramid.thepurramid.data.db.SpinItemEntity
 import com.example.purramid.thepurramid.data.db.SpinListEntity
+import com.example.purramid.thepurramid.randomizers.data.RandomizerRepository
 import com.example.purramid.thepurramid.randomizers.SpinItemType // Ensure this import is correct
-import com.vanniktech.emoji.EmojiManager
-import com.vanniktech.emoji.google.GoogleEmojiProvider
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -26,6 +25,7 @@ class PurramidApplication : Application() {
     // Inject the database using Hilt (DatabaseModule provides it)
     @Inject
     lateinit var database: PurramidDatabase
+    lateinit var randomizerRepository: RandomizerRepository
 
     // Create an application-scoped coroutine scope
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main) // Or Dispatchers.IO
@@ -47,6 +47,11 @@ class PurramidApplication : Application() {
             .setReplaceAll(true) // Replace all supported emojis
         EmojiCompat.init(config)
         seedDefaultRandomizerLists()
+
+        // Initialize preloaded lists
+        applicationScope.launch {
+            randomizerRepository.initializePreloadedLists()
+        }
     }
 
     private fun seedDefaultRandomizerLists() {

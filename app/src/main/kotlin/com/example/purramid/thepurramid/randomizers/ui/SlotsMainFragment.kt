@@ -27,8 +27,8 @@ import com.example.purramid.thepurramid.randomizers.SpinItemType
 import com.example.purramid.thepurramid.randomizers.viewmodel.SlotsResult
 import com.example.purramid.thepurramid.randomizers.viewmodel.SlotsViewModel
 import com.example.purramid.thepurramid.util.dpToPx
+import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
-import java.util.UUID
 
 @AndroidEntryPoint
 class SlotsMainFragment : Fragment() {
@@ -99,10 +99,10 @@ class SlotsMainFragment : Fragment() {
                      findNavController().navigate(action)
                 } catch (e: Exception) {
                      Log.e("SlotsMainFragment", "Navigation to Settings failed. Ensure NavGraph action exists.", e)
-                     Toast.makeText(context, "Cannot open settings.", Toast.LENGTH_SHORT).show() // Inform user
+                    Snackbar.make(binding.root, getString(R.string.error_cannot_open_settings), Snackbar.LENGTH_SHORT).show() // Inform user
                 }
             } ?: run {
-                 Toast.makeText(context, "Cannot open settings: Invalid ID", Toast.LENGTH_SHORT).show()
+                Snackbar.make(binding.root, getString(R.string.error_cannot_open_settings), Snackbar.LENGTH_SHORT).show()
             }
         }
         binding.slotsSpinButton.setOnClickListener {
@@ -121,8 +121,8 @@ class SlotsMainFragment : Fragment() {
 
         viewModel.settings.observe(lifecycleOwner) { settings ->
             settings?.let {
-                 // *** Assumes settings.numSlotsColumns exists ***
-                 val numColumns = settings.numSlotsColumns
+                 // *** Assumes settings.slotsColumnCount exists ***
+                 val numColumns = settings.slotsColumnCount
                  updateColumnCount(numColumns)
             }
         }
@@ -279,7 +279,7 @@ class SlotsMainFragment : Fragment() {
 
     private fun showListSelectionDialog(columnIndex: Int) {
         if (availableLists.isEmpty()) {
-            Toast.makeText(context, "No lists available to select.", Toast.LENGTH_SHORT).show() // TODO: String resource
+            Snackbar.make(binding.root, getString(R.string.no_lists_available), Snackbar.LENGTH_SHORT).show()
             return
         }
         val currentListId = viewModel.columnStates.value?.getOrNull(columnIndex)?.selectedListId

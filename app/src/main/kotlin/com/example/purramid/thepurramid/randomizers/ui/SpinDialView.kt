@@ -276,9 +276,30 @@ class SpinDialView @JvmOverloads constructor(
         canvas.drawPath(path, arrowPaint)
     }
 
-    fun spin(onAnimationEnd: () -> Unit) {
-        val degreesPerItem = 360f / settings.numWedges
-        val targetRotation = rotation + (360 * 3) - (degreesPerItem * (Random().nextInt(settings.numWedges)))
+    fun spin(onAnimationEnd: (SpinItemEntity?) -> Unit) {
+        val currentItems = this.items
+        if (currentItems.isEmpty()) {
+            onAnimationEnd(null)
+            return
+        }
+
+        val isSequenceMode = settings?.isSequenceEnabled ?: false
+
+        // Calculate duration based on mode
+        val duration = if (isSequenceMode) {
+            // 1 second per 10 items, rounded up, capped at 3 seconds
+            val seconds = kotlin.math.ceil(currentItems.size / 10.0).toInt()
+            val cappedSeconds = minOf(seconds, 3) // Cap at 3 seconds
+            cappedSeconds * 1000L // Convert to milliseconds
+        } else {
+            // Regular spin mode - fixed 2 seconds
+            2000L
+        }
+
+        val degreesPerItem = 360f / currentItems.size
+        val randomIndex = Random().nextInt(currentItems.size)
+        val targetRotation = rotation + (360 * 3) - (degreesPerItem * randomIndex)
+
         val animation = RotateAnimation(
             rotation,
             targetRotation,
@@ -287,7 +308,7 @@ class SpinDialView @JvmOverloads constructor(
             Animation.RELATIVE_TO_SELF,
             0.5f
         ).apply {
-            duration = 2000 // 2 seconds
+            this.duration = duration
             interpolator = LinearInterpolator()
             fillAfter = true
             setAnimationListener(object : Animation.AnimationListener {
@@ -295,7 +316,8 @@ class SpinDialView @JvmOverloads constructor(
                 override fun onAnimationEnd(animation: Animation) {
                     rotation = targetRotation % 360
                     invalidate()
-                    onAnimationEnd()
+                    val result = currentItems.getOrNull(randomIndex)
+                    onAnimationEnd(result)
                 }
 
                 override fun onAnimationRepeat(animation: Animation) {}

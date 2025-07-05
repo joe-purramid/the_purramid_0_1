@@ -13,6 +13,7 @@ import com.example.purramid.thepurramid.randomizers.viewmodel.ListEditorViewMode
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.async // Import async
+import java.util.UUID
 
 class ListEditorActivity : AppCompatActivity() {
 
@@ -82,6 +83,5 @@ class ListEditorActivity : AppCompatActivity() {
         // val intent = Intent(this, ListCreatorActivity::class.java)
         // listIdToEdit?.let { intent.putExtra(ListCreatorActivity.EXTRA_LIST_ID, it.toString()) }
         // startActivity(intent)
-         android.widget.Toast.makeText(this, "Navigate to Creator (TODO): Edit ID = $listIdToEdit", android.widget.Toast.LENGTH_SHORT).show()
     }
 }

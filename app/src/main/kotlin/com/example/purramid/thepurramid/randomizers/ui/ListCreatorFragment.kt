@@ -243,7 +243,7 @@ class ListCreatorFragment : Fragment(), ItemEditorAdapter.ItemEditorListener {
         editingColorForItem = item
         ColorPickerDialog
             .Builder(requireContext())
-            .setTitle("Pick Item Color") // TODO: Add String resource
+            .setTitle(getString(R.string.pick_item_color))
             .setColorShape(ColorShape.SQAURE)
             .setDefaultColor(item.backgroundColor ?: Color.LTGRAY)
             .setColorListener { color, colorHex ->

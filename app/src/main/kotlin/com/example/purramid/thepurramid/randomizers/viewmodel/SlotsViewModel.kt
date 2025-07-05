@@ -16,7 +16,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -103,7 +102,7 @@ class SlotsViewModel @Inject constructor(
                     _settings.value = loadedSettings
                     // Extract saved column states and number of columns from the loaded entity
                     val savedColumnStates = loadedSettings.slotsColumnStates
-                    val numColumns = loadedSettings.numSlotsColumns
+                    val numColumns = loadedSettings.slotsColumnCount
 
                     // Initialize column states based on saved data and number
                     val initialStates = initializeColumnStates(savedColumnStates, numColumns)
@@ -114,7 +113,7 @@ class SlotsViewModel @Inject constructor(
                     // Initialize with defaults if settings are missing
                     val defaultSettings = SpinSettingsEntity(instanceId = id) // Basic default
                     _settings.value = defaultSettings
-                    _columnStates.value = initializeColumnStates(emptyList(), defaultSettings.numSlotsColumns)
+                    _columnStates.value = initializeColumnStates(emptyList(), defaultSettings.slotsColumnCount)
                 }
             }
         }
@@ -327,11 +326,11 @@ class SlotsViewModel @Inject constructor(
         val currentColumns = _columnStates.value ?: return
 
         // Create a *new* settings object with the updated column states list
-        // Ensure numSlotsColumns is also correctly part of currentSettings if it can change elsewhere
+        // Ensure slotsColumnCount is also correctly part of currentSettings if it can change elsewhere
         val settingsToSave = currentSettings.copy(
             slotsColumnStates = currentColumns
-            // If numSlotsColumns can be changed in settings, make sure it's updated here too, e.g.:
-            // numSlotsColumns = currentColumns.size // Or get from settings UI value
+            // If slotsColumnCount can be changed in settings, make sure it's updated here too, e.g.:
+            // slotsColumnCount = currentColumns.size // Or get from settings UI value
         )
         _settings.value = settingsToSave
 

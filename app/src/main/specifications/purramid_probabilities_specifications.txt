@@ -8,6 +8,7 @@ Probabilities is a collection of two different randomizers used in probability l
 - Service/Activity type: Activity only (ProbabilitiesHostActivity)
 - Multi-window support: Yes (up to 7)
 - Window tracking: UUID per window
+  - Use thepurramid.ui.WindowState.kt
 - Shares single service: Not applicable
 - Requires permissions:
   - WAKE_LOCK

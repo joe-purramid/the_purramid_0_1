@@ -32,7 +32,7 @@ import java.util.UUID
         TimerStateEntity::class,
         TrafficLightStateEntity::class
     ],
-    version = 15, // Added nested timer and sound fields to timer_state
+    version = 16, // Updated windowState for RandomizersInstanceEntity
     exportSchema = false // Set to true if you want to export the schema to a file for version control (recommended for production apps)
 )
 @TypeConverters(Converters::class) // Register the TypeConverters class
@@ -78,6 +78,15 @@ abstract class PurramidDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_15_16 = object : Migration(15, 16) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Add windowState to randomizer_instances
+                database.execSQL(
+                    "ALTER TABLE randomizer_instances ADD COLUMN windowState TEXT NOT NULL DEFAULT 'normal'"
+                )
+            }
+        }
+
         // Future migrations would be added here
 
         fun getDatabase(context: Context): PurramidDatabase {
@@ -89,7 +98,8 @@ abstract class PurramidDatabase : RoomDatabase() {
                 )
                     .addMigrations(
                         MIGRATION_13_14,
-                        MIGRATION_14_15
+                        MIGRATION_14_15,
+                        MIGRATION_15_16
                         // Add future migrations here
                     )
                     .fallbackToDestructiveMigrationOnDowngrade() // Only destroy on downgrade
