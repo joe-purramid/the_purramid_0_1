@@ -377,6 +377,7 @@
     <string name="country_north_korea">North Korea</string>
 
     <!-- `` PROBABILITIES APP `` -->
+    <string name="probabilities_description">Dice and Coin Flip randomization tools</string>
 
     <!-- `` DICE MODE `` -->
     <string name="randomizer_mode_dice">Dice Mode</string>

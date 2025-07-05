@@ -1,5 +1,5 @@
 // CoinProbabilityMode.kt
-package com.example.purramid.thepurramid.randomizers
+package com.example.purramid.thepurramid.probabilities
 
 enum class CoinProbabilityMode {
     NONE,
@@ -8,4 +8,4 @@ enum class CoinProbabilityMode {
     GRID_6X6,
     GRID_10X10,
     GRAPH_DISTRIBUTION
-}
+} 

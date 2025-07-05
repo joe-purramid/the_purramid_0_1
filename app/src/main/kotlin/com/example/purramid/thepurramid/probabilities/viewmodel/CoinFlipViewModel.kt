@@ -4,7 +4,11 @@ import android.content.Context
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import com.example.purramid.thepurramid.probabilities.CoinProbabilityMode
+import com.example.purramid.thepurramid.probabilities.GraphDistributionType
+import com.example.purramid.thepurramid.probabilities.GraphPlotType
 import com.google.gson.Gson
+import java.lang.Exception
 
 // Data class for a single coin type
 enum class CoinType { B1, B5, B10, B25, MB1, MB2 }
@@ -19,11 +23,10 @@ data class CoinFlipSettings(
     val flipAnimation: Boolean = true,
     val freeForm: Boolean = false,
     val announce: Boolean = true,
-    val probabilityEnabled: Boolean = false,
-    val probabilityType: String = "two_column",
+    val probabilityMode: CoinProbabilityMode = CoinProbabilityMode.NONE,
     val graphEnabled: Boolean = false,
-    val graphType: String = "histogram",
-    val graphDistribution: String = "normal"
+    val graphType: GraphPlotType = GraphPlotType.HISTOGRAM,
+    val graphDistribution: GraphDistributionType = GraphDistributionType.OFF
 )
 
 data class CoinFlipResult(
@@ -37,75 +40,101 @@ class CoinFlipViewModel : ViewModel() {
     private val _result = MutableLiveData<CoinFlipResult?>()
     val result: LiveData<CoinFlipResult?> = _result
 
+    private val _error = MutableLiveData<String?>()
+    val error: LiveData<String?> = _error
+
     private var instanceId: Int = 0
 
     fun loadSettings(context: Context, instanceId: Int) {
-        this.instanceId = instanceId
-        val prefs = context.getSharedPreferences("probabilities_prefs", Context.MODE_PRIVATE)
-        val json = prefs.getString("probabilities_coin_settings_$instanceId", null)
-        if (json != null) {
-            val loaded = Gson().fromJson(json, CoinFlipSettings::class.java)
-            _settings.value = loaded
+        try {
+            this.instanceId = instanceId
+            val prefs = context.getSharedPreferences("probabilities_prefs", Context.MODE_PRIVATE)
+            val json = prefs.getString("probabilities_coin_settings_$instanceId", null)
+            if (json != null) {
+                val loaded = Gson().fromJson(json, CoinFlipSettings::class.java)
+                _settings.value = loaded
+            }
+        } catch (e: Exception) {
+            _error.value = "Failed to load coin flip settings: ${e.message}"
         }
     }
 
     private fun saveSettings(context: Context) {
-        val prefs = context.getSharedPreferences("probabilities_prefs", Context.MODE_PRIVATE)
-        val json = Gson().toJson(_settings.value)
-        prefs.edit().putString("probabilities_coin_settings_$instanceId", json).apply()
+        try {
+            val prefs = context.getSharedPreferences("probabilities_prefs", Context.MODE_PRIVATE)
+            val json = Gson().toJson(_settings.value)
+            prefs.edit().putString("probabilities_coin_settings_$instanceId", json).apply()
+        } catch (e: Exception) {
+            _error.value = "Failed to save coin flip settings: ${e.message}"
+        }
     }
 
     fun updateCoinConfig(context: Context, type: CoinType, quantity: Int? = null, color: Int? = null) {
-        val current = _settings.value ?: CoinFlipSettings()
-        val updated = current.coinConfigs.map {
-            if (it.type == type) it.copy(
-                quantity = quantity ?: it.quantity,
-                color = color ?: it.color
-            ) else it
+        try {
+            val current = _settings.value ?: CoinFlipSettings()
+            val updated = current.coinConfigs.map {
+                if (it.type == type) it.copy(
+                    quantity = quantity ?: it.quantity,
+                    color = color ?: it.color
+                ) else it
+            }
+            _settings.value = current.copy(coinConfigs = updated)
+            saveSettings(context)
+        } catch (e: Exception) {
+            _error.value = "Failed to update coin configuration: ${e.message}"
         }
-        _settings.value = current.copy(coinConfigs = updated)
-        saveSettings(context)
     }
 
     fun updateSettings(context: Context,
         flipAnimation: Boolean? = null,
         freeForm: Boolean? = null,
         announce: Boolean? = null,
-        probabilityEnabled: Boolean? = null,
-        probabilityType: String? = null,
+        probabilityMode: CoinProbabilityMode? = null,
         graphEnabled: Boolean? = null,
-        graphType: String? = null,
-        graphDistribution: String? = null
+        graphType: GraphPlotType? = null,
+        graphDistribution: GraphDistributionType? = null
     ) {
-        val current = _settings.value ?: CoinFlipSettings()
-        _settings.value = current.copy(
-            flipAnimation = flipAnimation ?: current.flipAnimation,
-            freeForm = freeForm ?: current.freeForm,
-            announce = announce ?: current.announce,
-            probabilityEnabled = probabilityEnabled ?: current.probabilityEnabled,
-            probabilityType = probabilityType ?: current.probabilityType,
-            graphEnabled = graphEnabled ?: current.graphEnabled,
-            graphType = graphType ?: current.graphType,
-            graphDistribution = graphDistribution ?: current.graphDistribution
-        )
-        saveSettings(context)
+        try {
+            val current = _settings.value ?: CoinFlipSettings()
+            _settings.value = current.copy(
+                flipAnimation = flipAnimation ?: current.flipAnimation,
+                freeForm = freeForm ?: current.freeForm,
+                announce = announce ?: current.announce,
+                probabilityMode = probabilityMode ?: current.probabilityMode,
+                graphEnabled = graphEnabled ?: current.graphEnabled,
+                graphType = graphType ?: current.graphType,
+                graphDistribution = graphDistribution ?: current.graphDistribution
+            )
+            saveSettings(context)
+        } catch (e: Exception) {
+            _error.value = "Failed to update coin flip settings: ${e.message}"
+        }
     }
 
     fun flipCoins() {
-        val current = _settings.value ?: CoinFlipSettings()
-        val results = mutableMapOf<CoinType, List<Boolean>>()
-        for (config in current.coinConfigs) {
-            val flips = mutableListOf<Boolean>()
-            for (i in 1..config.quantity) {
-                flips.add(listOf(true, false).random())
+        try {
+            val current = _settings.value ?: CoinFlipSettings()
+            val results = mutableMapOf<CoinType, List<Boolean>>()
+            for (config in current.coinConfigs) {
+                val flips = mutableListOf<Boolean>()
+                for (i in 1..config.quantity) {
+                    flips.add(listOf(true, false).random())
+                }
+                results[config.type] = flips
             }
-            results[config.type] = flips
+            _result.value = CoinFlipResult(results)
+        } catch (e: Exception) {
+            _error.value = "Failed to flip coins: ${e.message}"
         }
-        _result.value = CoinFlipResult(results)
     }
 
     fun reset() {
         _result.value = null
+        _error.value = null
+    }
+
+    fun clearError() {
+        _error.value = null
     }
 
     // TODO: Persist/restore settings per instance

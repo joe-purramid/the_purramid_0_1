@@ -119,8 +119,6 @@ class RandomizersHostActivity : AppCompatActivity() {
         val requiredDestinationId = when (mode) {
             RandomizerMode.SPIN -> R.id.randomizerMainFragment
             RandomizerMode.SLOTS -> R.id.slotsMainFragment
-            RandomizerMode.DICE -> R.id.diceMainFragment
-            RandomizerMode.COIN_FLIP -> R.id.coinFlipFragment
         }
         if (currentDestinationId == requiredDestinationId) {
             Log.d(TAG, "Already on the correct fragment for mode $mode. No navigation needed.")

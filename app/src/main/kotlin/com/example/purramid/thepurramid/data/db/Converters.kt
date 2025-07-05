@@ -5,14 +5,13 @@ import android.util.Log
 import androidx.room.TypeConverter
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.example.purramid.thepurramid.probabilities.DiceSumResultType // Import new Enums
+import com.example.purramid.thepurramid.probabilities.GraphDistributionType
+import com.example.purramid.thepurramid.probabilities.GraphPlotType
+import com.example.purramid.thepurramid.probabilities.CoinProbabilityMode
 import com.example.purramid.thepurramid.randomizers.RandomizerMode
 import com.example.purramid.thepurramid.randomizers.SlotsColumnState
-import com.example.purramid.thepurramid.randomizers.DiceSumResultType // Import new Enums
-import com.example.purramid.thepurramid.randomizers.GraphDistributionType
-import com.example.purramid.thepurramid.randomizers.GraphPlotType
-import com.example.purramid.thepurramid.randomizers.CoinProbabilityMode
 import com.example.purramid.thepurramid.spotlight.SpotlightOpening
-import com.example.purramid.thepurramid.spotlight.SpotlightView
 import com.example.purramid.thepurramid.traffic_light.viewmodel.LightColor
 import com.example.purramid.thepurramid.traffic_light.viewmodel.Orientation
 import com.example.purramid.thepurramid.traffic_light.viewmodel.ResponsiveModeSettings
@@ -119,79 +118,6 @@ class Converters {
         }
     }
 
-    @TypeConverter
-    fun fromSlotsColumnStateList(value: List<SlotsColumnState>?): String? {
-        // Use let for null safety
-        return value?.let {
-            try {
-                Gson().toJson(it)
-            } catch (e: Exception) {
-                Log.e("Converters", "Could not convert List<SlotsColumnState> to JSON", e)
-                null // Return null on serialization error
-            }
-        }
-    }
-
-    /**
-     * Converts a JSON String? back to a List<SlotsColumnState>? when reading from the database.
-     * Uses Gson for deserialization. Returns null if the string is null/empty or parsing fails.
-     */
-    @TypeConverter
-    fun toSlotsColumnStateList(value: String?): List<SlotsColumnState>? {
-        return if (value.isNullOrEmpty()) {
-            null // Handle null or empty input string
-        } else {
-            try {
-                // Define the specific generic type for Gson
-                val listType = object : TypeToken<List<SlotsColumnState>>() {}.type
-                Gson().fromJson(value, listType)
-            } catch (e: Exception) {
-                // Handle potential JSON parsing errors
-                Log.e("Converters", "Could not convert JSON to List<SlotsColumnState>: $value", e)
-                null // Return null on parsing error
-            }
-        }
-    }
-
-    // For Map<Int, Int> (Dice Pool, Colors, Modifiers)
-    @TypeConverter
-    fun fromIntIntMap(value: Map<Int, Int>?): String? {
-        // Return default empty map string if value is null or empty? Or just null?
-        // Returning "{}" might be safer for non-nullable String field if default is "{}"
-        return if (value.isNullOrEmpty()) DEFAULT_EMPTY_JSON_MAP else Gson().toJson(value)
-    }
-
-    @TypeConverter
-    fun toIntIntMap(value: String?): Map<Int, Int>? {
-        // Handle null/empty input, default to empty map might be safer than null
-        if (value.isNullOrEmpty()) {
-            return emptyMap() // Return empty map instead of null
-        }
-        return try {
-            val mapType = object : TypeToken<Map<Int, Int>>() {}.type
-            Gson().fromJson(value, mapType)
-        } catch (e: Exception) {
-            Log.e("Converters", "Could not convert JSON to Map<Int, Int>: $value", e)
-            emptyMap() // Return empty map on error
-        }
-    }
-
-    // Converter for SPIN Enum
-    @TypeConverter
-    fun fromRandomizerMode(value: RandomizerMode?): String? {
-        return value?.name ?: RandomizerMode.SPIN.name // Default if null
-    }
-
-    @TypeConverter
-    fun toRandomizerMode(value: String?): RandomizerMode {
-        return try {
-            value?.let { enumValueOf<RandomizerMode>(it) } ?: RandomizerMode.SPIN
-        } catch (e: IllegalArgumentException) {
-            Log.e("Converters", "Invalid RandomizerMode string: $value", e)
-            RandomizerMode.SPIN // Default on error
-        }
-    }
-
     // Converter for DiceSumResultType Enum
     @TypeConverter
     fun fromDiceSumResultType(value: DiceSumResultType?): String? {
@@ -253,6 +179,77 @@ class Converters {
         } catch (e: IllegalArgumentException) {
             Log.e("Converters", "Invalid CoinProbabilityMode string: $value", e)
             CoinProbabilityMode.NONE // Default on error
+        }
+    }
+
+    @TypeConverter
+    fun fromSlotsColumnStateList(value: List<SlotsColumnState>?): String? {
+        // Use let for null safety
+        return value?.let {
+            try {
+                Gson().toJson(it)
+            } catch (e: Exception) {
+                Log.e("Converters", "Could not convert List<SlotsColumnState> to JSON", e)
+                null // Return null on serialization error
+            }
+        }
+    }
+
+    /**
+     * Converts a JSON String? back to a List<SlotsColumnState>? when reading from the database.
+     * Uses Gson for deserialization. Returns null if the string is null/empty or parsing fails.
+     */
+    @TypeConverter
+    fun toSlotsColumnStateList(value: String?): List<SlotsColumnState>? {
+        return if (value.isNullOrEmpty()) {
+            null // Handle null or empty input string
+        } else {
+            try {
+                // Define the specific generic type for Gson
+                val listType = object : TypeToken<List<SlotsColumnState>>() {}.type
+                Gson().fromJson(value, listType)
+            } catch (e: Exception) {
+                // Handle potential JSON parsing errors
+                Log.e("Converters", "Could not convert JSON to List<SlotsColumnState>: $value", e)
+                null // Return null on parsing error
+            }
+        }
+    }
+
+    // For Map<Int, Int> (Dice Pool, Colors, Modifiers)
+    @TypeConverter
+    fun fromIntIntMap(value: Map<Int, Int>?): String? {
+        return if (value.isNullOrEmpty()) "{}" else Gson().toJson(value)
+    }
+
+    @TypeConverter
+    fun toIntIntMap(value: String?): Map<Int, Int>? {
+        // Handle null/empty input, default to empty map might be safer than null
+        if (value.isNullOrEmpty()) {
+            return emptyMap() // Return empty map instead of null
+        }
+        return try {
+            val mapType = object : TypeToken<Map<Int, Int>>() {}.type
+            Gson().fromJson(value, mapType)
+        } catch (e: Exception) {
+            Log.e("Converters", "Could not convert JSON to Map<Int, Int>: $value", e)
+            emptyMap() // Return empty map on error
+        }
+    }
+
+    // Converter for SPIN Enum
+    @TypeConverter
+    fun fromRandomizerMode(value: RandomizerMode?): String? {
+        return value?.name ?: RandomizerMode.SPIN.name // Default if null
+    }
+
+    @TypeConverter
+    fun toRandomizerMode(value: String?): RandomizerMode {
+        return try {
+            value?.let { enumValueOf<RandomizerMode>(it) } ?: RandomizerMode.SPIN
+        } catch (e: IllegalArgumentException) {
+            Log.e("Converters", "Invalid RandomizerMode string: $value", e)
+            RandomizerMode.SPIN // Default on error
         }
     }
 

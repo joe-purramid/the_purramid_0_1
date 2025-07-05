@@ -89,20 +89,6 @@
                     android:text="@string/randomizer_mode_slots"
                     style="@style/Widget.MaterialComponents.Chip.Choice" />
 
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/chipDice"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/randomizer_mode_dice"
-                    style="@style/Widget.MaterialComponents.Chip.Choice" />
-
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/chipCoinFlip"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/randomizer_mode_coin_flip"
-                    style="@style/Widget.MaterialComponents.Chip.Choice" />
-
             </com.google.android.material.chip.ChipGroup>
 
             <!-- Settings content will be dynamically added based on mode -->
