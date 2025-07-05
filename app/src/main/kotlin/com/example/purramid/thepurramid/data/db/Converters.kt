@@ -11,11 +11,15 @@ import com.example.purramid.thepurramid.randomizers.DiceSumResultType // Import 
 import com.example.purramid.thepurramid.randomizers.GraphDistributionType
 import com.example.purramid.thepurramid.randomizers.GraphPlotType
 import com.example.purramid.thepurramid.randomizers.CoinProbabilityMode
+import com.example.purramid.thepurramid.spotlight.SpotlightOpening
 import com.example.purramid.thepurramid.spotlight.SpotlightView
 import com.example.purramid.thepurramid.traffic_light.viewmodel.LightColor
 import com.example.purramid.thepurramid.traffic_light.viewmodel.Orientation
 import com.example.purramid.thepurramid.traffic_light.viewmodel.ResponsiveModeSettings
+import com.example.purramid.thepurramid.traffic_light.viewmodel.TimedSequence
+import com.example.purramid.thepurramid.traffic_light.viewmodel.TrafficLightMessages
 import com.example.purramid.thepurramid.traffic_light.viewmodel.TrafficLightMode
+import java.time.LocalTime
 import java.util.UUID
 
 /**
@@ -86,6 +90,31 @@ class Converters {
                 // Handle potential JSON parsing errors
                 Log.e("Converters", "Could not convert JSON to List<String>: $value", e)
                 null // Or return emptyList(), depending on desired error handling
+            }
+        }
+    }
+
+    /**
+     * Converts a LocalTime to seconds of day (Long) for storage.
+     * Returns null if the LocalTime is null.
+     */
+    @TypeConverter
+    fun fromLocalTime(time: LocalTime?): Long? {
+        return time?.toSecondOfDay()?.toLong()
+    }
+
+    /**
+     * Converts seconds of day (Long) back to LocalTime.
+     * Returns null if the input is null.
+     */
+    @TypeConverter
+    fun toLocalTime(seconds: Long?): LocalTime? {
+        return seconds?.let {
+            try {
+                LocalTime.ofSecondOfDay(it)
+            } catch (e: Exception) {
+                Log.e("Converters", "Invalid seconds value for LocalTime: $seconds", e)
+                null
             }
         }
     }
@@ -228,14 +257,14 @@ class Converters {
     }
 
     @TypeConverter
-    fun fromSpotlightShape(shape: SpotlightView.Spotlight.Shape?): String? {
+    fun fromSpotlightShape(shape: SpotlightOpening.Shape?): String? {
         return shape?.name
     }
 
     @TypeConverter
-    fun toSpotlightShape(shapeName: String?): SpotlightView.Spotlight.Shape? {
+    fun toSpotlightShape(shapeName: String?): SpotlightOpening.Shape? {
         return try {
-            shapeName?.let { SpotlightView.Spotlight.Shape.valueOf(it) }
+            shapeName?.let { SpotlightOpening.Shape.valueOf(it) }
         } catch (e: IllegalArgumentException) {
             Log.e("Converters", "Invalid Spotlight.Shape string: $shapeName", e)
             null // Return null if the string doesn't match an enum constant

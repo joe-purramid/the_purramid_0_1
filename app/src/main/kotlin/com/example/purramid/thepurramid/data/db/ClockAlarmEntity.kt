@@ -11,7 +11,7 @@ import java.util.UUID
 data class ClockAlarmEntity(
     @PrimaryKey(autoGenerate = true)
     val alarmId: Long = 0,
-    val clockId: Int, // Associated clock instance
+    val instanceId: Int, // Associated clock instance
     val uuid: UUID = UUID.randomUUID(),
     val time: LocalTime, // Alarm time
     val timeZoneId: String? = null, // Timezone for the alarm (null = system default)

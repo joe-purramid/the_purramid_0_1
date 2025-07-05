@@ -1,12 +1,14 @@
 // PurramidDatabase.kt
 package com.example.purramid.thepurramid.data.db 
 
-import
-android.content.Context
+import android.content.Context
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import java.util.UUID
 
 
 /**
@@ -30,7 +32,7 @@ import androidx.room.TypeConverters
         TimerStateEntity::class,
         TrafficLightStateEntity::class
     ],
-    version = 14, // Added nested timer and sound fields to timer_state
+    version = 15, // Added nested timer and sound fields to timer_state
     exportSchema = false // Set to true if you want to export the schema to a file for version control (recommended for production apps)
 )
 @TypeConverters(Converters::class) // Register the TypeConverters class
@@ -68,8 +70,15 @@ abstract class PurramidDatabase : RoomDatabase() {
             }
         }
 
-        // Future migrations would be added here:
-        // private val MIGRATION_14_15 = object : Migration(12, 13) { ... }
+        private val MIGRATION_14_15 = object : Migration(14, 15) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Rename clockId to instanceId
+                database.execSQL("ALTER TABLE clock_state RENAME COLUMN clockId TO instanceId")
+                database.execSQL("ALTER TABLE clock_alarms RENAME COLUMN clockId TO instanceId")
+            }
+        }
+
+        // Future migrations would be added here
 
         fun getDatabase(context: Context): PurramidDatabase {
             return INSTANCE ?: synchronized(this) {
@@ -79,8 +88,9 @@ abstract class PurramidDatabase : RoomDatabase() {
                     "purramid_database"
                 )
                     .addMigrations(
-                        MIGRATION_13_14
-                        // Add future migrations here: MIGRATION_14_15, etc.
+                        MIGRATION_13_14,
+                        MIGRATION_14_15
+                        // Add future migrations here
                     )
                     .fallbackToDestructiveMigrationOnDowngrade() // Only destroy on downgrade
                     .build()

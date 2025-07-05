@@ -14,9 +14,8 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintBottom_toTopOf="@+id/infoLayout">
 
-        <fragment
-            android:id="@+id/arFragment"
-            android:name="com.google.ar.sceneform.ux.ArFragment"
+        <io.github.sceneview.SceneView
+            android:id="@+id/sceneView"
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
 

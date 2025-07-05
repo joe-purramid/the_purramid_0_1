@@ -47,7 +47,7 @@ class ClockAlarmActivity : AppCompatActivity() {
     private lateinit var saveButton: Button
     private lateinit var cancelButton: Button
     
-    private var clockId: Int = -1
+    private var instanceId: Int = -1
     private var editingAlarmId: Long = -1
     
     companion object {
@@ -59,11 +59,11 @@ class ClockAlarmActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_clock_alarm)
-        
-        clockId = intent.getIntExtra(EXTRA_CLOCK_ID, -1)
+
+        instanceId = intent.getIntExtra(EXTRA_CLOCK_ID, -1)
         editingAlarmId = intent.getLongExtra(EXTRA_ALARM_ID, -1)
         
-        if (clockId == -1) {
+        if (instanceId == -1) {
             Snackbar.make(findViewById(android.R.id.content), "Invalid clock ID", Snackbar.LENGTH_SHORT).show()
             finish()
             return
@@ -122,7 +122,7 @@ class ClockAlarmActivity : AppCompatActivity() {
             try {
                 val alarm = ClockAlarmEntity(
                     alarmId = if (editingAlarmId != -1L) editingAlarmId else 0,
-                    clockId = clockId,
+                    instanceId = instanceId,
                     time = time,
                     label = label,
                     soundEnabled = soundEnabled,
@@ -153,7 +153,7 @@ class ClockAlarmActivity : AppCompatActivity() {
         // Create intent for our custom alarm receiver
         val intent = Intent(this, AlarmReceiver::class.java).apply {
             putExtra("alarm_id", alarm.alarmId)
-            putExtra("clock_id", alarm.clockId)
+            putExtra("clock_id", alarm.instanceId)
             putExtra("label", alarm.label)
             putExtra("sound_enabled", alarm.soundEnabled)
             putExtra("vibration_enabled", alarm.vibrationEnabled)
@@ -224,7 +224,7 @@ class ClockAlarmActivity : AppCompatActivity() {
     private fun loadExistingAlarms() {
         lifecycleScope.launch {
             try {
-                val alarms = alarmDao.getAlarmsForClock(clockId).first()
+                val alarms = alarmDao.getAlarmsForClock(instanceId).first()
                 // Update UI to show existing alarms
                 updateAlarmList(alarms)
             } catch (e: Exception) {
@@ -237,7 +237,7 @@ class ClockAlarmActivity : AppCompatActivity() {
     private fun updateAlarmList(alarms: List<ClockAlarmEntity>) {
         // Update the alarm list UI if you have one
         // This would show existing alarms for the clock
-        Log.d(TAG, "Found ${alarms.size} existing alarms for clock $clockId")
+        Log.d(TAG, "Found ${alarms.size} existing alarms for clock $instanceId")
     }
     
     // Cancel alarm functionality
@@ -267,23 +267,23 @@ class ClockAlarmActivity : AppCompatActivity() {
 class AlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val alarmId = intent.getLongExtra("alarm_id", -1)
-        val clockId = intent.getIntExtra("clock_id", -1)
+        val instanceId = intent.getIntExtra("clock_id", -1)
         val label = intent.getStringExtra("label") ?: ""
         val soundEnabled = intent.getBooleanExtra("sound_enabled", true)
         val vibrationEnabled = intent.getBooleanExtra("vibration_enabled", true)
         
-        Log.d("AlarmReceiver", "Alarm triggered: $alarmId for clock $clockId")
+        Log.d("AlarmReceiver", "Alarm triggered: $alarmId for clock $instanceId")
         
         // Show alarm notification/activity
-        showAlarmNotification(context, alarmId, clockId, label, soundEnabled, vibrationEnabled)
+        showAlarmNotification(context, alarmId, instanceId, label, soundEnabled, vibrationEnabled)
     }
     
-    private fun showAlarmNotification(context: Context, alarmId: Long, clockId: Int, label: String, soundEnabled: Boolean, vibrationEnabled: Boolean) {
+    private fun showAlarmNotification(context: Context, alarmId: Long, instanceId: Int, label: String, soundEnabled: Boolean, vibrationEnabled: Boolean) {
         // Create full-screen alarm activity
         val alarmIntent = Intent(context, AlarmRingingActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK
             putExtra("alarm_id", alarmId)
-            putExtra("clock_id", clockId)
+            putExtra("clock_id", instanceId)
             putExtra("label", label)
             putExtra("sound_enabled", soundEnabled)
             putExtra("vibration_enabled", vibrationEnabled)
@@ -304,7 +304,7 @@ class AlarmRingingActivity : AppCompatActivity() {
         setContentView(R.layout.activity_alarm_ringing)
         
         val alarmId = intent.getLongExtra("alarm_id", -1)
-        val clockId = intent.getIntExtra("clock_id", -1)
+        val instanceId = intent.getIntExtra("clock_id", -1)
         val label = intent.getStringExtra("label") ?: ""
         val soundEnabled = intent.getBooleanExtra("sound_enabled", true)
         val vibrationEnabled = intent.getBooleanExtra("vibration_enabled", true)

@@ -37,14 +37,14 @@ class ClockView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
     // --- Listener for Interactions ---
     interface ClockInteractionListener {
         /** Called when the user finishes dragging a hand, providing the calculated time. */
-        fun onTimeManuallySet(clockId: Int, newTime: LocalTime)
+        fun onTimeManuallySet(instanceId: Int, newTime: LocalTime)
         /** Called when the user starts (isDragging=true) or stops (isDragging=false) dragging a hand. */
-        fun onDragStateChanged(clockId: Int, isDragging: Boolean)
+        fun onDragStateChanged(instanceId: Int, isDragging: Boolean)
     }
     var interactionListener: ClockInteractionListener? = null
 
     // --- Configuration State (Configurable via setters) ---
-    private var clockId: Int = -1
+    private var instanceId: Int = -1
     private var isAnalog: Boolean = false
         private set // Private setter
     private var clockColor: Int = Color.WHITE
@@ -93,7 +93,7 @@ class ClockView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
         setPaintColors()
 
         // Set touch listener (logic remains similar, but relies on external state)
-        setOnTouchListener(handTouchListener)
+        setOnTouchListener(HandTouchListener())
     }
 
     // --- Public Method for Updating Display ---
@@ -112,8 +112,8 @@ class ClockView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
 
     // --- Public Configuration Methods ---
 
-    fun setClockId(id: Int) {
-        this.clockId = id
+    fun setInstanceId(id: Int) {
+        this.instanceId = id
     }
 
     fun setClockMode(isAnalogMode: Boolean) {
@@ -229,7 +229,6 @@ class ClockView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
     }
 
     // --- Drawing Logic (Using displayedTime) ---
-
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         if (!isAnalog) {
@@ -247,7 +246,6 @@ class ClockView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
             Log.e("ClockView", "Error formatting time: $displayedTime", e)
             "--:--" // Fallback display
         }
-
 
         // Adjust text size based on available width (simple example)
         val availableWidth = width - paddingLeft - paddingRight
@@ -303,7 +301,6 @@ class ClockView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
     }
 
     // --- Analog SVG Handlers ---
-
     private fun updateAnalogViewVisibility() {
         val visibility = if (isAnalog) View.VISIBLE else View.GONE
         clockFaceImageView?.visibility = visibility
@@ -385,50 +382,57 @@ class ClockView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
     }
 
     // --- Touch Handling Logic (Remains similar, but no internal pause/play) ---
-    private val handTouchListener = OnTouchListener { v, event ->
-        // Only handle touch if in analog mode with SVGs available and listener set
-        if (!isAnalog || hourHandImageView == null || minuteHandImageView == null || interactionListener == null || clockId == -1) {
-            return@OnTouchListener false
+    private inner class HandTouchListener : OnTouchListener {
+
+        private var lastTouchAngle: Float = 0f
+        private var currentlyMovingHand: Hand? = null
+
+        override fun onTouch(v: View?, event: MotionEvent?): Boolean {
+        // Early returns for null safety
+        if (event == null || !isAnalog || hourHandImageView == null ||
+            minuteHandImageView == null || interactionListener == null || instanceId == -1) {
+            return false
         }
 
         val centerX = width / 2f
         val centerY = height / 2f
         val x = event.x
         val y = event.y
-        val radius = min(centerX, centerY) * 0.8f // Approximate interactive radius
+        val radius = min(centerX, centerY) * 0.8f
 
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
                 val touchAngle = calculateAngle(centerX, centerY, x, y)
                 val dist = distance(centerX, centerY, x, y)
 
-                // Get current visual angles
+                // Get current visual angles safely
                 val hourAngle = hourHandImageView?.rotation ?: 0f
                 val minuteAngle = minuteHandImageView?.rotation ?: 0f
                 val secondAngle = secondHandImageView?.rotation ?: 0f
-                val angleThreshold = 15f // Touch tolerance
+                val angleThreshold = 15f
 
-                currentlyMovingHand = null // Reset
+                currentlyMovingHand = null
 
-                // Determine which hand is touched (check proximity to visual angle)
-                // Check second hand first if displayed
+                // Determine which hand is touched
                 if (displaySeconds && secondHandImageView?.isVisible == true &&
-                    abs(angleDifference(touchAngle, secondAngle)) < angleThreshold && dist > radius * 0.4f) { // Outer range for thin second hand
+                    abs(angleDifference(touchAngle, secondAngle)) < angleThreshold &&
+                    dist > radius * 0.4f) {
                     currentlyMovingHand = Hand.SECOND
-                } else if (abs(angleDifference(touchAngle, minuteAngle)) < angleThreshold && dist > radius * 0.3f) { // Mid range for minute hand
+                } else if (abs(angleDifference(touchAngle, minuteAngle)) < angleThreshold &&
+                    dist > radius * 0.3f) {
                     currentlyMovingHand = Hand.MINUTE
-                } else if (abs(angleDifference(touchAngle, hourAngle)) < angleThreshold && dist > radius * 0.2f) { // Inner range for hour hand
+                } else if (abs(angleDifference(touchAngle, hourAngle)) < angleThreshold &&
+                    dist > radius * 0.2f) {
                     currentlyMovingHand = Hand.HOUR
                 }
 
                 if (currentlyMovingHand != null) {
-                    Log.d("ClockView", "Hand drag started: $currentlyMovingHand on clock $clockId")
+                    Log.d("ClockView", "Hand drag started: $currentlyMovingHand on clock $instanceId")
                     lastTouchAngle = touchAngle
-                    // Notify listener that drag started (ViewModel will handle pausing)
-                    interactionListener?.onDragStateChanged(clockId, true)
-                    return@OnTouchListener true // Consume event: started dragging a hand
+                    interactionListener?.onDragStateChanged(instanceId, true)
+                    return true
                 } else {
-                    return@OnTouchListener false // Did not touch a hand, allow window drag
+                    return false
                 }
             }
             MotionEvent.ACTION_MOVE -> {
@@ -438,31 +442,34 @@ class ClockView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
 
                     // Apply visual rotation directly to the hand being dragged
                     when (currentlyMovingHand) {
-                        Hand.HOUR -> hourHandImageView?.rotation = (hourHandImageView?.rotation ?: 0f) + deltaAngle
-                        Hand.MINUTE -> minuteHandImageView?.rotation = (minuteHandImageView?.rotation ?: 0f) + deltaAngle
-                        Hand.SECOND -> secondHandImageView?.rotation = (secondHandImageView?.rotation ?: 0f) + deltaAngle
+                        Hand.HOUR -> hourHandImageView?.rotation =
+                            ((hourHandImageView?.rotation ?: 0f) + deltaAngle) % 360
+                        Hand.MINUTE -> minuteHandImageView?.rotation =
+                            ((minuteHandImageView?.rotation ?: 0f) + deltaAngle) % 360
+                        Hand.SECOND -> secondHandImageView?.rotation =
+                            ((secondHandImageView?.rotation ?: 0f) + deltaAngle) % 360
+                        null -> {} // No hand selected
                     }
                     lastTouchAngle = currentTouchAngle
-                    return@OnTouchListener true // Consume event: dragging hand
+                    return true
                 }
+                return false
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 if (currentlyMovingHand != null) {
-                    Log.d("ClockView", "Hand drag ended: $currentlyMovingHand on clock $clockId")
-                    // Calculate the final time based on the final visual angles
+                    Log.d("ClockView", "Hand drag ended: $currentlyMovingHand on clock $instanceId")
                     val finalTime = calculateTimeFromAngles()
-                    // Notify the listener about the manually set time
-                    interactionListener?.onTimeManuallySet(clockId, finalTime)
-                    // Notify listener that drag ended (ViewModel might handle resuming)
-                    interactionListener?.onDragStateChanged(clockId, false)
-                    currentlyMovingHand = null // Reset dragging state
-                    return@OnTouchListener true // Consume event: finished hand drag
+                    interactionListener?.onTimeManuallySet(instanceId, finalTime)
+                    interactionListener?.onDragStateChanged(instanceId, false)
+                    currentlyMovingHand = null
+                    return true
                 }
+                return false
             }
+            else -> false
         }
-        // If no conditions met or not consumed above
-        return@OnTouchListener false
     }
+}
 
     /**
      * Calculates the LocalTime based on the current rotation angles of the hand ImageViews.

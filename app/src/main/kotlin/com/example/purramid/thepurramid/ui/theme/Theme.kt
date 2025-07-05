@@ -1,4 +1,4 @@
-package com.example.thepurramid0_1.ui.theme
+package com.example.purramid.thepurramid.ui.theme
 
 import android.app.Activity
 import android.os.Build

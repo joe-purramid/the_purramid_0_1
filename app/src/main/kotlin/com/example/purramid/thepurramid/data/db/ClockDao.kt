@@ -12,7 +12,7 @@ interface ClockDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOrUpdate(state: ClockStateEntity)
 
-    @Query("SELECT * FROM clock_state WHERE clockId = :instanceId")
+    @Query("SELECT * FROM clock_state WHERE instanceId = :instanceId")
     suspend fun getByInstanceId(instanceId: Int): ClockStateEntity?
 
     @Query("SELECT * FROM clock_state")
@@ -21,7 +21,7 @@ interface ClockDao {
     @Query("SELECT COUNT(*) FROM clock_state")
     suspend fun getActiveInstanceCount(): Int
 
-    @Query("DELETE FROM clock_state WHERE clockId = :instanceId")
+    @Query("DELETE FROM clock_state WHERE instanceId = :instanceId")
     suspend fun deleteByInstanceId(instanceId: Int)
 
     @Query("DELETE FROM clock_state")

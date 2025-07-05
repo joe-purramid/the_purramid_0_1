@@ -11,4 +11,7 @@
     <color name="intent_border">#D0D0D0</color>
 	<color name="free_form_background">#FFE0E0E0</color> 
 	<color name="default_display_area_background">#FFCCCCCC</color>
+
+    <color name="alarm_background">#FF5252</color>
+    <color name="dismiss_button_color">#4CAF50</color>
 </resources>
