@@ -382,6 +382,7 @@
 
     <!-- `` PROBABILITIES APP `` -->
     <string name="probabilities_description">Dice and Coin Flip randomization tools</string>
+    <string name="max_probabilities_reached_snackbar">Maximum of <xliff:g id="count">%1$d</xliff:g> Probability Pool windows reached.</string>
 
     <!-- `` DICE MODE `` -->
     <string name="randomizer_mode_dice">Dice Mode</string>
@@ -554,7 +555,7 @@
     <string name="no_lists_available">No lists available to select.</string>
     <string name="error_list_creator_load_failed">Error loading list details</string>
     <string name="error_list_creator_image_size_check_failed">Could not determine image size</string>
-    <string name="error_list_creator_image_too_large">Image file is too large (Max 3MB)</string>
+    <string name="error_list_creator_image_too_large">Image file is too large (Max 1MB)</string> <!-- TODO: Address MB abbreviation in other languages -->
     <string name="error_list_creator_save_title_failed">Kitties are causing problems. The List title failed to save.</string>
     <string name="error_list_creator_add_item_failed">Kitties are being naughty. Failed to add new item.</string>
     <string name="error_list_creator_update_item_failed">A naughty kitty has gotten underfoot. Failed to update item.</string>

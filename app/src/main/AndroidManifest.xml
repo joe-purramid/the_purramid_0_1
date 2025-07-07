@@ -77,26 +77,38 @@
         <!-- PROBABILITIES -->
         <activity
             android:name=".probabilities.ProbabilitiesHostActivity"
-            android:exported="false"
-            android:label="@string/probabilities_title"
+            android:theme="@style/Theme.Purramid.FloatingWindow"
+            android:launchMode="standard"
+            android:taskAffinity=""
+            android:documentLaunchMode="always"
             android:resizeableActivity="true"
-            android:windowLayoutInDisplayCutoutMode="shortEdges">
+            android:supportsPictureInPicture="false"
+            android:excludeFromRecents="true"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|uiMode">
             <layout
                 android:defaultWidth="840dp"
                 android:defaultHeight="700dp"
-                android:gravity="center" />
+                android:gravity="center"
+                android:minWidth="300dp"
+                android:minHeight="250dp" />
         </activity>
 
         <!-- RANDOMIZERS -->
         <activity
             android:name=".randomizers.RandomizersHostActivity"
-            android:exported="false"
-            android:label="@string/randomizers_title"
+            android:theme="@style/Theme.Purramid.FloatingWindow"
+            android:launchMode="standard"
+            android:taskAffinity=""
+            android:documentLaunchMode="always"
             android:resizeableActivity="true"
-            android:windowLayoutInDisplayCutoutMode="shortEdges" >
+            android:supportsPictureInPicture="false"
+            android:excludeFromRecents="true"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|uiMode">
             <layout android:defaultWidth="840dp"
                 android:defaultHeight="700dp"
-                android:gravity="center" />
+                android:gravity="center"
+                android:minHeight="2500dp"
+                android:minWidth="300dp" />
         </activity>
 
         <activity

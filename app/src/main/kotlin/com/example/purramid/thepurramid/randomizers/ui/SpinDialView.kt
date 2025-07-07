@@ -1,6 +1,9 @@
 // SpinDialView.kt
 package com.example.purramid.thepurramid.randomizers.ui
 
+import android.R.attr.centerX
+import android.R.attr.centerY
+import android.R.attr.rotation
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -19,6 +22,7 @@ import androidx.core.graphics.toColorInt
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
+import com.example.purramid.thepurramid.R
 import com.example.purramid.thepurramid.data.db.SpinItemEntity
 import com.example.purramid.thepurramid.data.db.SpinSettingsEntity
 import com.example.purramid.thepurramid.randomizers.SpinItemType
@@ -167,8 +171,11 @@ class SpinDialView @JvmOverloads constructor(
         }
 
         canvas.save() //Save canvas state before rotation
-			canvas.withRotation(itemRotation, itemCenterX, itemCenterY) { // Rotate canvas for easier drawing
-            
+        canvas.save()
+        canvas.rotate(itemRotation, itemCenterX, itemCenterY)
+        // draw content
+        canvas.restore()
+
 			when (item.itemType) {
        		SpinItemType.TEXT -> {
 	          textPaint.textSize = calculateTextSize(item.content, sweepAngleDegrees)

@@ -8,19 +8,25 @@ import android.widget.*
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import com.example.purramid.thepurramid.R
+import com.example.purramid.thepurramid.instance.InstanceManager
 import com.example.purramid.thepurramid.probabilities.ProbabilitiesMode
 import com.example.purramid.thepurramid.probabilities.CoinProbabilityMode
 import com.example.purramid.thepurramid.probabilities.DiceSumResultType
 import com.example.purramid.thepurramid.probabilities.GraphDistributionType
 import com.example.purramid.thepurramid.probabilities.GraphPlotType
+import com.example.purramid.thepurramid.probabilities.ProbabilitiesHostActivity
 import com.example.purramid.thepurramid.probabilities.viewmodel.*
 import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.snackbar.Snackbar
+import javax.inject.Inject
 
 class ProbabilitiesSettingsFragment : Fragment() {
     private val settingsViewModel: ProbabilitiesSettingsViewModel by activityViewModels()
     private val diceViewModel: DiceViewModel by activityViewModels()
     private val coinFlipViewModel: CoinFlipViewModel by activityViewModels()
+
+    @Inject lateinit var instanceManager: InstanceManager
+    private val settingsViewModel: ProbabilitiesSettingsViewModel by activityViewModels()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -358,5 +364,58 @@ class ProbabilitiesSettingsFragment : Fragment() {
     
     private fun showError(message: String) {
         Snackbar.make(requireView(), message, Snackbar.LENGTH_LONG).show()
+    }
+
+    private fun onAddAnotherClicked() {
+        val currentInstanceId = arguments?.getInt("instanceId") ?: return
+
+        // Check if we can add another window
+        val activeCount = instanceManager.getActiveInstanceCount(InstanceManager.PROBABILITIES)
+        if (activeCount >= 7) {
+            Snackbar.make(
+                binding.root,
+                getString(R.string.max_probabilities_reached_snackbar),
+                Snackbar.LENGTH_LONG
+            ).show()
+            return
+        }
+
+        // Get next instance ID
+        val newInstanceId = instanceManager.getNextInstanceId(InstanceManager.PROBABILITIES)
+        if (newInstanceId == null) {
+            Snackbar.make(
+                binding.root,
+                getString(R.string.error_allocating_instance),
+                Snackbar.LENGTH_LONG
+            ).show()
+            return
+        }
+
+        // Launch new window with cloned settings
+        val currentActivity = requireActivity() as? ProbabilitiesHostActivity
+        val currentBounds = currentActivity?.getCurrentWindowBounds()
+
+        val intent = Intent(requireContext(), ProbabilitiesHostActivity::class.java).apply {
+            putExtra(ProbabilitiesHostActivity.EXTRA_INSTANCE_ID, newInstanceId)
+            putExtra(ProbabilitiesHostActivity.EXTRA_CLONE_FROM, currentInstanceId)
+
+            // Position new window with offset
+            currentBounds?.let {
+                putExtra("WINDOW_X", it.left + 50)
+                putExtra("WINDOW_Y", it.top + 50)
+                putExtra("WINDOW_WIDTH", it.width())
+                putExtra("WINDOW_HEIGHT", it.height())
+            }
+
+            // Flags for independent window
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_MULTIPLE_TASK or
+                    Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT)
+        }
+
+        startActivity(intent)
+
+        // Optionally close settings after launching
+        parentFragmentManager.popBackStack()
     }
 } 
