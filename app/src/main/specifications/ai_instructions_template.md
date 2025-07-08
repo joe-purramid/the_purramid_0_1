@@ -15,6 +15,9 @@ Review the provided code files for the [SPECIFIC APP-INTENT] against:
 5. **Bug Detection**: Find potential crashes, memory leaks, edge cases
 6. **Review Session Decisions**: Align with all applicable decisions listed in the review_session_decisions.txt file.
 
+## Special Consideration
+- **Separate from Dice and Coin flip**: Randomizers used to include Dice and Coin Flip modes. They have been moved into a different app-intent called Probabilities. Ensure no elements of Dice or Coin Flip remain in Randomizers.
+
 ## Output Format
 Provide findings in these categories:
 - **Critical Issues**: Architecture violations, crashes, spec non-compliance
