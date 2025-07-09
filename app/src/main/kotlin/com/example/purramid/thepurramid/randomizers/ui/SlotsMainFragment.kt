@@ -5,6 +5,7 @@ import android.content.Context
 import android.net.Uri // Import Uri
 import android.os.Bundle
 import android.util.Log
+import android.view.accessibility.AccessibilityManager
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -18,6 +19,7 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
+import androidx.navigation.fragment.NavHostFragment
 import com.bumptech.glide.Glide // Import Glide
 import com.example.purramid.thepurramid.R
 import com.example.purramid.thepurramid.data.db.SpinItemEntity

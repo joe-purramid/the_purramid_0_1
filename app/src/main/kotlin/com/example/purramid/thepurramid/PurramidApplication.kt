@@ -3,6 +3,7 @@ package com.example.purramid.thepurramid
 
 import android.app.Application
 import android.content.Context
+import android.util.Log
 import androidx.core.provider.FontRequest
 import androidx.emoji2.text.EmojiCompat
 import androidx.emoji2.text.FontRequestEmojiCompatConfig
@@ -15,6 +16,7 @@ import com.example.purramid.thepurramid.randomizers.SpinItemType // Ensure this 
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -49,8 +51,12 @@ class PurramidApplication : Application() {
         seedDefaultRandomizerLists()
 
         // Initialize preloaded lists
-        applicationScope.launch {
-            randomizerRepository.initializePreloadedLists()
+        GlobalScope.launch(Dispatchers.IO) {
+            try {
+                randomizerRepository.initializePreloadedLists()
+            } catch (e: Exception) {
+                Log.e("PurramidApp", "Failed to initialize preloaded lists", e)
+            }
         }
     }
 

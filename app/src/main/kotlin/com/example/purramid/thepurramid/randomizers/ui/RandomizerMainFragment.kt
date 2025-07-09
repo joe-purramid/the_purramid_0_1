@@ -306,14 +306,11 @@ class RandomizerMainFragment : Fragment() {
 
     private fun startCelebration() {
         if (_binding == null) return
-        val konfettiView = binding.konfettiView
 
         // --- Accessibility Check: Reduced Motion ---
         val am = context?.getSystemService(Context.ACCESSIBILITY_SERVICE) as? AccessibilityManager
-        val reducedMotionEnabled = am?.isTouchExplorationEnabled ?: false // Approximation, or check API level for specific setting
+        val reducedMotionEnabled = am?.isTouchExplorationEnabled ?: false
         if (reducedMotionEnabled) {
-            // Optionally show a static indicator instead of animation
-            // For now, just skip the animation
             return
         }
 
@@ -322,42 +319,25 @@ class RandomizerMainFragment : Fragment() {
             speed = 0f,
             maxSpeed = 30f,
             damping = 0.9f,
-            spread = 360, // Full circle burst
-            colors = listOf(0xFF0000, 0xFFFF00, 0x00FF00, 0x4363D8, 0x7F00FF),
-            // Define emission point (e.g., top center)
+            spread = 360,
+            colors = listOf(0xFFFF0000.toInt(), 0xFFFFFF00.toInt(), 0xFF00FF00.toInt(), 0xFF4363D8.toInt(), 0xFF7F00FF.toInt()),
             position = Position.Relative(0.5, 0.0),
-            // Define emission pattern (e.g., burst 100 particles over 100ms)
             emitter = Emitter(duration = 100, TimeUnit.MILLISECONDS).max(100)
-            // Or a stream: Emitter(duration = 3, TimeUnit.SECONDS).perSecond(50)
-            // Add other configurations: shapes, sizes, fadeOut, timeToLive, etc.
-            // shapes = listOf(Shape.Square, Shape.Circle),
-            // timeToLive = 3000L,
-            // fadeOutEnabled = true,
         )
 
-        konfettiView.start(party) // Start the confetti
+        binding.konfettiView.start(party)
 
-        // Konfetti often stops based on emitter duration / timeToLive
-        // The postDelayed might not be strictly necessary unless you want to ensure
-        // cleanup or stop a continuous emitter after exactly 3s.
-        // Let's keep it for now to hide the view if needed, but Konfetti might handle stopping particles.
-        konfettiView.postDelayed({ // Use konfettiView or any view
-            stopCelebration()
+        // Auto-stop after 3 seconds
+        binding.konfettiView.postDelayed({
+            if (_binding != null) {
+                binding.konfettiView.stopGracefully()
+            }
         }, 3000)
     }
 
     private fun stopCelebration() {
         if (_binding == null) return
-
-        // --- Stop and clear particle systems ---
-        particleSystems.forEach { it.terminate() } // Stop emitting and clear
-        particleSystems.clear()
-        // ---
-
-        // Hide the container
-        binding.fireworksContainer.visibility = View.GONE
-        // Optional: Clear any placeholder background if set
-        binding.fireworksContainer.setBackgroundColor(Color.TRANSPARENT)
+        binding.konfettiView.stopGracefully()
     }
 
     private fun clearAnnounceCelebrate() {

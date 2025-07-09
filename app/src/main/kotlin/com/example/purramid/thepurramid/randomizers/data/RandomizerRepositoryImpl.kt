@@ -105,7 +105,7 @@ class RandomizerRepositoryImpl @Inject constructor(
     override suspend fun getSettingsForInstance(instanceId: Int): SpinSettingsEntity? {
         return withContext(Dispatchers.IO) {
             // Convert Int instanceId to UUID for now - this will be fixed when we update the DAO
-            randomizerDao.getSettingsForInstance(UUID.randomUUID())
+            randomizerDao.getSettingsForInstance(instanceId)
         }
     }
 
@@ -118,7 +118,7 @@ class RandomizerRepositoryImpl @Inject constructor(
     override suspend fun deleteSettingsForInstance(instanceId: Int) {
         withContext(Dispatchers.IO) {
             // Convert Int instanceId to UUID for now
-            randomizerDao.deleteSettingsForInstance(UUID.randomUUID())
+            randomizerDao.deleteSettingsForInstance(instanceId)
         }
     }
 
@@ -132,7 +132,7 @@ class RandomizerRepositoryImpl @Inject constructor(
         withContext(Dispatchers.IO) {
             // Ensure the settings use the default ID
             val defaultSettings = settings.copy(instanceId = 0) // Will need to update this
-            randomizerDao.saveDefaultSettings(defaultSettings)
+            randomizerDao.saveSettings(defaultSettings)
         }
     }
 

@@ -11,6 +11,7 @@ import android.widget.Toast // For TODO placeholders
 import androidx.activity.OnBackPressedCallback // Import for handling back press
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.graphics.ColorUtils
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -21,6 +22,7 @@ import com.example.purramid.thepurramid.data.db.SpinItemEntity
 import com.example.purramid.thepurramid.databinding.FragmentListCreatorBinding // Use Fragment binding
 import com.example.purramid.thepurramid.randomizers.viewmodel.ListCreatorViewModel
 import com.github.dhaval2404.colorpicker.ColorPickerDialog
+import com.github.dhaval2404.colorpicker.MaterialColorPickerDialog
 import com.github.dhaval2404.colorpicker.model.ColorShape
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.vanniktech.emoji.EmojiPopup
@@ -81,6 +83,31 @@ class ListCreatorFragment : Fragment(), ItemEditorAdapter.ItemEditorListener {
         setupListeners()
         observeViewModel()
         setupBackButtonInterceptor()
+    }
+
+    private fun showColorPicker(item: SpinItemEntity) {
+        MaterialColorPickerDialog
+            .Builder(requireContext())
+            .setTitle(getString(R.string.pick_item_color))
+            .setColorShape(ColorShape.CIRCLE)
+            .setDefaultColor(item.backgroundColor ?: Color.LTGRAY)
+            .setColorListener { color, colorHex ->
+                // Check WCAG contrast
+                val meetsContrast = checkWCAGContrast(color)
+                if (!meetsContrast && !userConfirmedOverride) {
+                    showContrastWarning(color)
+                } else {
+                    viewModel.updateItemColor(item.id, color)
+                }
+            }
+            .show()
+    }
+
+    private fun checkWCAGContrast(color: Int): Boolean {
+        // Calculate contrast ratio against black and white
+        val contrastWithBlack = ColorUtils.calculateContrast(Color.BLACK, color)
+        val contrastWithWhite = ColorUtils.calculateContrast(Color.WHITE, color)
+        return contrastWithBlack >= 4.5 || contrastWithWhite >= 4.5
     }
 
     override fun onDestroyView() {
@@ -241,6 +268,7 @@ class ListCreatorFragment : Fragment(), ItemEditorAdapter.ItemEditorListener {
 
     override fun onColorClicked(item: SpinItemEntity, view: View) {
         editingColorForItem = item
+
         ColorPickerDialog
             .Builder(requireContext())
             .setTitle(getString(R.string.pick_item_color))
@@ -248,13 +276,17 @@ class ListCreatorFragment : Fragment(), ItemEditorAdapter.ItemEditorListener {
             .setDefaultColor(item.backgroundColor ?: Color.LTGRAY)
             .setColorListener { color, colorHex ->
                 editingColorForItem?.let { currentItem ->
-                    viewModel.updateItemColor(currentItem.id, color)
+                    // Check WCAG contrast
+                    if (!checkWCAGContrast(color)) {
+                        showContrastWarning(color, currentItem)
+                    } else {
+                        viewModel.updateItemColor(currentItem.id, color)
+                    }
                 }
                 editingColorForItem = null
             }
-            .setNegativeButton(getString(R.string.cancel)) { dialog, _ ->
+            .setNegativeButton(getString(R.string.cancel)) { _, _ ->
                 editingColorForItem = null
-                dialog.dismiss()
             }
             .show()
     }
@@ -272,7 +304,26 @@ class ListCreatorFragment : Fragment(), ItemEditorAdapter.ItemEditorListener {
         }
     }
 
-    override fun     override fun onEmojiClicked(item: SpinItemEntity, anchorView: View) {
+    private fun checkWCAGContrast(color: Int): Boolean {
+        val contrastWithBlack = ColorUtils.calculateContrast(Color.BLACK, color)
+        val contrastWithWhite = ColorUtils.calculateContrast(Color.WHITE, color)
+        return contrastWithBlack >= 4.5 || contrastWithWhite >= 4.5
+    }
+
+    private fun showContrastWarning(color: Int, item: SpinItemEntity) {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Color Contrast Warning")
+            .setMessage("This color may not meet accessibility standards. Would you like to use it anyway?")
+            .setPositiveButton("Use Anyway") { _, _ ->
+                viewModel.updateItemColor(item.id, color)
+            }
+            .setNegativeButton("Choose Different Color") { _, _ ->
+                onColorClicked(item, binding.root)
+            }
+            .show()
+    }
+
+    override fun onEmojiClicked(item: SpinItemEntity, anchorView: View) {
         // Dismiss any existing popup first
         emojiPopup?.dismiss()
         editingEmojiForItem = item // Store the item we're adding emoji to

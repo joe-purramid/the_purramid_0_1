@@ -39,12 +39,13 @@ The Purramid is an application built in Kotlin for Android 13 or more current ve
 	(3.2) the app-intent list folds closed in a smooth animation.
 	(3.3) the corresponding app-intent activity or service launches.
 		(3.3.1) ClockOverlayService.kt
-		(3.3.2) RandomizerHostsActivity.kt
-		(3.3.3) ScreenMaskService.kt
-		(3.3.4) SpotlightService.kt
-		(3.3.5) TimersService.kt
-		(3.3.6) TrafficLightService.kt
-		(3.3.7) AboutActivity.kt
+		(3.3.2) ProbabilitiesHostActivity.kt
+		(3.3.3) RandomizersHostActivity.kt
+		(3.3.4) ScreenMaskService.kt
+		(3.3.5) SpotlightService.kt
+		(3.3.6) TimersService.kt
+		(3.3.7) TrafficLightService.kt
+		(3.3.8) AboutActivity.kt
 		
 (4) If the user touches anywhere on the screen that is not an app-intent icon, the app-intent list folds closed with a smooth animation. 
 

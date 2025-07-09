@@ -6,12 +6,11 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.purramid.thepurramid.data.db.RandomizerDao
-import com.example.purramid.thepurramid.data.db.RandomizerInstanceEntity
 import com.example.purramid.thepurramid.data.db.SpinItemEntity
 import com.example.purramid.thepurramid.data.db.SpinListEntity
 import com.example.purramid.thepurramid.data.db.SpinSettingsEntity
 import com.example.purramid.thepurramid.randomizers.SlotsColumnState
+import com.example.purramid.thepurramid.randomizers.data.RandomizerRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.Deferred
@@ -29,7 +28,7 @@ data class SlotsResult(val results: List<Pair<SlotsColumnState, SpinItemEntity?>
 
 @HiltViewModel
 class SlotsViewModel @Inject constructor(
-    private val randomizerDao: RandomizerDao,
+    private val randomizerRepository: RandomizerRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -50,7 +49,7 @@ class SlotsViewModel @Inject constructor(
     val columnStates: LiveData<List<SlotsColumnState>> = _columnStates
 
     // LiveData for available lists (used for selection dropdowns)
-    val allSpinLists: LiveData<List<SpinListEntity>> = randomizerDao.getAllSpinLists()
+    val allSpinLists: LiveData<List<SpinListEntity>> = randomizerRepository.getAllSpinLists()
 
     // Signals when spinning animation is active for a column (Map<columnIndex, Boolean>)
     private val _isSpinning = MutableLiveData<Map<Int, Boolean>>(emptyMap())
@@ -96,7 +95,7 @@ class SlotsViewModel @Inject constructor(
 
     private fun loadInitialState(id: Int) {
         viewModelScope.launch(Dispatchers.IO) {
-            val loadedSettings = randomizerDao.getSettingsForInstance(id)
+            val loadedSettings = randomizerRepository.getSettingsForInstance(id)
             withContext(Dispatchers.Main) {
                 if (loadedSettings != null) {
                     _settings.value = loadedSettings
@@ -156,7 +155,7 @@ class SlotsViewModel @Inject constructor(
 
         val job = viewModelScope.async(Dispatchers.IO) { // Use async to return Deferred
             try {
-                val items = randomizerDao.getItemsForList(listId)
+                val items = randomizerRepository.getItemsForList(listId)
                 listItemsCache[listId] = items
                 items // Return items
             } catch (e: Exception) {
@@ -221,8 +220,8 @@ class SlotsViewModel @Inject constructor(
             Log.d(TAG, "handleManualClose called for instanceId: $instanceId")
             viewModelScope.launch(Dispatchers.IO) {
                 try {
-                    randomizerDao.deleteSettingsForInstance(instanceId)
-                    randomizerDao.deleteInstance(RandomizerInstanceEntity(instanceId = instanceId))
+                    randomizerRepository.deleteSettingsForInstance(instanceId)
+                    randomizerRepository.deleteInstance(instanceId)
                     Log.d(TAG, "Successfully deleted settings and instance record for $instanceId from DB.")
                 } catch (e: Exception) {
                     Log.e(TAG, "Error deleting data for instance $instanceId from DB", e)
@@ -337,8 +336,7 @@ class SlotsViewModel @Inject constructor(
         // Persist to database
         viewModelScope.launch(Dispatchers.IO) {
             // The TypeConverter for List<SlotsColumnState> in Converters.kt will handle the conversion
-            randomizerDao.saveSettings(settingsToSave)
+            randomizerRepository.saveSettings(settingsToSave)
         }
     }
-}
 }

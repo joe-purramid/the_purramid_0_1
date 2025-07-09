@@ -22,7 +22,10 @@ import com.example.purramid.thepurramid.data.db.RandomizerDao
 import com.example.purramid.thepurramid.data.db.RandomizerInstanceEntity
 import com.example.purramid.thepurramid.data.db.SpinSettingsEntity
 import com.example.purramid.thepurramid.databinding.FragmentRandomizerSettingsBinding
+import com.example.purramid.thepurramid.instance.InstanceManager
 import com.example.purramid.thepurramid.randomizers.RandomizerMode
+import com.example.purramid.thepurramid.randomizers.RandomizersHostActivity
+import com.example.purramid.thepurramid.randomizers.data.RandomizerRepository
 import com.example.purramid.thepurramid.randomizers.viewmodel.RandomizerSettingsViewModel
 import com.example.purramid.thepurramid.randomizers.viewmodel.RandomizerViewModel
 import com.github.dhaval2404.colorpicker.MaterialColorPickerDialog
@@ -46,7 +49,7 @@ class RandomizerSettingsFragment : Fragment() {
     private var initialBackgroundColor: Int = Color.BLACK
 
     @Inject
-    lateinit var randomizerDao: RandomizerDao
+    lateinit var randomizerRepository: RandomizerRepository
 
     companion object {
         private const val TAG = "RandomizerSettingsFrag"
@@ -318,7 +321,7 @@ class RandomizerSettingsFragment : Fragment() {
     private fun updateAddAnotherButtonState() {
         viewLifecycleOwner.lifecycleScope.launch {
             val activeInstances = withContext(Dispatchers.IO) {
-                randomizerDao.getActiveInstancesCount()
+                randomizerRepository.getActiveInstanceCount() // Changed
             }
             binding.buttonAddAnotherRandomizer.isEnabled = activeInstances < MAX_RANDOMIZER_INSTANCES
             Log.d(TAG, "Active instances: $activeInstances, Add Another button enabled: ${binding.buttonAddAnotherRandomizer.isEnabled}")
@@ -332,37 +335,38 @@ class RandomizerSettingsFragment : Fragment() {
         }
 
         viewLifecycleOwner.lifecycleScope.launch {
-            val activeInstances = withContext(Dispatchers.IO) { randomizerDao.getActiveInstancesCount() }
+            val activeInstances = withContext(Dispatchers.IO) {
+                randomizerRepository.getActiveInstanceCount() // Changed
+            }
             if (activeInstances >= MAX_RANDOMIZER_INSTANCES) {
-                Snackbar.make(binding.root, "Maximum number of randomizer windows reached.", Snackbar.LENGTH_LONG).show()
+                Snackbar.make(binding.root, getString(R.string.max_randomizers_general_reached_snackbar, MAX_RANDOMIZER_INSTANCES), Snackbar.LENGTH_LONG).show()
                 return@launch
             }
 
             settingsViewModel.saveSettings(currentSettingsEntity)
 
             // Get next available instanceId from the instance manager
-            val newInstanceId = withContext(Dispatchers.IO) {
-                // This should use the InstanceManager to get the next available instanceId
-                // For now, we'll use a simple approach - find the next available ID
-                val existingIds = randomizerDao.getAllStates().map { it.instanceId }.toSet()
-                (1..MAX_RANDOMIZER_INSTANCES).find { it !in existingIds } ?: 1
+            val newInstanceId = instanceManager.getNextInstanceId(InstanceManager.RANDOMIZERS) ?: run {
+                Snackbar.make(binding.root, getString(R.string.max_randomizers_general_reached_snackbar, MAX_RANDOMIZER_INSTANCES), Snackbar.LENGTH_LONG).show()
+                return@launch
             }
 
             val newSettings = currentSettingsEntity.copy(
                 instanceId = newInstanceId,
                 slotsColumnStates = emptyList(),
-                currentSpinListId = null
+                currentListId = null
             )
             val newInstanceEntity = RandomizerInstanceEntity(instanceId = newInstanceId)
 
             try {
                 withContext(Dispatchers.IO) {
-                    randomizerDao.saveSettings(newSettings)
-                    randomizerDao.saveInstance(newInstanceEntity)
+                    randomizerRepository.saveSettings(newSettings) // Changed
+                    randomizerRepository.saveInstance(newInstanceEntity) // Changed
                 }
                 Log.d(TAG, "Cloned settings from ${currentSettingsEntity.instanceId} and created new instance: $newInstanceId")
 
-                (activity as? MainActivity)?.launchNewRandomizerInstanceWithBounds(newInstanceId)
+                // Launch new instance
+                (activity as? RandomizersHostActivity)?.launchNewRandomizerInstance(currentSettingsEntity.instanceId)
 
                 updateAddAnotherButtonState()
 

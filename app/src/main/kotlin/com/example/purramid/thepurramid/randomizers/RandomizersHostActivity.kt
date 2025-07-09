@@ -1,23 +1,25 @@
-// RandomizersHostActivity.kt
 package com.example.purramid.thepurramid.randomizers
 
 import android.content.Intent
+import android.graphics.Point
 import android.os.Bundle
 import android.util.Log
-import androidx.activity.viewModels // Import activityViewModels
-import androidx.appcompat.app.AppCompatActivity
+import android.view.MotionEvent
+import androidx.activity.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import com.example.purramid.thepurramid.R
-import com.example.purramid.thepurramid.data.db.DEFAULT_SETTINGS_ID
-import com.example.purramid.thepurramid.data.db.RandomizerDao
 import com.example.purramid.thepurramid.data.db.RandomizerInstanceEntity
 import com.example.purramid.thepurramid.data.db.SpinSettingsEntity
 import com.example.purramid.thepurramid.databinding.ActivityRandomizersHostBinding
 import com.example.purramid.thepurramid.instance.InstanceManager
-import com.example.purramid.thepurramid.randomizers.viewmodel.RandomizerSettingsViewModel // Changed import
-import com.example.purramid.thepurramid.randomizers.viewmodel.RandomizerViewModel // Keep for EXTRA_INSTANCE_ID
+import com.example.purramid.thepurramid.randomizers.data.RandomizerRepository
+import com.example.purramid.thepurramid.randomizers.viewmodel.RandomizerSettingsViewModel
+import com.example.purramid.thepurramid.randomizers.viewmodel.RandomizerViewModel
+import com.example.purramid.thepurramid.ui.FloatingWindowActivity
+import com.example.purramid.thepurramid.util.dpToPx
+import com.example.purramid.thepurramid.util.isPointInView
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -26,21 +28,22 @@ import java.util.UUID
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class RandomizersHostActivity : AppCompatActivity() {
+class RandomizersHostActivity : FloatingWindowActivity() {
 
     private lateinit var binding: ActivityRandomizersHostBinding
-    private var currentInstanceId: Int = 0
     private lateinit var navController: NavController
 
     // Use RandomizerSettingsViewModel to observe mode changes
     private val settingsViewModel: RandomizerSettingsViewModel by viewModels()
 
-    @Inject lateinit var randomizerDao: RandomizerDao
-    @Inject lateinit var instanceManager: InstanceManager
+    @Inject lateinit var randomizerRepository: RandomizerRepository
 
     companion object {
         private const val TAG = "RandomizersHostActivity"
-        const val EXTRA_INSTANCE_ID = RandomizerViewModel.KEY_INSTANCE_ID // Consistent key
+        const val EXTRA_INSTANCE_ID = RandomizerViewModel.KEY_INSTANCE_ID
+        const val EXTRA_CLONE_FROM = "clone_from_instance"
+        private const val MIN_WIDTH_DP = 300
+        private const val MIN_HEIGHT_DP = 250
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,7 +55,8 @@ class RandomizersHostActivity : AppCompatActivity() {
             supportFragmentManager.findFragmentById(R.id.nav_host_fragment_randomizers) as NavHostFragment
         navController = navHostFragment.navController
 
-        val instanceId = intent.getIntExtra(EXTRA_INSTANCE_ID, 0)
+        // Get instance ID from intent or allocate new
+        instanceId = intent.getIntExtra(EXTRA_INSTANCE_ID, 0)
         if (instanceId == 0) {
             // Allocate a new instanceId
             val newInstanceId = instanceManager.getNextInstanceId(InstanceManager.RANDOMIZERS)
@@ -61,20 +65,28 @@ class RandomizersHostActivity : AppCompatActivity() {
                 finish()
                 return
             }
-            currentInstanceId = newInstanceId
+            instanceId = newInstanceId
             intent.putExtra(EXTRA_INSTANCE_ID, newInstanceId)
             setIntent(intent)
 
             lifecycleScope.launch {
                 createDefaultEntriesForNewInstance(newInstanceId)
-                instanceManager.registerExistingInstance(InstanceManager.RANDOMIZERS, newInstanceId)
                 Log.d(TAG, "HostActivity created AND DEFAULT DB ENTRIES ADDED for new instanceId: $newInstanceId")
                 observeSettingsAndNavigate(newInstanceId)
             }
         } else {
-            currentInstanceId = instanceId
+            // Existing instance
             instanceManager.registerExistingInstance(InstanceManager.RANDOMIZERS, instanceId)
             Log.d(TAG, "HostActivity created and registered with existing instanceId: $instanceId")
+
+            // Handle clone settings if requested
+            val cloneFromInstance = intent.getIntExtra(EXTRA_CLONE_FROM, -1)
+            if (cloneFromInstance != -1) {
+                lifecycleScope.launch {
+                    cloneSettingsFrom(cloneFromInstance, instanceId)
+                }
+            }
+
             observeSettingsAndNavigate(instanceId)
         }
     }
@@ -82,7 +94,7 @@ class RandomizersHostActivity : AppCompatActivity() {
     private suspend fun createDefaultEntriesForNewInstance(newInstanceId: Int) {
         withContext(Dispatchers.IO) {
             try {
-                val globalDefaultSettings = randomizerDao.getDefaultSettings()
+                val globalDefaultSettings = randomizerRepository.getDefaultSettings()
                 val initialSettingsForInstance = globalDefaultSettings?.copy(
                     instanceId = newInstanceId,
                     mode = RandomizerMode.SPIN
@@ -90,11 +102,36 @@ class RandomizersHostActivity : AppCompatActivity() {
                     instanceId = newInstanceId,
                     mode = RandomizerMode.SPIN
                 )
-                randomizerDao.saveSettings(initialSettingsForInstance)
-                randomizerDao.saveInstance(RandomizerInstanceEntity(instanceId = newInstanceId))
+                randomizerRepository.saveSettings(initialSettingsForInstance)
+
+                val instanceEntity = RandomizerInstanceEntity(
+                    instanceId = newInstanceId,
+                    windowX = window.attributes.x,
+                    windowY = window.attributes.y,
+                    windowWidth = window.attributes.width,
+                    windowHeight = window.attributes.height,
+                    isActive = true
+                )
+                randomizerRepository.saveInstance(instanceEntity)
+
                 Log.d(TAG, "Default DB entries (settings and instance) created for new instance $newInstanceId")
             } catch (e: Exception) {
                 Log.e(TAG, "Error creating default DB entries for new instance $newInstanceId", e)
+            }
+        }
+    }
+
+    private suspend fun cloneSettingsFrom(sourceInstanceId: Int, targetInstanceId: Int) {
+        withContext(Dispatchers.IO) {
+            try {
+                val sourceSettings = randomizerRepository.getSettingsForInstance(sourceInstanceId)
+                if (sourceSettings != null) {
+                    val clonedSettings = sourceSettings.copy(instanceId = targetInstanceId)
+                    randomizerRepository.saveSettings(clonedSettings)
+                    Log.d(TAG, "Cloned settings from instance $sourceInstanceId to $targetInstanceId")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error cloning settings", e)
             }
         }
     }
@@ -108,7 +145,8 @@ class RandomizersHostActivity : AppCompatActivity() {
                 Log.w(TAG, "Settings are null or instanceId mismatch for $instanceId. Cannot determine mode.")
                 // Fallback or error display if settings can't be loaded
                 if (navController.currentDestination?.id != R.id.randomizerMainFragment) {
-                    // Optionally navigate to main fragment
+                    // Optionally navigate to main fragment as default
+                    navigateToModeFragment(RandomizerMode.SPIN, instanceId)
                 }
             }
         }
@@ -138,22 +176,93 @@ class RandomizersHostActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        instanceManager.releaseInstanceId(InstanceManager.RANDOMIZERS, currentInstanceId)
-        Log.d(TAG, "HostActivity destroyed and released instanceId: $currentInstanceId")
+        instanceManager.releaseInstanceId(InstanceManager.RANDOMIZERS, instanceId)
+        Log.d(TAG, "HostActivity destroyed and released instanceId: $instanceId")
     }
 
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
         Log.d(TAG, "onNewIntent called for HostActivity. New Intent Action: ${intent?.action}")
         val newInstanceId = intent?.getIntExtra(EXTRA_INSTANCE_ID, 0) ?: 0
-        if (newInstanceId != 0 && newInstanceId != currentInstanceId) {
-            instanceManager.releaseInstanceId(InstanceManager.RANDOMIZERS, currentInstanceId)
-            currentInstanceId = newInstanceId
+        if (newInstanceId != 0 && newInstanceId != instanceId) {
+            instanceManager.releaseInstanceId(InstanceManager.RANDOMIZERS, instanceId)
+            instanceId = newInstanceId
             instanceManager.registerExistingInstance(InstanceManager.RANDOMIZERS, newInstanceId)
             setIntent(intent)
             observeSettingsAndNavigate(newInstanceId)
         } else if (newInstanceId != 0) {
             observeSettingsAndNavigate(newInstanceId)
         }
+    }
+
+    // FloatingWindowActivity abstract method implementations
+    override fun getMinWidth() = dpToPx(MIN_WIDTH_DP)
+    override fun getMinHeight() = dpToPx(MIN_HEIGHT_DP)
+    override fun getWindowPrefsName() = "randomizers_window_prefs"
+
+    override fun isTouchOnInteractiveElement(event: MotionEvent): Boolean {
+        val touchPoint = Point(event.x.toInt(), event.y.toInt())
+
+        // Check if touch is on navigation host fragment (which contains all UI)
+        val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment_randomizers)
+        navHostFragment?.view?.let { view ->
+            if (isPointInView(view, touchPoint)) {
+                // Touch is within the nav host, now check if it's on specific non-interactive areas
+                // For randomizers, we want to allow dragging from empty areas but not from buttons/controls
+                // This will be handled by the fragments themselves
+                return true
+            }
+        }
+
+        return false
+    }
+
+    override fun isInResizeZone(point: Point): Boolean {
+        val decorView = window.decorView
+        val edgeThreshold = dpToPx(20)
+        return point.x > decorView.width - edgeThreshold ||
+                point.y > decorView.height - edgeThreshold
+    }
+
+    override fun isInDragZone(point: Point): Boolean {
+        // For randomizers, allow dragging from any non-button area
+        // The fragments will handle their own touch events for buttons
+        return !isTouchOnInteractiveElement(
+            MotionEvent.obtain(0, 0, 0, point.x.toFloat(), point.y.toFloat(), 0)
+        )
+    }
+
+    override fun saveWindowState() {
+        if (instanceId <= 0) return
+
+        val bounds = getCurrentWindowBounds()
+
+        // Save to database via repository
+        lifecycleScope.launch {
+            try {
+                val currentInstance = randomizerRepository.getInstanceById(instanceId)
+                if (currentInstance != null) {
+                    val updatedInstance = currentInstance.copy(
+                        windowX = bounds.left,
+                        windowY = bounds.top,
+                        windowWidth = bounds.width(),
+                        windowHeight = bounds.height()
+                    )
+                    randomizerRepository.saveInstance(updatedInstance)
+                    Log.d(TAG, "Window state saved for instance $instanceId")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error saving window state", e)
+            }
+        }
+    }
+
+    // Method to handle Add Another functionality from settings
+    fun launchNewRandomizerInstance(cloneFromInstanceId: Int) {
+        val newIntent = Intent(this, RandomizersHostActivity::class.java).apply {
+            putExtra(EXTRA_CLONE_FROM, cloneFromInstanceId)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
+        }
+        startActivity(newIntent)
     }
 }

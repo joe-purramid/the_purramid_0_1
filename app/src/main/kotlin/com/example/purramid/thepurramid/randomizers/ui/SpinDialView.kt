@@ -4,6 +4,7 @@ package com.example.purramid.thepurramid.randomizers.ui
 import android.R.attr.centerX
 import android.R.attr.centerY
 import android.R.attr.rotation
+import android.graphics.*
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -12,13 +13,14 @@ import android.graphics.Rect
 import android.graphics.drawable.Drawable
 import android.graphics.Paint
 import android.graphics.RectF
+import android.net.Uri
 import android.util.AttributeSet
+import android.util.Log
 import android.view.View
 import android.view.animation.Animation
 import android.view.animation.LinearInterpolator
 import android.view.animation.RotateAnimation
 import androidx.core.graphics.ColorUtils
-import androidx.core.graphics.toColorInt
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
@@ -39,6 +41,15 @@ class SpinDialView @JvmOverloads constructor(
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
+
+    private var items: List<SpinItemEntity> = emptyList()
+    private var dialRadius = 0f
+    private var centerX = 0f
+    private var centerY = 0f
+    private var rotation = 0f
+
+    var settings: SpinSettingsEntity? = null
+    var currentList: SpinList? = null
 
     private val backgroundPaint = Paint().apply {
         color = Color.WHITE // Default background color
@@ -68,19 +79,10 @@ class SpinDialView @JvmOverloads constructor(
         strokeCap = Paint.Cap.ROUND   // Optional: for smoother line ends
     }
 
-    private var lists: List<SpinList> = emptyList()
-    var currentList: SpinList? = null
-    var settings: SpinSettings = SpinSettings()
-
-		// Cache for loaded images <ItemID, Bitmap?> (null if loading/failed) 
+		// Cache for loaded images <ItemID, Bitmap?> (null if loading/failed)
 		private val imageBitmapCache = ConcurrentHashMap<UUID, Bitmap?>() 
 		// Rect for text bounds measurement 
 		private val textBounds = Rect()
-
-    private var dialRadius = 0f
-    private var centerX = 0f
-    private var centerY = 0f
-    private var rotation = 0f // Current rotation of the dial
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
@@ -219,7 +221,6 @@ class SpinDialView @JvmOverloads constructor(
 					canvas.drawText(emojiString, itemCenterX, emojiY, textPaint)
                 }
             }
-        }
         canvas.restore() // Restore canvas to pre-rotation state
     }
 
@@ -384,37 +385,37 @@ class SpinDialView @JvmOverloads constructor(
     private fun loadItemImage(item: SpinItemEntity) {
         if (item.itemType != SpinItemType.IMAGE || item.content.isBlank()) return
 
-        val imageUri = try { Uri.parse(item.content) } catch (e: Exception) { null }
-        if (imageUri == null) {
+        val imageUri = try {
+            Uri.parse(item.content)
+        } catch (e: Exception) {
             Log.e("SpinDialView", "Invalid URI string for image item: ${item.content}")
-            imageBitmapCache[item.id] = null // Mark as failed
+            null
+        }
+
+        if (imageUri == null) {
+            imageBitmapCache[item.id] = null
             if (isAttachedToWindow) invalidate()
             return
         }
 
-        // Set null initially to indicate loading
         imageBitmapCache[item.id] = null
-        // Request redraw in case previous image was shown
         if (isAttachedToWindow) invalidate()
 
         Log.d("SpinDialView", "Loading image for item ${item.id} from $imageUri")
         Glide.with(context)
             .asBitmap()
-            .load(imageUri) // Use parsed Uri
+            .load(imageUri)
             .into(object : CustomTarget<Bitmap>() {
                 override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
                     Log.d("SpinDialView", "Image loaded for item ${item.id}")
-                    // Cache the loaded bitmap
                     imageBitmapCache[item.id] = resource
-                    // Request redraw ONLY if the view is still attached
                     if (isAttachedToWindow) {
                         invalidate()
                     }
                 }
+
                 override fun onLoadCleared(placeholder: Drawable?) {
                     Log.d("SpinDialView", "Image load cleared for item ${item.id}")
-                    // Handle placeholder state if needed
-                    imageBitmapCache.remove(item.id) // Remove if cleared, maybe? Or keep null? Let's keep null.
                     imageBitmapCache[item.id] = null
                     if (isAttachedToWindow) invalidate()
                 }
@@ -422,14 +423,12 @@ class SpinDialView @JvmOverloads constructor(
                 override fun onLoadFailed(errorDrawable: Drawable?) {
                     super.onLoadFailed(errorDrawable)
                     Log.e("SpinDialView", "Image load FAILED for item ${item.id}")
-                    // Mark as failed (null bitmap)
-                    imageBitmapCache[item.id] = null // Indicate load failed
+                    imageBitmapCache[item.id] = null
                     if (isAttachedToWindow) invalidate()
                 }
             })
     }
 
-    // --- Updated setData ---
     fun setData(newItems: List<SpinItemEntity>, newSettings: SpinSettingsEntity?) {
         val oldItems = this.items
         this.items = newItems
@@ -456,5 +455,22 @@ class SpinDialView @JvmOverloads constructor(
         val availableWidth = (dialRadius * 0.8 * sin(Math.toRadians(sweepAngle / 2.0))).toFloat() * 2
         val baseTextSize = dialRadius / 5 // A reasonable starting point based on dial size
         return baseTextSize
+    }
+
+    // Clean up resources
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        cancelSpinAnimation()
+        // Clean up bitmap cache
+        imageBitmapCache.values.forEach { bitmap ->
+            if (bitmap != null && !bitmap.isRecycled) {
+                bitmap.recycle()
+            }
+        }
+        imageBitmapCache.clear()
+    }
+
+    private fun cancelSpinAnimation() {
+        clearAnimation()
     }
 }

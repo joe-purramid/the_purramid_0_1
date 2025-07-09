@@ -28,7 +28,6 @@ data class SpinSettingsEntity(
     var isConfettiEnabled: Boolean = false,
     var spinDurationMillis: Long = 2000L,
     var spinMaxItems: Int = 20,
-    val currentSpinListId: Long? = null, // Assuming Long is the type of your List ID
 
     // --- Slots Specific ---
     val slotsColumnCount: Int = 3, // Default to 3 columns
@@ -37,5 +36,4 @@ data class SpinSettingsEntity(
     var isSlotsAnnounceEnabled: Boolean = false,
     var slotsSpinDurationMillis: Long = 1000L,
     var slotsReelStopVariationMillis: Long = 200L,
-    val currentSlotsListId: Long? = null
 )

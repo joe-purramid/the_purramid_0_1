@@ -486,6 +486,7 @@
     <string name="pick_item_color">Pick Item Color</string>
     <string name="setting_announce">Announce Result</string>
     <string name="add_another_randomizer">Add another Randomizer</string>
+    <string name="sequence_current_background">@drawable/sequence_current_background</string>
 
     <!-- `` SPIN MODE `` -->
     <string name="randomizer_mode_spin">Spin Mode</string>

@@ -75,12 +75,12 @@ interface RandomizerDao {
     suspend fun saveSettings(settings: SpinSettingsEntity)
 
     /** Gets the default settings entity using the predefined ID. */
-    @Query("SELECT * FROM spin_settings WHERE instanceId = :defaultId")
-    suspend fun getDefaultSettings(defaultId: UUID = DEFAULT_SETTINGS_ID): SpinSettingsEntity?
+    @Query("SELECT * FROM spin_settings WHERE instanceId = 0")
+    suspend fun getDefaultSettings(): SpinSettingsEntity?
 
     /** Gets the settings for a specific randomizer instance. Returns null if not found. */
     @Query("SELECT * FROM spin_settings WHERE instanceId = :instanceId")
-    suspend fun getSettingsForInstance(instanceId: UUID): SpinSettingsEntity?
+    suspend fun getSettingsForInstance(instanceId: Int): SpinSettingsEntity?
 
     /** Saves settings as the default settings, replacing any existing default. */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -88,7 +88,7 @@ interface RandomizerDao {
 
     /** Deletes the settings associated with a specific instance ID. */
     @Query("DELETE FROM spin_settings WHERE instanceId = :instanceId")
-    suspend fun deleteSettingsForInstance(instanceId: UUID)
+    suspend fun deleteSettingsForInstance(instanceId: Int)
 
 
     // --- Instance Operations ---
