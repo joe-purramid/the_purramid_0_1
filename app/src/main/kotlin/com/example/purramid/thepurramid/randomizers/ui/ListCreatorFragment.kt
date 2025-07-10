@@ -94,8 +94,8 @@ class ListCreatorFragment : Fragment(), ItemEditorAdapter.ItemEditorListener {
             .setColorListener { color, colorHex ->
                 // Check WCAG contrast
                 val meetsContrast = checkWCAGContrast(color)
-                if (!meetsContrast && !userConfirmedOverride) {
-                    showContrastWarning(color)
+                if (!checkWCAGContrast(color)) {
+                    showContrastWarning(color, item)
                 } else {
                     viewModel.updateItemColor(item.id, color)
                 }
@@ -267,28 +267,7 @@ class ListCreatorFragment : Fragment(), ItemEditorAdapter.ItemEditorListener {
     }
 
     override fun onColorClicked(item: SpinItemEntity, view: View) {
-        editingColorForItem = item
-
-        ColorPickerDialog
-            .Builder(requireContext())
-            .setTitle(getString(R.string.pick_item_color))
-            .setColorShape(ColorShape.SQAURE)
-            .setDefaultColor(item.backgroundColor ?: Color.LTGRAY)
-            .setColorListener { color, colorHex ->
-                editingColorForItem?.let { currentItem ->
-                    // Check WCAG contrast
-                    if (!checkWCAGContrast(color)) {
-                        showContrastWarning(color, currentItem)
-                    } else {
-                        viewModel.updateItemColor(currentItem.id, color)
-                    }
-                }
-                editingColorForItem = null
-            }
-            .setNegativeButton(getString(R.string.cancel)) { _, _ ->
-                editingColorForItem = null
-            }
-            .show()
+        showColorPicker(item)
     }
 
     override fun onImageClicked(item: SpinItemEntity) {
@@ -302,12 +281,6 @@ class ListCreatorFragment : Fragment(), ItemEditorAdapter.ItemEditorListener {
             Toast.makeText(context, "Cannot open image picker", Toast.LENGTH_SHORT).show() // TODO: String resource
             editingImageForItem = null // Clear if launch fails
         }
-    }
-
-    private fun checkWCAGContrast(color: Int): Boolean {
-        val contrastWithBlack = ColorUtils.calculateContrast(Color.BLACK, color)
-        val contrastWithWhite = ColorUtils.calculateContrast(Color.WHITE, color)
-        return contrastWithBlack >= 4.5 || contrastWithWhite >= 4.5
     }
 
     private fun showContrastWarning(color: Int, item: SpinItemEntity) {

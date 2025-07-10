@@ -11,31 +11,103 @@
         android:id="@+id/slotsTitleTextView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Slots"
+        android:text="@string/slots"
         android:textSize="24sp"
         android:textStyle="bold"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <!-- Spin button -->
     <Button
         android:id="@+id/slotsSpinButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Spin"
+        android:layout_marginBottom="16dp"
+        android:text="@string/spin"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
 
+    <!-- Close button -->
+    <ImageView
+        android:id="@+id/slotsCloseButton"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="8dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:clickable="true"
+        android:contentDescription="@string/close"
+        android:focusable="true"
+        android:src="@drawable/ic_close"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- Settings button -->
+    <ImageView
+        android:id="@+id/slotsSettingsButton"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="8dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:clickable="true"
+        android:contentDescription="@string/settings"
+        android:focusable="true"
+        android:src="@drawable/ic_settings"
+        app:layout_constraintEnd_toStartOf="@id/slotsCloseButton"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- Slots columns container -->
     <LinearLayout
         android:id="@+id/slotsColumnsContainer"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:orientation="horizontal"
         android:gravity="center"
+        android:padding="16dp"
         app:layout_constraintBottom_toTopOf="@id/slotsSpinButton"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/slotsTitleTextView" />
+        app:layout_constraintTop_toBottomOf="@id/slotsTitleTextView">
+
+        <!-- Slot columns - 5 total, visibility controlled by code -->
+        <com.example.purramid.thepurramid.randomizers.ui.SlotColumnView
+            android:id="@+id/slotColumnView1"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp" />
+
+        <com.example.purramid.thepurramid.randomizers.ui.SlotColumnView
+            android:id="@+id/slotColumnView2"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp" />
+
+        <com.example.purramid.thepurramid.randomizers.ui.SlotColumnView
+            android:id="@+id/slotColumnView3"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp" />
+
+        <com.example.purramid.thepurramid.randomizers.ui.SlotColumnView
+            android:id="@+id/slotColumnView4"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:visibility="gone" />
+
+        <com.example.purramid.thepurramid.randomizers.ui.SlotColumnView
+            android:id="@+id/slotColumnView5"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:visibility="gone" />
+    </LinearLayout>
 
     <TextView
         android:id="@+id/slotsResultTextView"
@@ -49,6 +121,7 @@
         app:layout_constraintStart_toStartOf="parent"
         tools:visibility="visible" />
 
+    <!-- Announcement overlay -->
     <FrameLayout
         android:id="@+id/slotsAnnouncementOverlay"
         android:layout_width="0dp"

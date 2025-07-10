@@ -5,7 +5,7 @@ import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
-import android.graphics.Color // Import color for placeholder
+import android.content.Context
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -15,10 +15,11 @@ import android.view.ViewGroup
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.ArrayAdapter
 import android.widget.TextView
-import android.widget.Toast
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.navigation.NavOptions
+import androidx.navigation.fragment.NavHostFragment
 import com.bumptech.glide.Glide // Import Glide
 import com.example.purramid.thepurramid.R
 import com.example.purramid.thepurramid.data.db.SpinItemEntity
@@ -107,13 +108,23 @@ class RandomizerMainFragment : Fragment() {
                     val bundle = Bundle().apply {
                         putInt(RandomizerViewModel.KEY_INSTANCE_ID, id)
                     }
+
+                    val navOptions = NavOptions.Builder()
+                        .setEnterAnim(R.anim.settings_explosion_enter)
+                        .setExitAnim(R.anim.settings_explosion_exit)
+                        .setPopEnterAnim(R.anim.settings_explosion_enter)
+                        .setPopExitAnim(R.anim.settings_explosion_exit)
+                        .build()
+
+
                     // Navigate using NavController from NavHostFragment
                     val navController = (requireActivity().supportFragmentManager
                         .findFragmentById(R.id.nav_host_fragment_randomizers) as NavHostFragment)
                         .navController
                     navController.navigate(
                         R.id.action_randomizerMainFragment_to_randomizerSettingsFragment,
-                        bundle
+                        bundle,
+                        navOptions
                     )
                 } catch (e: Exception) {
                     Log.e("RandomizerMainFragment", "Navigation to Settings failed", e)

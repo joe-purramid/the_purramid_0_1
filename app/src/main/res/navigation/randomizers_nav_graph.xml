@@ -32,11 +32,23 @@
             app:nullable="true" />
     </fragment>
 
+    <activity
+        android:id="@+id/listEditorActivity"
+        android:name="com.example.purramid.thepurramid.randomizers.ui.ListEditorActivity">
+        <argument
+            android:name="instanceId"
+            app:argType="integer" />
+        <argument
+            android:name="listId"
+            app:argType="long"
+            android:defaultValue="-1L" />
+    </activity>
+
     <fragment
         android:id="@+id/slotsMainFragment"
         android:name="com.example.purramid.thepurramid.randomizers.ui.SlotsMainFragment">
         <action
-            android:id="@+id/action_slotsMainFragment_to_randomizerSettingsFragment"
+            android:id="@+id/actionSlotsMainFragmentToSettingsFragment"
             app:destination="@id/randomizerSettingsFragment" />
     </fragment>
 </navigation>

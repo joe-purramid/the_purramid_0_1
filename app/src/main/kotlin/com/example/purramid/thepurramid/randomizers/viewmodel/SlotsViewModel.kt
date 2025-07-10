@@ -237,9 +237,9 @@ class SlotsViewModel @Inject constructor(
         super.onCleared()
         // Cancel any ongoing fetch jobs
         fetchJobs.values.forEach { it.cancel() }
-        // Clear observers added with observeForever if necessary
-        // _columnStates.removeObserver(...)
-        // allSpinLists.removeObserver(...)
+        fetchJobs.clear()
+        // Clear cache
+        listItemsCache.clear()
     }
 
     private suspend fun determineResults(columnsSpun: List<SlotsColumnState>) {

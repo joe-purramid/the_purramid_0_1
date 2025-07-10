@@ -9,7 +9,6 @@ import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
-import com.example.purramid.thepurramid.data.db.RandomizerInstanceEntity
 import com.example.purramid.thepurramid.data.db.SpinItemEntity
 import com.example.purramid.thepurramid.data.db.SpinListEntity
 import com.example.purramid.thepurramid.data.db.SpinSettingsEntity
@@ -117,21 +116,29 @@ class RandomizerViewModel @Inject constructor(
 
     private fun loadDataForInstance(idToLoad: Int) {
         viewModelScope.launch {
-            val settings = randomizerRepository.getSettingsForInstance(idToLoad)
-            _spinDialData.value = _spinDialData.value?.copy(settings = settings)
-            if (_currentListId.value == null && settings?.currentListId != null) {
-                savedStateHandle["currentListId"] = settings.currentListId.toString()
-            } else {
-                _currentListId.value?.let { loadItemsForList(it) }
+            try {
+                val settings = randomizerRepository.getSettingsForInstance(idToLoad)
+                _spinDialData.value = _spinDialData.value?.copy(settings = settings)
+                if (_currentListId.value == null && settings?.currentListId != null) {
+                    savedStateHandle["currentListId"] = settings.currentListId.toString()
+                } else {
+                    _currentListId.value?.let { loadItemsForList(it) }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error loading data for instance $idToLoad", e)
             }
         }
     }
 
     private fun loadItemsForList(listId: UUID) {
         viewModelScope.launch {
-            val items = randomizerRepository.getItemsForList(listId)
-            val randomizedItems = items.shuffled()
-            _spinDialData.value = _spinDialData.value?.copy(items = randomizedItems)
+            try {
+                val items = randomizerRepository.getItemsForList(listId)
+                val randomizedItems = items.shuffled()
+                _spinDialData.value = _spinDialData.value?.copy(items = randomizedItems)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error loading items for list $listId", e)
+            }
         }
     }
 
@@ -177,7 +184,7 @@ class RandomizerViewModel @Inject constructor(
     }
 
     fun toggleListDropdown() {
-        _isDropdownVisible.value = !(_isDropdownVisible.value ?: false)
+        _isDropdownVisible.value = _isDropdownVisible.value != true
     }
 
     fun selectList(listId: UUID) {
@@ -185,11 +192,15 @@ class RandomizerViewModel @Inject constructor(
         savedStateHandle["currentListId"] = listId.toString()
         _isDropdownVisible.value = false
         viewModelScope.launch {
-            val settings = randomizerRepository.getSettingsForInstance(instanceId)
-            settings?.let {
-                val updatedSettings = it.copy(currentListId = listId)
-                randomizerRepository.saveSettings(updatedSettings)
-                _spinDialData.value = _spinDialData.value?.copy(settings = updatedSettings)
+            try {
+                val settings = randomizerRepository.getSettingsForInstance(instanceId)
+                settings?.let {
+                    val updatedSettings = it.copy(currentListId = listId)
+                    randomizerRepository.saveSettings(updatedSettings)
+                    _spinDialData.value = _spinDialData.value?.copy(settings = updatedSettings)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error selecting list $listId", e)
             }
         }
     }
@@ -197,19 +208,23 @@ class RandomizerViewModel @Inject constructor(
     // --- Sequence Logic Functions ---
     private fun generateSequence(firstItem: SpinItemEntity) {
         viewModelScope.launch {
-            val listId = firstItem.listId
-            val allItemsForList = randomizerRepository.getItemsForList(listId)
-            if (allItemsForList.size <= 1) {
-                _sequenceList.value = allItemsForList
+            try {
+                val listId = firstItem.listId
+                val allItemsForList = randomizerRepository.getItemsForList(listId)
+                if (allItemsForList.size <= 1) {
+                    _sequenceList.value = allItemsForList
+                    _sequenceIndex.value = 0
+                    return@launch
+                }
+                val remainingItems = allItemsForList.toMutableList()
+                remainingItems.remove(firstItem)
+                remainingItems.shuffle()
+                val finalSequence = listOf(firstItem) + remainingItems
+                _sequenceList.value = finalSequence
                 _sequenceIndex.value = 0
-                return@launch
+            } catch (e: Exception) {
+                Log.e(TAG, "Error generating sequence", e)
             }
-            val remainingItems = allItemsForList.toMutableList()
-            remainingItems.remove(firstItem)
-            remainingItems.shuffle()
-            val finalSequence = listOf(firstItem) + remainingItems
-            _sequenceList.value = finalSequence
-            _sequenceIndex.value = 0
         }
     }
 
@@ -257,92 +272,5 @@ class RandomizerViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         // No database deletion here
-    }
-
-    // --- Settings Update ---
-    fun updateSettings(newSettings: SpinSettingsEntity) {
-        viewModelScope.launch {
-            // Corrected logic for applying sequence check
-            var settingsToModify = newSettings.copy(instanceId = instanceId)
-            if (settingsToModify.isSequenceEnabled) {
-                settingsToModify = settingsToModify.copy(
-                    isAnnounceEnabled = false,
-                    isCelebrateEnabled = false
-                )
-            }
-            else if (!settingsToModify.isAnnounceEnabled) {
-                settingsToModify = settingsToModify.copy(
-                    isCelebrateEnabled = false
-                )
-            }
-
-            // Save the potentially modified settings
-            randomizerRepository.saveSettings(settingsToModify)
-            // Update LiveData
-            if (_spinDialData.value == null) { _spinDialData.value = SpinDialViewData() }
-            _spinDialData.value = _spinDialData.value?.copy(settings = settingsToModify)
-        }
-    }
-
-    // --- List and Item Modification Functions ---
-    fun addList(title: String) {
-        viewModelScope.launch {
-            val newList = SpinListEntity(id = UUID.randomUUID(), title = title)
-            randomizerRepository.insertSpinList(newList)
-        }
-    }
-
-    fun deleteList(list: SpinListEntity) {
-        viewModelScope.launch {
-            val wasCurrentList = (_currentListId.value == list.id) // Check before deleting
-            randomizerRepository.deleteSpinList(list) // Repository handles deleting items first
-            if (wasCurrentList) {
-                // Update SavedStateHandle
-                savedStateHandle["currentListId"] = null
-                // Also clear settings in DB
-                randomizerRepository.getSettingsForInstance(instanceId)?.let {
-                    randomizerRepository.saveSettings(it.copy(currentListId = null))
-                    // No need to update _spinDialData here, _currentListId observer handles it
-                }
-            }
-        }
-    }
-
-    fun updateListTitle(listId: UUID, newTitle: String) {
-        viewModelScope.launch {
-            randomizerRepository.getSpinListById(listId)?.let { list ->
-                randomizerRepository.updateSpinList(list.copy(title = newTitle))
-            }
-        }
-    }
-
-    fun addItemToList(listId: UUID, item: SpinItemEntity) {
-        // Assign new ID on add
-        val itemToAdd = item.copy(listId = listId, id = UUID.randomUUID())
-        viewModelScope.launch {
-            randomizerRepository.insertSpinItem(itemToAdd)
-            if (_currentListId.value == listId) {
-                // Reload items which triggers observer update
-                loadItemsForList(listId)
-            }
-        }
-    }
-
-    fun updateItem(item: SpinItemEntity) {
-        viewModelScope.launch {
-            randomizerRepository.updateSpinItem(item)
-            if (_currentListId.value == item.listId) {
-                loadItemsForList(item.listId)
-            }
-        }
-    }
-
-    fun deleteItem(item: SpinItemEntity) {
-        viewModelScope.launch {
-            randomizerRepository.deleteSpinItem(item)
-            if (_currentListId.value == item.listId) {
-                loadItemsForList(item.listId)
-            }
-        }
     }
 }

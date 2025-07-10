@@ -50,7 +50,7 @@
   - Randomziers spin animation has a cap of 3 seconds for lists that have 30 items or more.
     - Previously it was 1 second for every ten items, rounded up, which meant max time could be five seconds.
   
-  - **Reviewed**: 6 July 2025
+- **Reviewed**: 6 July 2025
 - **Architecture**: Window Management for Activities
 - **Key Decisions**:
   - Randomziers and Probabilities use ui.WindowState.kt to manage windows
@@ -58,6 +58,12 @@
 	- Add window dragging functionality to activities
 	- Services continue to use WindowManager.LayoutParams
   
+- **Reviewed**: 10 July 2025
+- **Architecture**: SharedPreferences for Probabilities
+- **Key Decisions**:
+  - Probabilities will not use Room database
+    - Preferences stored are simple key-value pairs that don't require queries or complex relationships.
+	- SharedPreferences with JSON serialization is appropriate
 
   
   

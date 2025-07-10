@@ -426,7 +426,7 @@ Randomizers is a collection of two different randomization tools: Spin and Slots
 			(10.3.6.3) If Sequence is toggled on:
 				(10.3.6.3.1) when Announce is on, Announce is toggled off
 				(10.3.6.3.2) when Celebrate is on, Celebrate is toggled off
-				(10.3.6.3.3) a spin animation lasts for 1 second for every 10 items on a list (rounded up to the next second)
+				(10.3.6.3.3) a spin animation lasts for 1 second for every 10 items on a list (rounded up to the next second), up to a maximum of 3 seconds
 				(10.3.6.3.4) a randomized order is created for each item on the list 
 				(10.3.6.3.5) the first result in the sequence is displayed where one result is displayed for Announce.
 					(10.3.6.3.5.1) This is referred to as "the displayed result"

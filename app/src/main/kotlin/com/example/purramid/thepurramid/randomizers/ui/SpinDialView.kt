@@ -461,6 +461,10 @@ class SpinDialView @JvmOverloads constructor(
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
         cancelSpinAnimation()
+
+        // Clear all Glide requests for this view
+        Glide.with(context).clear(this)
+
         // Clean up bitmap cache
         imageBitmapCache.values.forEach { bitmap ->
             if (bitmap != null && !bitmap.isRecycled) {

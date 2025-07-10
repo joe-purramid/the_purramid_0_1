@@ -4,13 +4,17 @@ package com.example.purramid.thepurramid.randomizers.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.purramid.thepurramid.data.db.PurramidDatabase
 import com.example.purramid.thepurramid.data.db.RandomizerDao
 import com.example.purramid.thepurramid.data.db.SpinListEntity
+import com.example.purramid.thepurramid.randomizers.data.RandomizerRepository
+import jakarta.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.UUID
 
 // Data class to hold list entity and its item count
 data class ListWithCount(
@@ -18,13 +22,12 @@ data class ListWithCount(
     val itemCount: Int
 )
 
-class ListEditorViewModel(application: Application) : AndroidViewModel(application) {
-
-    private val randomizerDao: RandomizerDao =
-        PurramidDatabase.getDatabase(application).randomizerDao()
+class ListEditorViewModel @Inject constructor(
+    private val randomizerRepository: RandomizerRepository
+) : ViewModel() {
 
     // Observe all lists from the DAO
-    val allSpinLists: LiveData<List<SpinListEntity>> = randomizerDao.getAllSpinLists()
+    val allSpinLists: LiveData<List<SpinListEntity>> = randomizerRepository.getAllSpinLists()
 
     // We might need item counts - calculating this reactively can be complex.
     // For simplicity now, we can fetch counts when needed or pass them around.
@@ -34,19 +37,16 @@ class ListEditorViewModel(application: Application) : AndroidViewModel(applicati
     fun deleteList(list: SpinListEntity) {
         viewModelScope.launch(Dispatchers.IO) { // Use IO dispatcher for DB operations
             // Delete items first
-            randomizerDao.deleteItemsForList(list.id)
+            randomizerRepository.deleteItemsForList(list.id)
             // Then delete the list itself
-            randomizerDao.deleteSpinList(list)
-            // TODO: Handle clearing currentListId if the deleted list was selected
-            // This ideally happens in the RandomizerViewModel observing allSpinLists
-            // or needs communication back if this VM doesn't know the current selection.
+            randomizerRepository.deleteSpinList(list)
         }
     }
 
     // Example function to get count (can be inefficient if called often)
     suspend fun getItemCountForList(listId: UUID): Int {
        return withContext(Dispatchers.IO) {
-           randomizerDao.getItemsForList(listId).size
+           randomizerRepository.getItemsForList(listId).size
        }
     }
 }

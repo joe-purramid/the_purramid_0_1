@@ -18,6 +18,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.navigation.NavOptions
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.NavHostFragment
 import com.bumptech.glide.Glide // Import Glide
@@ -61,10 +62,6 @@ class SlotsMainFragment : Fragment() {
 
         // Find the container within the overlay (assuming it has an ID or is the first child)
         announcementResultsContainer = binding.slotsAnnouncementOverlay.findViewById(R.id.slotsAnnouncementResultsLayout)
-        // If you didn't add an ID, you might need to get the child LinearLayout differently:
-        // if (binding.slotsAnnouncementOverlay.childCount > 0 && binding.slotsAnnouncementOverlay.getChildAt(0) is LinearLayout) {
-        //     announcementResultsContainer = binding.slotsAnnouncementOverlay.getChildAt(0) as LinearLayout
-        // }
 
         initializeColumnViews()
         setupUIListeners()
@@ -97,9 +94,16 @@ class SlotsMainFragment : Fragment() {
         binding.slotsSettingsButton.setOnClickListener {
             viewModel.instanceId?.let { id ->
                 try {
-                     // *** Assumes navigation action exists in randomizers_nav_graph.xml ***
-                     val action = SlotsMainFragmentDirections.actionSlotsMainFragmentToSettingsFragment(id.toString())
-                     findNavController().navigate(action)
+                    val navOptions = NavOptions.Builder()
+                        .setEnterAnim(R.anim.settings_explosion_enter)
+                        .setExitAnim(R.anim.settings_explosion_exit)
+                        .setPopEnterAnim(R.anim.settings_explosion_enter)
+                        .setPopExitAnim(R.anim.settings_explosion_exit)
+                        .build()
+
+                    // *** Assumes navigation action exists in randomizers_nav_graph.xml ***
+                     val action = SlotsMainFragmentDirections.actionSlotsMainFragmentToSettingsFragment(id)
+                     findNavController().navigate(action, navOptions)
                 } catch (e: Exception) {
                      Log.e("SlotsMainFragment", "Navigation to Settings failed. Ensure NavGraph action exists.", e)
                     Snackbar.make(binding.root, getString(R.string.error_cannot_open_settings), Snackbar.LENGTH_SHORT).show() // Inform user

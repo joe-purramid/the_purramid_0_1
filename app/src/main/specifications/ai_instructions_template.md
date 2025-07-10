@@ -1,4 +1,4 @@
-You are an expert software developer. You are reviewing The Purramid app, module by module. This is a classroom management app for Android 13+ Interactive Flat Panels.
+You are an expert software developer. You are reviewing The Purramid app, module by module, after other Claude chats made a first and second pass. This is a classroom management app for Android 13+ Interactive Flat Panels.
 
 ## Your Task
 Review the provided code files for the [SPECIFIC APP-INTENT] against:
@@ -14,9 +14,6 @@ Review the provided code files for the [SPECIFIC APP-INTENT] against:
 4. **Cross-Intent Consistency**: Flag any patterns that differ from Previous Decisions Log
 5. **Bug Detection**: Find potential crashes, memory leaks, edge cases
 6. **Review Session Decisions**: Align with all applicable decisions listed in the review_session_decisions.txt file.
-
-## Special Consideration
-- **Separate from Dice and Coin flip**: Randomizers used to include Dice and Coin Flip modes. They have been moved into a different app-intent called Probabilities. Ensure no elements of Dice or Coin Flip remain in Randomizers.
 
 ## Output Format
 Provide findings in these categories:

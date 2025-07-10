@@ -532,6 +532,7 @@
     </string-array>
 
     <!-- `` SLOTS MODE `` -->
+    <string name="slots">Slots</string>
     <string name="randomizer_mode_slots">Slots Mode</string>
     <string name="lock_column">Lock Column</string>
     <string name="unlock_column">Unlock Column</string>
@@ -555,19 +556,20 @@
     <string name="error_settings_final_save_failed">A naughty kitty has gotten underfoot. Your settings have applied to your current session, but they have not saved for later use.</string>
     <string name="no_lists_available">No lists available to select.</string>
     <string name="error_list_creator_load_failed">Error loading list details</string>
-    <string name="error_list_creator_image_size_check_failed">Could not determine image size</string>
-    <string name="error_list_creator_image_too_large">Image file is too large (Max 1MB)</string> <!-- TODO: Address MB abbreviation in other languages -->
     <string name="error_list_creator_save_title_failed">Kitties are causing problems. The List title failed to save.</string>
     <string name="error_list_creator_add_item_failed">Kitties are being naughty. Failed to add new item.</string>
     <string name="error_list_creator_update_item_failed">A naughty kitty has gotten underfoot. Failed to update item.</string>
     <string name="error_list_creator_delete_item_failed">A kitty says this toy belongs to them. Failed to delete item.</string>
     <string name="error_list_creator_delete_list_failed">A kitty says this toy belongs to them. Failed to delete list.</string>
+    <string name="error_list_creator_image_size_check_failed">Could not determine image size</string>
+    <string name="error_list_creator_image_too_large">Image file is too large (Max 1MB)</string> <!-- TODO: Address MB abbreviation in other languages -->
     <string name="list_creator_cannot_save_title">Cannot Save List</string> <!-- This is the title of list_creator_min_items_message -->
     <string name="list_creator_min_items_message">Empty Lists cannot be saved. Please add two or more items or cancel this List creation.</string>
     <string name="list_creator_button_cancel_creation">Cancel Creation</string>
     <string name="list_creator_button_continue_editing">Continue Editing</string>
     <string name="delete_item_title">Delete Item?</string>
     <string name="delete_item_confirmation">Are you sure you want to delete this item starting with \'%1$s\'?</string>
+    <string name="error_settings_load_failed">Error loading settings</string>
     <string name="error_settings_not_loaded_cant_save">Settings not loaded, cannot save changes.</string>
 
 

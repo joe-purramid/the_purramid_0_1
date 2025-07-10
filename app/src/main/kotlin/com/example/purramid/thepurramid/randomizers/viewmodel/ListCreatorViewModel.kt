@@ -35,7 +35,7 @@ class ListCreatorViewModel @Inject constructor(
         const val MAX_ITEM_LENGTH = 27
         const val MAX_ITEMS = 44
         const val MIN_ITEMS_FOR_NEW_LIST = 2
-        private const val MAX_IMAGE_SIZE_BYTES = 3 * 1024 * 1024 // 3 MB
+        private const val MAX_IMAGE_SIZE_BYTES = 1 * 1024 * 1024 // 1 MB
     }
 
     private val listIdArg: String? = savedStateHandle[ARG_LIST_ID]

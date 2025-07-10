@@ -164,7 +164,7 @@ class RandomizerSettingsViewModel @Inject constructor(
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to save settings for instance ${finalSettingsToSave.instanceId}", e)
                 withContext(Dispatchers.Main) {
-                    _errorEvent.value = Event(R.string.error_settings_save_failed_kitty)
+                    _errorEvent.value = Event(R.string.error_settings_final_save_failed)
                 }
             }
         }

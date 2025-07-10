@@ -31,7 +31,7 @@
     </style>
 
     <style name="FloatingWindowAnimation">
-        <item name="android:windowEnterAnimation">@anim/floating_window_enter</item>
-        <item name="android:windowExitAnimation">@anim/floating_window_exit</item>
+        <item name="android:windowEnterAnimation">@anim/settings_explosion_enter</item>
+        <item name="android:windowExitAnimation">@anim/settings_explosion_exit</item>
     </style>
 </resources>

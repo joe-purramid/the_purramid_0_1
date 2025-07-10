@@ -1,8 +1,10 @@
 // SpinItemEntity.kt
 package com.example.purramid.thepurramid.data.db
 
-import androidx.room.Entity // Make sure Room annotations are present if this is the intended Entity file
-import androidx.room.PrimaryKey // Make sure Room annotations are present
+import androidx.room.Entity
+import androidx.room.ForeignKey
+import androidx.room.Index
+import androidx.room.PrimaryKey
 import com.example.purramid.thepurramid.randomizers.SpinItemType
 import java.util.UUID
 
