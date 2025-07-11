@@ -6,11 +6,17 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.FrameLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import com.example.purramid.thepurramid.R
+import com.example.purramid.thepurramid.probabilities.data.DicePosition
+import com.example.purramid.thepurramid.probabilities.data.ProbabilitiesPositionState
+import com.example.purramid.thepurramid.probabilities.ProbabilitiesHostActivity
+import com.example.purramid.thepurramid.probabilities.ProbabilitiesMode
+import com.example.purramid.thepurramid.probabilities.util.ProbabilitiesLayoutHelper
 import com.example.purramid.thepurramid.probabilities.viewmodel.DiceViewModel
 import com.example.purramid.thepurramid.probabilities.viewmodel.DieType
 import com.github.mikephil.charting.charts.BarChart
@@ -20,6 +26,7 @@ import com.github.mikephil.charting.data.BarDataSet
 import com.github.mikephil.charting.data.BarEntry
 import com.github.mikephil.charting.formatter.IndexAxisValueFormatter
 import com.github.mikephil.charting.formatter.ValueFormatter
+import com.google.android.flexbox.FlexboxLayout
 
 class DiceMainFragment : Fragment() {
     private val diceViewModel: DiceViewModel by activityViewModels()
@@ -111,5 +118,94 @@ class DiceMainFragment : Fragment() {
             updateGraph()
         }
         diceViewModel.settings.observe(viewLifecycleOwner) { updateGraph() }
+        setupDicePositions()
+    }
+
+    private fun setupDicePositions() {
+        val instanceId = arguments?.getInt(ProbabilitiesHostActivity.EXTRA_INSTANCE_ID) ?: 1
+        val savedPositions = positionManager.loadPositions(instanceId)
+
+        if (savedPositions?.dicePositions?.isNotEmpty() == true) {
+            // Restore saved positions
+            restoreDicePositions(savedPositions.dicePositions)
+        } else {
+            // Calculate and set default positions
+            val diceDisplayArea = view?.findViewById<FlexboxLayout>(R.id.diceDisplayArea) ?: return
+
+            diceDisplayArea.post {
+                val settings = diceViewModel.settings.value ?: return@post
+                val diceGroups = mutableMapOf<DieType, Int>()
+
+                settings.dieConfigs.forEach { config ->
+                    if (config.quantity > 0) {
+                        diceGroups[config.type] = config.quantity
+                    }
+                }
+
+                val defaultPositions = ProbabilitiesLayoutHelper.calculateDefaultDicePositions(
+                    diceDisplayArea.width,
+                    diceDisplayArea.height,
+                    diceGroups
+                )
+
+                // Apply positions to dice views
+                applyDicePositions(defaultPositions)
+
+                // Save the default positions
+                val positionState = ProbabilitiesPositionState(
+                    instanceId = instanceId,
+                    mode = ProbabilitiesMode.DICE,
+                    dicePositions = defaultPositions
+                )
+                positionManager.savePositions(instanceId, positionState)
+            }
+        }
+    }
+
+    private fun applyDicePositions(positions: List<DicePosition>) {
+        positions.forEach { position ->
+            val dieView = findDieViewByTypeAndIndex(position.dieType, position.index)
+            dieView?.apply {
+                x = position.x
+                y = position.y
+                rotation = position.rotation
+            }
+        }
+    }
+
+    private fun findDieViewByTypeAndIndex(dieType: DieType, index: Int): View? {
+        val diceDisplayArea = view?.findViewById<com.google.android.flexbox.FlexboxLayout>(R.id.diceDisplayArea) ?: return null
+
+        var currentIndex = 0
+        for (i in 0 until diceDisplayArea.childCount) {
+            val childView = diceDisplayArea.getChildAt(i)
+            val viewDieType = childView.getTag(R.id.die_type) as? DieType
+
+            if (viewDieType == dieType) {
+                if (currentIndex == index) {
+                    return childView
+                }
+                currentIndex++
+            }
+        }
+        return null
+    }
+
+    private fun restoreDicePositions(positions: List<DicePosition>) {
+        positions.forEach { position ->
+            val dieView = findDieViewByTypeAndIndex(position.dieType, position.index)
+            dieView?.apply {
+                x = position.x
+                y = position.y
+                rotation = position.rotation
+                position.lastResult?.let { result ->
+                    // Update the die to show the last result
+                    if (this is FrameLayout) {
+                        val textView = findViewById<TextView>(R.id.dieResultTextView)
+                        textView?.text = result.toString()
+                    }
+                }
+            }
+        }
     }
 } 

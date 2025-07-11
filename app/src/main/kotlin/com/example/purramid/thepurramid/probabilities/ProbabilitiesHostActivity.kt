@@ -39,7 +39,6 @@ class ProbabilitiesHostActivity : AppCompatActivity() {
         private const val MIN_WIDTH_DP = 300
         private const val MIN_HEIGHT_DP = 250
         private const val TAG = "ProbabilitiesHostActivity"
-        const val EXTRA_INSTANCE_ID = "probabilities_instance_id"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

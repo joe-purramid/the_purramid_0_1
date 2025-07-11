@@ -27,6 +27,7 @@ Since you cannot run the actual app, perform:
 
 ## Test Categories
 For each test area, identify:
+- **Outstanding TODO**: Find any remaining TODO notations and confirm whether that work has been implemented or not.
 - **Critical Failures**: Crashes, data loss, architecture violations
 - **Functional Issues**: Features not working as specified
 - **Integration Problems**: Components not properly connected

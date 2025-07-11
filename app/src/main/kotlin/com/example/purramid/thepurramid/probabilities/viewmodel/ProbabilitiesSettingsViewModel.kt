@@ -4,7 +4,9 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.example.purramid.thepurramid.probabilities.ProbabilitiesMode
+import dagger.hilt.android.lifecycle.HiltViewModel
 
+@HiltViewModel
 class ProbabilitiesSettingsViewModel : ViewModel() {
     private val _settings = MutableLiveData<ProbabilitiesSettingsEntity?>()
     val settings: LiveData<ProbabilitiesSettingsEntity?> = _settings

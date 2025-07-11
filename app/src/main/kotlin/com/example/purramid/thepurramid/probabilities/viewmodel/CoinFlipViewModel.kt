@@ -7,8 +7,11 @@ import androidx.lifecycle.ViewModel
 import com.example.purramid.thepurramid.probabilities.CoinProbabilityMode
 import com.example.purramid.thepurramid.probabilities.GraphDistributionType
 import com.example.purramid.thepurramid.probabilities.GraphPlotType
+import com.example.purramid.thepurramid.probabilities.ProbabilitiesPositionManager
 import com.google.gson.Gson
+import dagger.hilt.android.lifecycle.HiltViewModel
 import java.lang.Exception
+import javax.inject.Inject
 
 // Data class for a single coin type
 enum class CoinType { B1, B5, B10, B25, MB1, MB2 }
@@ -33,7 +36,10 @@ data class CoinFlipResult(
     val results: Map<CoinType, List<Boolean>> // true = heads, false = tails
 )
 
-class CoinFlipViewModel : ViewModel() {
+@HiltViewModel
+class CoinFlipViewModel @Inject constructor(
+    private val positionManager: ProbabilitiesPositionManager
+) : ViewModel() {
     private val _settings = MutableLiveData(CoinFlipSettings())
     val settings: LiveData<CoinFlipSettings> = _settings
 
@@ -138,4 +144,4 @@ class CoinFlipViewModel : ViewModel() {
     }
 
     // TODO: Persist/restore settings per instance
-} 
+}

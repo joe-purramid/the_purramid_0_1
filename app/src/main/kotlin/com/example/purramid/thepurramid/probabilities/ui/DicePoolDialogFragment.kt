@@ -226,4 +226,17 @@ class DicePoolDialogFragment : DialogFragment() {
     private fun showSuccess(message: String) {
         Snackbar.make(requireView(), message, Snackbar.LENGTH_SHORT).show()
     }
+
+    private fun onDicePoolChanged() {
+        // Clear saved positions to force recalculation
+        positionManager.clearPositions(instanceId)
+
+        // The fragment will recalculate on next onViewCreated
+        // Or you can trigger immediate recalculation
+        parentFragment?.let { parent ->
+            if (parent is DiceMainFragment) {
+                parent.setupDicePositions()
+            }
+        }
+    }
 } 

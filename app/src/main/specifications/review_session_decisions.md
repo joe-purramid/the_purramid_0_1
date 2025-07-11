@@ -8,7 +8,7 @@
   - Use thepurramid.instance.InstanceManager.kt
 
 - **Reviewed**: 15 June 2025
-- **Architecture**: Settings Window Implementation
+- **Architecture**: Service settings Window Implementation
 - **Key Decisions**:
   - Settings should open at the center of the screen
   - Use an explosion animation

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="coin_is_heads" type="id"/>
+    <item name="coin_type" type="id"/>
+    <item name="die_type" type="id"/>
+</resources>

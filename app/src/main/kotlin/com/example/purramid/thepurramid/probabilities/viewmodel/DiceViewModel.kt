@@ -4,12 +4,17 @@ import android.content.Context
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import com.example.purramid.thepurramid.probabilities.ProbabilitiesMode
 import com.example.purramid.thepurramid.probabilities.DiceSumResultType
 import com.example.purramid.thepurramid.probabilities.GraphDistributionType
 import com.example.purramid.thepurramid.probabilities.GraphPlotType
+import com.example.purramid.thepurramid.probabilities.ProbabilitiesMode
+import com.example.purramid.thepurramid.probabilities.ProbabilitiesPositionManager
+import com.example.purramid.thepurramid.util.Event
 import com.google.gson.Gson
+import dagger.hilt.android.lifecycle.HiltViewModel
 import java.lang.Exception
+import javax.inject.Inject
+import kotlin.random.Random
 
 // Data class for a single die type
 enum class DieType { D4, D6, D8, D10, D12, D20, PERCENTILE }
@@ -37,10 +42,14 @@ data class DiceSettings(
 data class DiceResult(
     val results: Map<DieType, List<Int>>,
     val sum: Int,
-    val crits: List<Boolean>
+    val crits: List<Boolean>,
+    val modifiers: Map<DieType, Int> = emptyMap()
 )
 
-class DiceViewModel : ViewModel() {
+@HiltViewModel
+class DiceViewModel @Inject constructor(
+    private val positionManager: ProbabilitiesPositionManager
+) : ViewModel() {
     private val _settings = MutableLiveData(DiceSettings())
     val settings: LiveData<DiceSettings> = _settings
 
@@ -49,6 +58,12 @@ class DiceViewModel : ViewModel() {
 
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
+
+    private val _criticalHit = MutableLiveData<Event<Boolean>>()
+    val criticalHit: LiveData<Event<Boolean>> = _criticalHit
+
+    private val _rollAnimationTrigger = MutableLiveData<Event<Boolean>>()
+    val rollAnimationTrigger: LiveData<Event<Boolean>> = _rollAnimationTrigger
 
     private var instanceId: Int = 0
 
@@ -145,7 +160,7 @@ class DiceViewModel : ViewModel() {
         try {
             val current = _settings.value ?: DiceSettings()
             val results = mutableMapOf<DieType, List<Int>>()
-            var sum = 0
+            var totalSum = 0
             val crits = mutableListOf<Boolean>()
             
             for (config in current.dieConfigs) {
@@ -159,28 +174,66 @@ class DiceViewModel : ViewModel() {
                     DieType.D20 -> 20
                     DieType.PERCENTILE -> 100
                 }
-                
-                for (i in 1..config.quantity) {
+
+                or (i in 0 until config.quantity) {
                     val roll = if (config.type == DieType.PERCENTILE) {
-                        val tens = (1..10).random() * 10 % 100
-                        val ones = (1..10).random() % 10
-                        val value = if (tens == 0 && ones == 0) 100 else tens + ones
-                        value
+                        rollPercentile()
                     } else {
-                        (1..sides).random()
+                        Random.nextInt(1, sides + 1)
                     }
+
                     rolls.add(roll)
-                    sum += roll + config.modifier
-                    // Only track critical hits for d20 (natural 20s)
-                    if (config.type == DieType.D20) {
-                        crits.add(roll == 20) // Natural 20 only
+                    val modifiedResult = roll + config.modifier
+                    totalSum += modifiedResult
+
+                    if (config.type == DieType.D20 && roll == 20 && current.critEnabled) {
+                        crits.add(true)
+                        if (current.criticalCelebration) {
+                            _criticalHit.value = Event(true)
+                        }
                     }
                 }
+
                 results[config.type] = rolls
             }
-            _result.value = DiceResult(results, sum, crits)
+            _result.value = DiceResult(
+                results = results,
+                sum = totalSum,
+                crits = crits,
+                modifiers = current.dieConfigs.associate { it.type to it.modifier }
+            )
+
+            if (current.rollAnimation) {
+                _rollAnimationTrigger.value = Event(true)
+            }
         } catch (e: Exception) {
             _error.value = "Failed to roll dice: ${e.message}"
+        }
+    }
+
+    private fun rollPercentile(): Int {
+        val tens = Random.nextInt(0, 10) * 10
+        val ones = Random.nextInt(0, 10)
+        return if (tens == 0 && ones == 0) 100 else tens + ones
+    }
+
+    fun getSumByType(): Map<DieType, Int> {
+        val current = _settings.value ?: return emptyMap()
+        val result = _result.value ?: return emptyMap()
+
+        return result.results.mapValues { (type, rolls) ->
+            val modifier = current.dieConfigs.find { it.type == type }?.modifier ?: 0
+            rolls.sum() + (rolls.size * modifier)
+        }
+    }
+
+    fun getTotalSum(): Int {
+        val current = _settings.value ?: return 0
+        val result = _result.value ?: return 0
+
+        return result.results.entries.sumOf { (type, rolls) ->
+            val modifier = current.dieConfigs.find { it.type == type }?.modifier ?: 0
+            rolls.sum() + (rolls.size * modifier)
         }
     }
 
@@ -194,4 +247,4 @@ class DiceViewModel : ViewModel() {
     }
 
     // TODO: Persist/restore settings per instance
-} 
+}
