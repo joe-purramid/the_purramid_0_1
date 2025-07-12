@@ -352,14 +352,13 @@ class ProbabilitiesSettingsFragment : Fragment() {
     
     private fun validateCriticalSuccessCompatibility(): Boolean {
         // This would check if d20 dice are configured in the pool
-        // For now, return true as a placeholder
+        // TODO: For now, return true as a placeholder
         return true
     }
     
     private fun initializeUIState() {
-        // Initialize spinners and switches based on current settings
         // This would be called after loading settings from ViewModels
-        // For now, this is a placeholder for future implementation
+        // TODO: this is a placeholder for future implementation
     }
     
     private fun showError(message: String) {
@@ -417,5 +416,11 @@ class ProbabilitiesSettingsFragment : Fragment() {
 
         // Optionally close settings after launching
         parentFragmentManager.popBackStack()
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        // Remove the yellow border when settings close
+        activity?.window?.decorView?.foreground = null
     }
 } 
