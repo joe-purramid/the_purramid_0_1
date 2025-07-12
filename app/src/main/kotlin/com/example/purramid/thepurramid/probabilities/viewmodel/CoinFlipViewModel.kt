@@ -1,24 +1,25 @@
 package com.example.purramid.thepurramid.probabilities.viewmodel
 
-import android.content.Context
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.example.purramid.thepurramid.probabilities.CoinProbabilityMode
 import com.example.purramid.thepurramid.probabilities.GraphDistributionType
 import com.example.purramid.thepurramid.probabilities.GraphPlotType
 import com.example.purramid.thepurramid.probabilities.ProbabilitiesPositionManager
-import com.google.gson.Gson
 import dagger.hilt.android.lifecycle.HiltViewModel
-import java.lang.Exception
+import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlin.random.Random
 
-// Data class for a single coin type
+// Data classes
 enum class CoinType { B1, B5, B10, B25, MB1, MB2 }
+
 data class CoinConfig(
     val type: CoinType,
-    var quantity: Int = 1,
-    var color: Int = 0xFFFFFF
+    var quantity: Int = 0,
+    var color: Int = 0xFFDAA520.toInt() // Goldenrod default
 )
 
 data class CoinFlipSettings(
@@ -29,17 +30,25 @@ data class CoinFlipSettings(
     val probabilityMode: CoinProbabilityMode = CoinProbabilityMode.NONE,
     val graphEnabled: Boolean = false,
     val graphType: GraphPlotType = GraphPlotType.HISTOGRAM,
-    val graphDistribution: GraphDistributionType = GraphDistributionType.OFF
+    val graphDistribution: GraphDistributionType = GraphDistributionType.OFF,
+    val probabilityEnabled: Boolean = false
 )
 
 data class CoinFlipResult(
     val results: Map<CoinType, List<Boolean>> // true = heads, false = tails
 )
 
+data class GridCellResult(
+    val headsCount: Int,
+    val tailsCount: Int
+)
+
 @HiltViewModel
 class CoinFlipViewModel @Inject constructor(
+    private val preferencesManager: ProbabilitiesPreferencesManager,
     private val positionManager: ProbabilitiesPositionManager
 ) : ViewModel() {
+
     private val _settings = MutableLiveData(CoinFlipSettings())
     val settings: LiveData<CoinFlipSettings> = _settings
 
@@ -51,47 +60,84 @@ class CoinFlipViewModel @Inject constructor(
 
     private var instanceId: Int = 0
 
-    fun loadSettings(context: Context, instanceId: Int) {
-        try {
-            this.instanceId = instanceId
-            val prefs = context.getSharedPreferences("probabilities_prefs", Context.MODE_PRIVATE)
-            val json = prefs.getString("probabilities_coin_settings_$instanceId", null)
-            if (json != null) {
-                val loaded = Gson().fromJson(json, CoinFlipSettings::class.java)
-                _settings.value = loaded
+    fun initialize(instanceId: Int) {
+        this.instanceId = instanceId
+        loadSettings()
+    }
+
+    private fun loadSettings() {
+        viewModelScope.launch {
+            try {
+                val loaded = preferencesManager.loadCoinSettings(instanceId)
+                if (loaded != null) {
+                    _settings.value = loaded
+                } else {
+                    // Set default coin pool of 1b25
+                    val defaultSettings = CoinFlipSettings(
+                        coinConfigs = CoinType.values().map { type ->
+                            CoinConfig(
+                                type = type,
+                                quantity = if (type == CoinType.B25) 1 else 0,
+                                color = 0xFFDAA520.toInt()
+                            )
+                        }
+                    )
+                    _settings.value = defaultSettings
+                    saveSettings()
+                }
+            } catch (e: Exception) {
+                _error.value = "Failed to load coin flip settings: ${e.message}"
             }
-        } catch (e: Exception) {
-            _error.value = "Failed to load coin flip settings: ${e.message}"
         }
     }
 
-    private fun saveSettings(context: Context) {
-        try {
-            val prefs = context.getSharedPreferences("probabilities_prefs", Context.MODE_PRIVATE)
-            val json = Gson().toJson(_settings.value)
-            prefs.edit().putString("probabilities_coin_settings_$instanceId", json).apply()
-        } catch (e: Exception) {
-            _error.value = "Failed to save coin flip settings: ${e.message}"
-        }
-    }
-
-    fun updateCoinConfig(context: Context, type: CoinType, quantity: Int? = null, color: Int? = null) {
-        try {
-            val current = _settings.value ?: CoinFlipSettings()
-            val updated = current.coinConfigs.map {
-                if (it.type == type) it.copy(
-                    quantity = quantity ?: it.quantity,
-                    color = color ?: it.color
-                ) else it
+    private fun saveSettings() {
+        viewModelScope.launch {
+            try {
+                _settings.value?.let { settings ->
+                    preferencesManager.saveCoinSettings(instanceId, settings)
+                }
+            } catch (e: Exception) {
+                _error.value = "Failed to save coin flip settings: ${e.message}"
             }
-            _settings.value = current.copy(coinConfigs = updated)
-            saveSettings(context)
-        } catch (e: Exception) {
-            _error.value = "Failed to update coin configuration: ${e.message}"
         }
     }
 
-    fun updateSettings(context: Context,
+    fun updateCoinConfig(
+        type: CoinType,
+        quantity: Int? = null,
+        color: Int? = null
+    ) {
+        viewModelScope.launch {
+            try {
+                val current = _settings.value ?: CoinFlipSettings()
+
+                // Validate quantity
+                val newQuantity = quantity ?: current.coinConfigs.find { it.type == type }?.quantity ?: 0
+                if (newQuantity < 0 || newQuantity > 10) {
+                    _error.value = "Coin quantity must be between 0 and 10"
+                    return@launch
+                }
+
+                val updated = current.coinConfigs.map { config ->
+                    if (config.type == type) {
+                        config.copy(
+                            quantity = newQuantity,
+                            color = color ?: config.color
+                        )
+                    } else {
+                        config
+                    }
+                }
+                _settings.value = current.copy(coinConfigs = updated)
+                saveSettings()
+            } catch (e: Exception) {
+                _error.value = "Failed to update coin configuration: ${e.message}"
+            }
+        }
+    }
+
+    fun updateSettings(
         flipAnimation: Boolean? = null,
         freeForm: Boolean? = null,
         announce: Boolean? = null,
@@ -100,37 +146,79 @@ class CoinFlipViewModel @Inject constructor(
         graphType: GraphPlotType? = null,
         graphDistribution: GraphDistributionType? = null
     ) {
-        try {
-            val current = _settings.value ?: CoinFlipSettings()
-            _settings.value = current.copy(
-                flipAnimation = flipAnimation ?: current.flipAnimation,
-                freeForm = freeForm ?: current.freeForm,
-                announce = announce ?: current.announce,
-                probabilityMode = probabilityMode ?: current.probabilityMode,
-                graphEnabled = graphEnabled ?: current.graphEnabled,
-                graphType = graphType ?: current.graphType,
-                graphDistribution = graphDistribution ?: current.graphDistribution
-            )
-            saveSettings(context)
-        } catch (e: Exception) {
-            _error.value = "Failed to update coin flip settings: ${e.message}"
+        viewModelScope.launch {
+            try {
+                val current = _settings.value ?: CoinFlipSettings()
+
+                // Handle mutual exclusivity as per specifications
+                var newFreeForm = freeForm ?: current.freeForm
+                var newProbabilityMode = probabilityMode ?: current.probabilityMode
+                var newAnnounce = announce ?: current.announce
+
+                // Free form and probability mode are mutually exclusive
+                if (freeForm == true && current.probabilityMode != CoinProbabilityMode.NONE) {
+                    newProbabilityMode = CoinProbabilityMode.NONE
+                }
+
+                // Probability mode and free form are mutually exclusive
+                if (probabilityMode != null && probabilityMode != CoinProbabilityMode.NONE && current.freeForm) {
+                    newFreeForm = false
+                }
+
+                // Probability mode cannot be active while Announce is toggled on
+                if (probabilityMode != null && probabilityMode != CoinProbabilityMode.NONE && current.announce) {
+                    newAnnounce = false
+                }
+
+                // Announce cannot be active while Probability mode is on
+                if (announce == true && current.probabilityMode != CoinProbabilityMode.NONE) {
+                    newProbabilityMode = CoinProbabilityMode.NONE
+                }
+
+                _settings.value = current.copy(
+                    flipAnimation = flipAnimation ?: current.flipAnimation,
+                    freeForm = newFreeForm,
+                    announce = newAnnounce,
+                    probabilityMode = newProbabilityMode,
+                    graphEnabled = graphEnabled ?: current.graphEnabled,
+                    graphType = graphType ?: current.graphType,
+                    graphDistribution = graphDistribution ?: current.graphDistribution,
+                    probabilityEnabled = newProbabilityMode != CoinProbabilityMode.NONE
+                )
+                saveSettings()
+            } catch (e: Exception) {
+                _error.value = "Failed to update coin flip settings: ${e.message}"
+            }
         }
     }
 
     fun flipCoins() {
-        try {
-            val current = _settings.value ?: CoinFlipSettings()
-            val results = mutableMapOf<CoinType, List<Boolean>>()
-            for (config in current.coinConfigs) {
-                val flips = mutableListOf<Boolean>()
-                for (i in 1..config.quantity) {
-                    flips.add(listOf(true, false).random())
+        viewModelScope.launch {
+            try {
+                val current = _settings.value ?: CoinFlipSettings()
+                val results = mutableMapOf<CoinType, List<Boolean>>()
+
+                var hasCoins = false
+                for (config in current.coinConfigs) {
+                    if (config.quantity > 0) {
+                        hasCoins = true
+                        val flips = mutableListOf<Boolean>()
+                        for (i in 0 until config.quantity) {
+                            flips.add(Random.nextBoolean()) // true = heads, false = tails
+                        }
+                        results[config.type] = flips
+                    }
                 }
-                results[config.type] = flips
+
+                if (!hasCoins) {
+                    _error.value = "Add coins to your pool to flip!"
+                    return@launch
+                }
+
+                _result.value = CoinFlipResult(results)
+            } catch (e: Exception) {
+                _error.value = "Failed to flip coins: ${e.message}"
             }
-            _result.value = CoinFlipResult(results)
-        } catch (e: Exception) {
-            _error.value = "Failed to flip coins: ${e.message}"
         }
     }
 
@@ -143,5 +231,40 @@ class CoinFlipViewModel @Inject constructor(
         _error.value = null
     }
 
-    // TODO: Persist/restore settings per instance
+    fun applyColorToAll(color: Int) {
+        viewModelScope.launch {
+            try {
+                val current = _settings.value ?: CoinFlipSettings()
+                val updated = current.coinConfigs.map { config ->
+                    config.copy(color = color)
+                }
+                _settings.value = current.copy(coinConfigs = updated)
+                saveSettings()
+            } catch (e: Exception) {
+                _error.value = "Failed to apply color to all coins: ${e.message}"
+            }
+        }
+    }
+
+    fun getTotalCoins(): Int {
+        return _settings.value?.coinConfigs?.sumOf { it.quantity } ?: 0
+    }
+
+    fun getActiveCoins(): List<CoinConfig> {
+        return _settings.value?.coinConfigs?.filter { it.quantity > 0 } ?: emptyList()
+    }
+
+    fun getHeadsCount(): Int {
+        val result = _result.value ?: return 0
+        return result.results.values.sumOf { flips ->
+            flips.count { it }
+        }
+    }
+
+    fun getTailsCount(): Int {
+        val result = _result.value ?: return 0
+        return result.results.values.sumOf { flips ->
+            flips.count { !it }
+        }
+    }
 }

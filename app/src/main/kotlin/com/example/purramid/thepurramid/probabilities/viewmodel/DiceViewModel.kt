@@ -1,27 +1,26 @@
 package com.example.purramid.thepurramid.probabilities.viewmodel
 
-import android.content.Context
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.example.purramid.thepurramid.probabilities.DiceSumResultType
 import com.example.purramid.thepurramid.probabilities.GraphDistributionType
 import com.example.purramid.thepurramid.probabilities.GraphPlotType
-import com.example.purramid.thepurramid.probabilities.ProbabilitiesMode
 import com.example.purramid.thepurramid.probabilities.ProbabilitiesPositionManager
 import com.example.purramid.thepurramid.util.Event
-import com.google.gson.Gson
 import dagger.hilt.android.lifecycle.HiltViewModel
-import java.lang.Exception
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 import kotlin.random.Random
 
-// Data class for a single die type
+// Data classes
 enum class DieType { D4, D6, D8, D10, D12, D20, PERCENTILE }
+
 data class DieConfig(
     val type: DieType,
-    var quantity: Int = 1,
-    var color: Int = 0xFFFFFF,
+    var quantity: Int = 0,
+    var color: Int = 0xFFFFFFFF.toInt(),
     var modifier: Int = 0,
     var usePips: Boolean = false
 )
@@ -48,8 +47,10 @@ data class DiceResult(
 
 @HiltViewModel
 class DiceViewModel @Inject constructor(
+    private val preferencesManager: ProbabilitiesPreferencesManager,
     private val positionManager: ProbabilitiesPositionManager
 ) : ViewModel() {
+
     private val _settings = MutableLiveData(DiceSettings())
     val settings: LiveData<DiceSettings> = _settings
 
@@ -67,49 +68,80 @@ class DiceViewModel @Inject constructor(
 
     private var instanceId: Int = 0
 
-    fun loadSettings(context: Context, instanceId: Int) {
-        try {
-            this.instanceId = instanceId
-            val prefs = context.getSharedPreferences("probabilities_prefs", Context.MODE_PRIVATE)
-            val json = prefs.getString("probabilities_dice_settings_$instanceId", null)
-            if (json != null) {
-                val loaded = Gson().fromJson(json, DiceSettings::class.java)
-                _settings.value = loaded
+    fun initialize(instanceId: Int) {
+        this.instanceId = instanceId
+        loadSettings()
+    }
+
+    private fun loadSettings() {
+        viewModelScope.launch {
+            try {
+                val loaded = preferencesManager.loadDiceSettings(instanceId)
+                if (loaded != null) {
+                    _settings.value = loaded
+                } else {
+                    // Set default dice pool of 1d6
+                    val defaultSettings = DiceSettings(
+                        dieConfigs = DieType.values().map { type ->
+                            DieConfig(
+                                type = type,
+                                quantity = if (type == DieType.D6) 1 else 0,
+                                color = 0xFFFFFFFF.toInt()
+                            )
+                        }
+                    )
+                    _settings.value = defaultSettings
+                    saveSettings()
+                }
+            } catch (e: Exception) {
+                _error.value = "Failed to load dice settings: ${e.message}"
             }
-        } catch (e: Exception) {
-            _error.value = "Failed to load dice settings: ${e.message}"
         }
     }
 
-    private fun saveSettings(context: Context) {
-        try {
-            val prefs = context.getSharedPreferences("probabilities_prefs", Context.MODE_PRIVATE)
-            val json = Gson().toJson(_settings.value)
-            prefs.edit().putString("probabilities_dice_settings_$instanceId", json).apply()
-        } catch (e: Exception) {
-            _error.value = "Failed to save dice settings: ${e.message}"
-        }
-    }
-
-    fun updateDieConfig(context: Context, type: DieType, quantity: Int? = null, color: Int? = null, modifier: Int? = null, usePips: Boolean? = null) {
-        try {
-            val current = _settings.value ?: DiceSettings()
-            val updated = current.dieConfigs.map {
-                if (it.type == type) it.copy(
-                    quantity = quantity ?: it.quantity,
-                    color = color ?: it.color,
-                    modifier = modifier ?: it.modifier,
-                    usePips = usePips ?: it.usePips
-                ) else it
+    private fun saveSettings() {
+        viewModelScope.launch {
+            try {
+                _settings.value?.let { settings ->
+                    preferencesManager.saveDiceSettings(instanceId, settings)
+                }
+            } catch (e: Exception) {
+                _error.value = "Failed to save dice settings: ${e.message}"
             }
-            _settings.value = current.copy(dieConfigs = updated)
-            saveSettings(context)
-        } catch (e: Exception) {
-            _error.value = "Failed to update die configuration: ${e.message}"
         }
     }
 
-    fun updateSettings(context: Context,
+    fun updateDieConfig(
+        type: DieType,
+        quantity: Int? = null,
+        color: Int? = null,
+        modifier: Int? = null,
+        usePips: Boolean? = null
+    ) {
+        viewModelScope.launch {
+            try {
+                val current = _settings.value ?: DiceSettings()
+                val updated = current.dieConfigs.map { config ->
+                    if (config.type == type) {
+                        config.copy(
+                            quantity = quantity ?: config.quantity,
+                            color = color ?: config.color,
+                            modifier = modifier ?: config.modifier,
+                            usePips = usePips ?: config.usePips
+                        )
+                    } else {
+                        config
+                    }
+                }
+                _settings.value = current.copy(dieConfigs = updated)
+                saveSettings()
+            } catch (e: Exception) {
+                _error.value = "Failed to update die configuration: ${e.message}"
+            }
+        }
+    }
+
+    fun updateSettings(
         usePercentile: Boolean? = null,
         rollAnimation: Boolean? = null,
         critEnabled: Boolean? = null,
@@ -120,94 +152,138 @@ class DiceViewModel @Inject constructor(
         graphType: GraphPlotType? = null,
         graphDistribution: GraphDistributionType? = null
     ) {
-        try {
-            val current = _settings.value ?: DiceSettings()
-            
-            // Handle mutual exclusivity as per specifications
-            var newAnnounce = announce ?: current.announce
-            var newCriticalCelebration = criticalCelebration ?: current.criticalCelebration
-            var newGraphEnabled = graphEnabled ?: current.graphEnabled
-            
-            // If Critical Celebration is being turned on, ensure Announce is also on
-            if (criticalCelebration == true && !newAnnounce) {
-                newAnnounce = true
+        viewModelScope.launch {
+            try {
+                val current = _settings.value ?: DiceSettings()
+
+                // Handle mutual exclusivity as per specifications
+                var newAnnounce = announce ?: current.announce
+                var newCriticalCelebration = criticalCelebration ?: current.criticalCelebration
+                var newGraphEnabled = graphEnabled ?: current.graphEnabled
+                var newSumResultType = sumResultType ?: current.sumResultType
+
+                // If Critical Celebration is being turned on, ensure Announce is also on
+                if (criticalCelebration == true && !newAnnounce) {
+                    newAnnounce = true
+                }
+
+                // If Graph Distribution is being turned on, turn off incompatible features
+                if (graphEnabled == true) {
+                    if (newAnnounce || newSumResultType != DiceSumResultType.INDIVIDUAL) {
+                        newAnnounce = false
+                        newSumResultType = DiceSumResultType.INDIVIDUAL
+                        newCriticalCelebration = false
+                    }
+                }
+
+                // If Announce is being turned off, turn off dependent features
+                if (announce == false) {
+                    newCriticalCelebration = false
+                    if (current.sumResultType != DiceSumResultType.INDIVIDUAL) {
+                        newSumResultType = DiceSumResultType.INDIVIDUAL
+                    }
+                }
+
+                _settings.value = current.copy(
+                    usePercentile = usePercentile ?: current.usePercentile,
+                    rollAnimation = rollAnimation ?: current.rollAnimation,
+                    critEnabled = critEnabled ?: current.critEnabled,
+                    announce = newAnnounce,
+                    criticalCelebration = newCriticalCelebration,
+                    sumResultType = newSumResultType,
+                    graphEnabled = newGraphEnabled,
+                    graphType = graphType ?: current.graphType,
+                    graphDistribution = graphDistribution ?: current.graphDistribution
+                )
+                saveSettings()
+            } catch (e: Exception) {
+                _error.value = "Failed to update dice settings: ${e.message}"
             }
-            
-            // If Graph Distribution is being turned on, turn off Announce, Sum Results, and Add Modifiers
-            if (graphEnabled == true && (newAnnounce || current.sumResultType != DiceSumResultType.INDIVIDUAL)) {
-                newAnnounce = false
-                // Note: Sum Results and Add Modifiers would need to be reset here if they were separate settings
-            }
-            
-            _settings.value = current.copy(
-                usePercentile = usePercentile ?: current.usePercentile,
-                rollAnimation = rollAnimation ?: current.rollAnimation,
-                critEnabled = critEnabled ?: current.critEnabled,
-                announce = newAnnounce,
-                criticalCelebration = newCriticalCelebration,
-                sumResultType = sumResultType ?: current.sumResultType,
-                graphEnabled = newGraphEnabled,
-                graphType = graphType ?: current.graphType,
-                graphDistribution = graphDistribution ?: current.graphDistribution
-            )
-            saveSettings(context)
-        } catch (e: Exception) {
-            _error.value = "Failed to update dice settings: ${e.message}"
         }
     }
 
     fun rollDice() {
-        try {
-            val current = _settings.value ?: DiceSettings()
-            val results = mutableMapOf<DieType, List<Int>>()
-            var totalSum = 0
-            val crits = mutableListOf<Boolean>()
-            
-            for (config in current.dieConfigs) {
-                val rolls = mutableListOf<Int>()
-                val sides = when (config.type) {
-                    DieType.D4 -> 4
-                    DieType.D6 -> 6
-                    DieType.D8 -> 8
-                    DieType.D10 -> 10
-                    DieType.D12 -> 12
-                    DieType.D20 -> 20
-                    DieType.PERCENTILE -> 100
-                }
+        viewModelScope.launch {
+            try {
+                val current = _settings.value ?: DiceSettings()
+                val results = mutableMapOf<DieType, List<Int>>()
+                var totalSum = 0
+                val crits = mutableListOf<Boolean>()
+                val modifiers = mutableMapOf<DieType, Int>()
 
-                or (i in 0 until config.quantity) {
-                    val roll = if (config.type == DieType.PERCENTILE) {
-                        rollPercentile()
-                    } else {
-                        Random.nextInt(1, sides + 1)
-                    }
+                // Roll regular dice
+                for (config in current.dieConfigs) {
+                    if (config.quantity > 0 && config.type != DieType.PERCENTILE) {
+                        val rolls = mutableListOf<Int>()
+                        val sides = getSidesForDieType(config.type)
 
-                    rolls.add(roll)
-                    val modifiedResult = roll + config.modifier
-                    totalSum += modifiedResult
+                        for (i in 0 until config.quantity) {
+                            val roll = Random.nextInt(1, sides + 1)
+                            rolls.add(roll)
 
-                    if (config.type == DieType.D20 && roll == 20 && current.critEnabled) {
-                        crits.add(true)
-                        if (current.criticalCelebration) {
-                            _criticalHit.value = Event(true)
+                            val modifiedResult = roll + config.modifier
+                            totalSum += modifiedResult
+
+                            // Check for critical hit (natural 20 on d20)
+                            if (config.type == DieType.D20 && roll == 20 && current.critEnabled) {
+                                crits.add(true)
+                                if (current.criticalCelebration) {
+                                    _criticalHit.value = Event(true)
+                                }
+                            }
+                        }
+
+                        if (rolls.isNotEmpty()) {
+                            results[config.type] = rolls
+                            modifiers[config.type] = config.modifier
                         }
                     }
                 }
 
-                results[config.type] = rolls
-            }
-            _result.value = DiceResult(
-                results = results,
-                sum = totalSum,
-                crits = crits,
-                modifiers = current.dieConfigs.associate { it.type to it.modifier }
-            )
+                // Roll percentile dice if enabled
+                if (current.usePercentile) {
+                    val percentileConfig = current.dieConfigs.find { it.type == DieType.PERCENTILE }
+                    if (percentileConfig != null && percentileConfig.quantity > 0) {
+                        val percentileRolls = mutableListOf<Int>()
 
-            if (current.rollAnimation) {
-                _rollAnimationTrigger.value = Event(true)
+                        for (i in 0 until percentileConfig.quantity) {
+                            val percentileRoll = rollPercentile()
+                            percentileRolls.add(percentileRoll)
+                            totalSum += percentileRoll + percentileConfig.modifier
+                        }
+
+                        if (percentileRolls.isNotEmpty()) {
+                            results[DieType.PERCENTILE] = percentileRolls
+                            modifiers[DieType.PERCENTILE] = percentileConfig.modifier
+                        }
+                    }
+                }
+
+                _result.value = DiceResult(
+                    results = results,
+                    sum = totalSum,
+                    crits = crits,
+                    modifiers = modifiers
+                )
+
+                if (current.rollAnimation) {
+                    _rollAnimationTrigger.value = Event(true)
+                }
+            } catch (e: Exception) {
+                _error.value = "Failed to roll dice: ${e.message}"
             }
-        } catch (e: Exception) {
-            _error.value = "Failed to roll dice: ${e.message}"
+        }
+    }
+
+    private fun getSidesForDieType(type: DieType): Int {
+        return when (type) {
+            DieType.D4 -> 4
+            DieType.D6 -> 6
+            DieType.D8 -> 8
+            DieType.D10 -> 10
+            DieType.D12 -> 12
+            DieType.D20 -> 20
+            DieType.PERCENTILE -> 100
         }
     }
 
@@ -246,5 +322,33 @@ class DiceViewModel @Inject constructor(
         _error.value = null
     }
 
-    // TODO: Persist/restore settings per instance
+    fun applyColorToAll(color: Int) {
+        viewModelScope.launch {
+            try {
+                val current = _settings.value ?: DiceSettings()
+                val updated = current.dieConfigs.map { config ->
+                    config.copy(color = color)
+                }
+                _settings.value = current.copy(dieConfigs = updated)
+                saveSettings()
+            } catch (e: Exception) {
+                _error.value = "Failed to apply color to all dice: ${e.message}"
+            }
+        }
+    }
+
+    fun applyModifierToAll(modifier: Int) {
+        viewModelScope.launch {
+            try {
+                val current = _settings.value ?: DiceSettings()
+                val updated = current.dieConfigs.map { config ->
+                    config.copy(modifier = modifier)
+                }
+                _settings.value = current.copy(dieConfigs = updated)
+                saveSettings()
+            } catch (e: Exception) {
+                _error.value = "Failed to apply modifier to all dice: ${e.message}"
+            }
+        }
+    }
 }

@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:padding="16dp"
-    tools:context=".randomizers.ui.CoinFlipFragment">
+    tools:context=".probabilities.ui.CoinFlipFragment">
 
     <ImageButton
         android:id="@+id/coinFlipCloseButton"
@@ -93,17 +93,35 @@
             android:orientation="vertical"
             android:gravity="center_horizontal"
             android:padding="4dp">
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/heads"
                 android:textAppearance="?attr/textAppearanceHeadline6"/>
+
             <TextView
                 android:id="@+id/twoColumnHeadsResultTextView"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textSize="24sp"
                 tools:text="3"/>
+
+            <ScrollView
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:layout_marginTop="8dp">
+
+                <com.google.android.flexbox.FlexboxLayout
+                    android:id="@+id/headsColumnContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:flexWrap="wrap"
+                    app:alignItems="center"
+                    app:justifyContent="center"
+                    app:flexDirection="row"/>
+            </ScrollView>
         </LinearLayout>
 
         <View
@@ -118,17 +136,35 @@
             android:orientation="vertical"
             android:gravity="center_horizontal"
             android:padding="4dp">
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/tails"
                 android:textAppearance="?attr/textAppearanceHeadline6"/>
+
             <TextView
                 android:id="@+id/twoColumnTailsResultTextView"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textSize="24sp"
                 tools:text="2"/>
+
+            <ScrollView
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:layout_marginTop="8dp">
+
+                <com.google.android.flexbox.FlexboxLayout
+                    android:id="@+id/tailsColumnContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:flexWrap="wrap"
+                    app:alignItems="center"
+                    app:justifyContent="center"
+                    app:flexDirection="row"/>
+            </ScrollView>
         </LinearLayout>
     </LinearLayout>
 
@@ -157,6 +193,19 @@
         app:layout_constraintBottom_toBottomOf="@id/coinDisplayAreaRecyclerView"
         app:layout_constraintStart_toStartOf="@id/coinDisplayAreaRecyclerView"
         app:layout_constraintEnd_toEndOf="@id/coinDisplayAreaRecyclerView">
+
+        <com.github.mikephil.charting.charts.BarChart
+            android:id="@+id/barChart"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone"/>
+
+        <com.github.mikephil.charting.charts.LineChart
+            android:id="@+id/lineChart"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone"/>
+
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

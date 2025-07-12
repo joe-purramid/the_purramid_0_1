@@ -12,8 +12,8 @@ import java.util.UUID
 
 
 /**
- * The Room database for the Purramid application.
- * This contains tables for Clock and Randomizer features.
+ * The Room database for Purramid Class Tools application.
+ * This contains tables for Clock, Randomizers, Screen Mask, Spotlight, Timers, and Traffic Light features.
  */
 @Database(
     entities = [
@@ -32,7 +32,7 @@ import java.util.UUID
         TimerStateEntity::class,
         TrafficLightStateEntity::class
     ],
-    version = 16, // Updated windowState for RandomizersInstanceEntity
+    version = 2, // Release to production
     exportSchema = false // Set to true if you want to export the schema to a file for version control (recommended for production apps)
 )
 @TypeConverters(Converters::class) // Register the TypeConverters class
@@ -55,35 +55,21 @@ abstract class PurramidDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: PurramidDatabase? = null
 
-        // Migration from 13 to 14: Add UUID to screen_mask_state
-        private val MIGRATION_13_14 = object : Migration(13, 14) {
-            override fun migrate(database: SupportSQLiteDatabase) {
-                database.execSQL("ALTER TABLE screen_mask_state ADD COLUMN uuid TEXT NOT NULL DEFAULT '${UUID.randomUUID()}'")
-                database.execSQL("ALTER TABLE timer_state ADD COLUMN isNested INTEGER NOT NULL DEFAULT 0")
-                database.execSQL("ALTER TABLE timer_state ADD COLUMN nestedX INTEGER NOT NULL DEFAULT -1")
-                database.execSQL("ALTER TABLE timer_state ADD COLUMN nestedY INTEGER NOT NULL DEFAULT -1")
-                database.execSQL("ALTER TABLE timer_state ADD COLUMN soundsEnabled INTEGER NOT NULL DEFAULT 0")
-                database.execSQL("ALTER TABLE timer_state ADD COLUMN selectedSoundUri TEXT DEFAULT NULL")
-                database.execSQL("ALTER TABLE timer_state ADD COLUMN musicUrl TEXT DEFAULT NULL")
-                database.execSQL("ALTER TABLE timer_state ADD COLUMN recentMusicUrlsJson TEXT NOT NULL DEFAULT '[]'")
-                database.execSQL("ALTER TABLE timer_state ADD COLUMN showLapTimes INTEGER NOT NULL DEFAULT 0")
-            }
-        }
-
-        private val MIGRATION_14_15 = object : Migration(14, 15) {
-            override fun migrate(database: SupportSQLiteDatabase) {
-                // Rename clockId to instanceId
-                database.execSQL("ALTER TABLE clock_state RENAME COLUMN clockId TO instanceId")
-                database.execSQL("ALTER TABLE clock_alarms RENAME COLUMN clockId TO instanceId")
-            }
-        }
-
-        private val MIGRATION_15_16 = object : Migration(15, 16) {
-            override fun migrate(database: SupportSQLiteDatabase) {
-                // Add windowState to randomizer_instances
-                database.execSQL(
-                    "ALTER TABLE randomizer_instances ADD COLUMN windowState TEXT NOT NULL DEFAULT 'normal'"
-                )
+        // Migration from 1 to 2: Add UUID to screen_mask_state
+        private val MIGRATION_1_2 = object : Migration(1, 14) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE screen_mask_state ADD COLUMN uuid TEXT NOT NULL DEFAULT '${UUID.randomUUID()}'")
+                db.execSQL("ALTER TABLE timer_state ADD COLUMN isNested INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE timer_state ADD COLUMN nestedX INTEGER NOT NULL DEFAULT -1")
+                db.execSQL("ALTER TABLE timer_state ADD COLUMN nestedY INTEGER NOT NULL DEFAULT -1")
+                db.execSQL("ALTER TABLE timer_state ADD COLUMN soundsEnabled INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE timer_state ADD COLUMN selectedSoundUri TEXT DEFAULT NULL")
+                db.execSQL("ALTER TABLE timer_state ADD COLUMN musicUrl TEXT DEFAULT NULL")
+                db.execSQL("ALTER TABLE timer_state ADD COLUMN recentMusicUrlsJson TEXT NOT NULL DEFAULT '[]'")
+                db.execSQL("ALTER TABLE timer_state ADD COLUMN showLapTimes INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE clock_state RENAME COLUMN clockId TO instanceId")
+                db.execSQL("ALTER TABLE clock_alarms RENAME COLUMN clockId TO instanceId")
+                db.execSQL("ALTER TABLE randomizer_instances ADD COLUMN windowState TEXT NOT NULL DEFAULT 'normal'")
             }
         }
 
@@ -97,12 +83,10 @@ abstract class PurramidDatabase : RoomDatabase() {
                     "purramid_database"
                 )
                     .addMigrations(
-                        MIGRATION_13_14,
-                        MIGRATION_14_15,
-                        MIGRATION_15_16
+                        MIGRATION_1_2,
                         // Add future migrations here
                     )
-                    .fallbackToDestructiveMigrationOnDowngrade() // Only destroy on downgrade
+                    .fallbackToDestructiveMigrationOnDowngrade(false) // Only destroy on downgrade
                     .build()
                 INSTANCE = instance
                 instance

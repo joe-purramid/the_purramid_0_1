@@ -7,11 +7,9 @@ import android.graphics.Rect
 import android.util.Log
 import android.view.MotionEvent
 import androidx.activity.viewModels
-import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
-import androidx.activity.viewModels
 import com.google.android.material.snackbar.Snackbar
 import com.example.purramid.thepurramid.R
 import com.example.purramid.thepurramid.databinding.ActivityProbabilitiesHostBinding
@@ -25,9 +23,8 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class ProbabilitiesHostActivity : AppCompatActivity() {
+class ProbabilitiesHostActivity : FloatingWindowActivity() {
     private lateinit var navController: NavController
-    private var currentInstanceId: Int = 0
     private lateinit var binding: ActivityProbabilitiesHostBinding
     private val settingsViewModel: ProbabilitiesSettingsViewModel by viewModels()
 
@@ -46,13 +43,14 @@ class ProbabilitiesHostActivity : AppCompatActivity() {
         binding = ActivityProbabilitiesHostBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        val navHostFragment =
-            supportFragmentManager.findFragmentById(R.id.nav_host_fragment_probabilities) as NavHostFragment
-        navController = navHostFragment.navController
+        setupInstanceId()
+        setupNavigation()
+        restoreWindowState()
+    }
 
-        val instanceId = intent.getIntExtra(EXTRA_INSTANCE_ID, 0)
+    private fun setupInstanceId() {
+        instanceId = intent.getIntExtra(EXTRA_INSTANCE_ID, 0)
         if (instanceId == 0) {
-            // Allocate a new instanceId
             instanceId = instanceManager.getNextInstanceId(InstanceManager.PROBABILITIES) ?: run {
                 showMaxWindowsError()
                 finish()
@@ -63,106 +61,261 @@ class ProbabilitiesHostActivity : AppCompatActivity() {
         // Clone settings if requested
         val cloneFromInstance = intent.getIntExtra(EXTRA_CLONE_FROM, -1)
         if (cloneFromInstance != -1) {
-            settingsViewModel.cloneSettingsFrom(cloneFromInstance, instanceId)
+            cloneSettings(cloneFromInstance)
         }
-
-        // Set up navigation and observe mode changes
-        setupNavigation()
     }
 
-    private fun showMaxWindowsError() {
-        Snackbar.make(
-            binding.root,
-            getString(R.string.max_probabilities_reached_snackbar),
-            Snackbar.LENGTH_LONG
-        ).show()
-    }
-    // TODO: Reconcile this with individual warnings for Dice and Coin Flip that already existr
+    private fun setupNavigation() {
+        val navHostFragment =
+            supportFragmentManager.findFragmentById(R.id.nav_host_fragment_probabilities) as NavHostFragment
+        navController = navHostFragment.navController
 
-    private fun observeSettingsAndNavigate(instanceId: Int) {
+        // Pass instance ID to fragments
+        navController.setGraph(R.navigation.probabilities_nav_graph, Bundle().apply {
+            putInt(EXTRA_INSTANCE_ID, instanceId)
+        })
+
+        // Observe settings to navigate to correct mode
+        settingsViewModel.loadSettings(instanceId)
+        observeSettingsAndNavigate()
+    }
+
+    private fun observeSettingsAndNavigate() {
         settingsViewModel.settings.observe(this) { settings ->
             if (settings != null && settings.instanceId == instanceId) {
-                Log.d(TAG, "Settings observed in ProbabilitiesHostActivity for instance ${settings.instanceId}. Mode: ${settings.mode}")
-                navigateToModeFragment(settings.mode, instanceId)
-            } else {
-                Log.w(TAG, "Settings are null or instanceId mismatch for $instanceId. Cannot determine mode.")
+                Log.d(TAG, "Settings observed for instance ${settings.instanceId}. Mode: ${settings.mode}")
+                navigateToModeFragment(settings.mode)
             }
         }
     }
 
-    private fun navigateToModeFragment(mode: ProbabilitiesMode, instanceId: Int) {
+    private fun navigateToModeFragment(mode: ProbabilitiesMode) {
         val currentDestinationId = navController.currentDestination?.id
         val requiredDestinationId = when (mode) {
             ProbabilitiesMode.DICE -> R.id.diceMainFragment
             ProbabilitiesMode.COIN_FLIP -> R.id.coinFlipFragment
         }
-        if (currentDestinationId == requiredDestinationId) {
-            Log.d(TAG, "Already on the correct fragment for mode $mode. No navigation needed.")
-            return
-        }
-        Log.d(TAG, "Navigating to mode: $mode for instance: $instanceId")
-        val navOptions = androidx.navigation.NavOptions.Builder()
-            .setPopUpTo(navController.graph.startDestinationId, true)
-            .build()
-        try {
-            val args = Bundle().apply { putInt(EXTRA_INSTANCE_ID, instanceId) }
+
+        if (currentDestinationId != requiredDestinationId) {
+            Log.d(TAG, "Navigating to mode: $mode for instance: $instanceId")
+            val navOptions = androidx.navigation.NavOptions.Builder()
+                .setPopUpTo(navController.graph.startDestinationId, true)
+                .build()
+
+            val args = Bundle().apply {
+                putInt(EXTRA_INSTANCE_ID, instanceId)
+            }
             navController.navigate(requiredDestinationId, args, navOptions)
-        } catch (e: Exception) {
-            Log.e(TAG, "Navigation failed for mode $mode: ${e.message}")
         }
+    }
+
+    private fun restoreWindowState() {
+        val prefs = getSharedPreferences("probabilities_window_states", MODE_PRIVATE)
+        val savedX = prefs.getInt("window_${instanceId}_x", -1)
+        val savedY = prefs.getInt("window_${instanceId}_y", -1)
+        val savedWidth = prefs.getInt("window_${instanceId}_width", -1)
+        val savedHeight = prefs.getInt("window_${instanceId}_height", -1)
+
+        if (savedX != -1 && savedY != -1) {
+            window.attributes = window.attributes.apply {
+                x = savedX
+                y = savedY
+                if (savedWidth > 0) width = savedWidth
+                if (savedHeight > 0) height = savedHeight
+            }
+        }
+    }
+
+    private fun cloneSettings(fromInstanceId: Int) {
+        lifecycleScope.launch {
+            // Clone dice settings
+            val prefs = getSharedPreferences("probabilities_prefs", MODE_PRIVATE)
+            val diceJson = prefs.getString("dice_settings_$fromInstanceId", null)
+            if (diceJson != null) {
+                prefs.edit().putString("dice_settings_$instanceId", diceJson).apply()
+            }
+
+            // Clone coin settings
+            val coinJson = prefs.getString("coin_settings_$fromInstanceId", null)
+            if (coinJson != null) {
+                prefs.edit().putString("coin_settings_$instanceId", coinJson).apply()
+            }
+
+            // Clone mode
+            val mode = prefs.getString("mode_$fromInstanceId", null)
+            if (mode != null) {
+                prefs.edit().putString("mode_$instanceId", mode).apply()
+            }
+        }
+    }
+
+    private fun showMaxWindowsError() {
+        Snackbar.make(
+            binding.root,
+            getString(R.string.max_probabilities_reached_snackbar, 7),
+            Snackbar.LENGTH_LONG
+        ).show()
     }
 
     override fun getMinWidth() = dpToPx(MIN_WIDTH_DP)
     override fun getMinHeight() = dpToPx(MIN_HEIGHT_DP)
 
     override fun isTouchOnInteractiveElement(event: MotionEvent): Boolean {
-        // Check if touch is on buttons, settings, etc.
         val touchPoint = Point(event.x.toInt(), event.y.toInt())
-        return isPointInView(binding.navHostFragment, touchPoint)
+
+        // Check if touch is on any button or interactive element
+        val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment_probabilities)
+        navHostFragment?.let { fragment ->
+            fragment.childFragmentManager.fragments.forEach { childFragment ->
+                childFragment.view?.let { fragmentView ->
+                    // Check buttons in the fragment
+                    val buttons = listOf(
+                        fragmentView.findViewById<View>(R.id.diceRollButton),
+                        fragmentView.findViewById<View>(R.id.diceResetButton),
+                        fragmentView.findViewById<View>(R.id.dicePoolButton),
+                        fragmentView.findViewById<View>(R.id.diceSettingsButton),
+                        fragmentView.findViewById<View>(R.id.diceCloseButton),
+                        fragmentView.findViewById<View>(R.id.coinFlipActionButton),
+                        fragmentView.findViewById<View>(R.id.manageCoinPoolButton),
+                        fragmentView.findViewById<View>(R.id.coinFlipSettingsButton),
+                        fragmentView.findViewById<View>(R.id.coinFlipCloseButton)
+                    )
+
+                    buttons.forEach { button ->
+                        button?.let {
+                            if (isPointInView(it, touchPoint)) {
+                                return true
+                            }
+                        }
+                    }
+
+                    // Check if touch is on dice/coin display areas
+                    val displayAreas = listOf(
+                        fragmentView.findViewById<View>(R.id.diceDisplayArea),
+                        fragmentView.findViewById<View>(R.id.coinDisplayAreaRecyclerView),
+                        fragmentView.findViewById<View>(R.id.freeFormDisplayContainer)
+                    )
+
+                    displayAreas.forEach { area ->
+                        area?.let {
+                            if (it.visibility == View.VISIBLE && isPointInView(it, touchPoint)) {
+                                return true
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return false
     }
 
     override fun isInResizeZone(point: Point): Boolean {
         val decorView = window.decorView
         val edgeThreshold = dpToPx(20)
-        return point.x > decorView.width - edgeThreshold ||
+
+        // Bottom-right corner for resize
+        return point.x > decorView.width - edgeThreshold &&
                 point.y > decorView.height - edgeThreshold
     }
 
     override fun isInDragZone(point: Point): Boolean {
         // Allow dragging from any non-interactive area
-        return !isTouchOnInteractiveElement(MotionEvent.obtain(0, 0, 0, point.x.toFloat(), point.y.toFloat(), 0))
+        return !isTouchOnInteractiveElement(
+            MotionEvent.obtain(0, 0, 0, point.x.toFloat(), point.y.toFloat(), 0)
+        )
     }
 
     override fun saveWindowState() {
         val bounds = getCurrentWindowBounds()
         val prefs = getSharedPreferences("probabilities_window_states", MODE_PRIVATE)
         prefs.edit().apply {
-            putInt("window_${currentInstanceId}_x", bounds.left)
-            putInt("window_${currentInstanceId}_y", bounds.top)
-            putInt("window_${currentInstanceId}_width", bounds.width())
-            putInt("window_${currentInstanceId}_height", bounds.height())
+            putInt("window_${instanceId}_x", bounds.left)
+            putInt("window_${instanceId}_y", bounds.top)
+            putInt("window_${instanceId}_width", bounds.width())
+            putInt("window_${instanceId}_height", bounds.height())
             apply()
         }
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        instanceManager.releaseInstanceId(InstanceManager.PROBABILITIES, currentInstanceId)
-        Log.d(TAG, "ProbabilitiesHostActivity destroyed and released instanceId: $currentInstanceId")
+
+        // Release instance ID
+        instanceManager.releaseInstanceId(InstanceManager.PROBABILITIES, instanceId)
+
+        // Check if this was the last instance
+        if (instanceManager.getActiveInstanceCount(InstanceManager.PROBABILITIES) == 0) {
+            // Optionally clear all probabilities preferences
+            Log.d(TAG, "Last Probabilities instance closed")
+        }
     }
 
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
-        Log.d(TAG, "onNewIntent called for ProbabilitiesHostActivity. New Intent Action: ${intent?.action}")
-        val newInstanceId = intent?.getIntExtra(EXTRA_INSTANCE_ID, 0) ?: 0
-        if (newInstanceId != 0 && newInstanceId != currentInstanceId) {
-            instanceManager.releaseInstanceId(InstanceManager.PROBABILITIES, currentInstanceId)
-            currentInstanceId = newInstanceId
-            instanceManager.registerExistingInstance(InstanceManager.PROBABILITIES, newInstanceId)
-            setIntent(intent)
-            observeSettingsAndNavigate(newInstanceId)
-        } else if (newInstanceId != 0) {
-            observeSettingsAndNavigate(newInstanceId)
+        Log.d(TAG, "onNewIntent called")
+
+        intent?.let {
+            val newInstanceId = it.getIntExtra(EXTRA_INSTANCE_ID, 0)
+            if (newInstanceId != 0 && newInstanceId != instanceId) {
+                // Handle instance change if needed
+                instanceId = newInstanceId
+                setupNavigation()
+            }
         }
     }
-} 
+
+    fun openSettings() {
+        // Navigate to settings fragment
+        val bundle = Bundle().apply {
+            putInt("instanceId", instanceId)
+        }
+
+        navController.navigate(R.id.probabilitiesSettingsFragment, bundle)
+
+        // Add yellow border per Universal Requirements (7.2.2)
+        window.decorView.foreground = ContextCompat.getDrawable(
+            this,
+            R.drawable.highlight_border
+        )
+    }
+
+    fun closeSettings() {
+        // Remove yellow border
+        window.decorView.foreground = null
+        navController.popBackStack()
+    }
+
+    fun launchNewInstance() {
+        val activeCount = instanceManager.getActiveInstanceCount(InstanceManager.PROBABILITIES)
+        if (activeCount >= 7) {
+            showMaxWindowsError()
+            return
+        }
+
+        val newInstanceId = instanceManager.getNextInstanceId(InstanceManager.PROBABILITIES)
+        if (newInstanceId == null) {
+            showMaxWindowsError()
+            return
+        }
+
+        val currentBounds = getCurrentWindowBounds()
+        val intent = Intent(this, ProbabilitiesHostActivity::class.java).apply {
+            putExtra(EXTRA_INSTANCE_ID, newInstanceId)
+            putExtra(EXTRA_CLONE_FROM, instanceId)
+
+            // Offset new window position
+            putExtra("WINDOW_X", currentBounds.left + 50)
+            putExtra("WINDOW_Y", currentBounds.top + 50)
+            putExtra("WINDOW_WIDTH", currentBounds.width())
+            putExtra("WINDOW_HEIGHT", currentBounds.height())
+
+            // Flags for independent window
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_MULTIPLE_TASK or
+                    Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT)
+        }
+
+        startActivity(intent)
+    }
+}

@@ -96,6 +96,7 @@ class ProbabilitiesSettingsFragment : Fragment() {
                     }
                 }
             }
+            setupAddAnotherButton()
         }
 
         // Mode toggle group
@@ -363,6 +364,13 @@ class ProbabilitiesSettingsFragment : Fragment() {
     
     private fun showError(message: String) {
         Snackbar.make(requireView(), message, Snackbar.LENGTH_LONG).show()
+    }
+
+    private fun setupAddAnotherButton() {
+        val addAnotherButton = view?.findViewById<Button>(R.id.buttonAddAnother)
+        addAnotherButton?.setOnClickListener {
+            (activity as? ProbabilitiesHostActivity)?.launchNewInstance()
+        }
     }
 
     private fun onAddAnotherClicked() {

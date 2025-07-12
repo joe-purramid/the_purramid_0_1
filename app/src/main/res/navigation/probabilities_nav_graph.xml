@@ -1,3 +1,4 @@
+<!-- res/navigation/probabilities_nav_graph.xml -->
 <?xml version="1.0" encoding="utf-8"?>
 <navigation xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -11,8 +12,9 @@
         android:label="@string/randomizer_mode_dice"
         tools:layout="@layout/fragment_dice_main">
         <argument
-            android:name="instanceId"
-            app:argType="string" />
+            android:name="probabilities_instance_id"
+            app:argType="integer"
+            android:defaultValue="1" />
     </fragment>
 
     <fragment
@@ -21,8 +23,20 @@
         android:label="@string/randomizer_mode_coin_flip"
         tools:layout="@layout/fragment_coin_flip">
         <argument
-            android:name="instanceId"
-            app:argType="string" />
+            android:name="probabilities_instance_id"
+            app:argType="integer"
+            android:defaultValue="1" />
     </fragment>
 
-</navigation> 
+    <fragment
+        android:id="@+id/probabilitiesSettingsFragment"
+        android:name="com.example.purramid.thepurramid.probabilities.ui.ProbabilitiesSettingsFragment"
+        android:label="@string/probabilities_settings_title"
+        tools:layout="@layout/fragment_probabilities_settings">
+        <argument
+            android:name="instanceId"
+            app:argType="integer"
+            android:defaultValue="1" />
+    </fragment>
+
+</navigation>
