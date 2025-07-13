@@ -539,7 +539,6 @@
     <string name="item_image_placeholder">[Image]</string>
     <string name="select_list_for_column">Select List for Column %1$d</string>
     <string name="list_selection_clear">Clear Selection</string>
-    <string name="no_lists_available">No lists available to select.</string>
     <string name="cannot_open_settings">Cannot open settings.</string>
     <string name="item_image_content_description">Image representing list item</string>
     <string name="item_image_content_description_secondary">Faded image representing adjacent list item</string>

@@ -10,39 +10,35 @@ import android.content.SharedPreferences
 import android.graphics.PixelFormat
 import android.os.Build
 import android.os.Bundle
-import android.os.Handler
 import android.os.IBinder
-import android.os.Looper
 import android.util.DisplayMetrics
 import android.util.Log
 import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
-import android.widget.Toast // Retain for cases where Snackbar isn't feasible from service
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.LifecycleService
-import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.ViewModelStore
-import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import com.example.purramid.thepurramid.R
-import com.example.purramid.thepurramid.data.db.ScreenMaskDao // For restoring state
+import com.example.purramid.thepurramid.data.db.ScreenMaskDao
 import com.example.purramid.thepurramid.instance.InstanceManager
 import com.example.purramid.thepurramid.screen_mask.ui.MaskView
 import com.example.purramid.thepurramid.screen_mask.viewmodel.ScreenMaskViewModel
+import com.example.purramid.thepurramid.util.dpToPx
 import dagger.hilt.android.AndroidEntryPoint
-import kotlin.math.max
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
+import androidx.core.content.edit
+import androidx.lifecycle.SavedStateHandle
 
 // Actions for ScreenMaskService
 const val ACTION_START_SCREEN_MASK = "com.example.purramid.screen_mask.ACTION_START"
@@ -52,21 +48,18 @@ const val ACTION_REQUEST_IMAGE_CHOOSER = "com.example.purramid.screen_mask.ACTIO
 const val ACTION_TOGGLE_LOCK = "com.example.purramid.screen_mask.ACTION_TOGGLE_LOCK"
 const val ACTION_TOGGLE_LOCK_ALL = "com.example.purramid.screen_mask.ACTION_TOGGLE_LOCK_ALL"
 const val ACTION_BILLBOARD_IMAGE_SELECTED = "com.example.purramid.screen_mask.ACTION_BILLBOARD_IMAGE_SELECTED" // Activity sends to Service
+const val ACTION_HIGHLIGHT = "com.example.purramid.screen_mask.ACTION_HIGHLIGHT"
 const val ACTION_REMOVE_HIGHLIGHT = "com.example.purramid.screen_mask.ACTION_REMOVE_HIGHLIGHT"
 const val EXTRA_MASK_INSTANCE_ID = ScreenMaskViewModel.KEY_INSTANCE_ID // From ViewModel
 const val EXTRA_IMAGE_URI = "com.example.purramid.screen_mask.EXTRA_IMAGE_URI"
 
 @AndroidEntryPoint
-class ScreenMaskService : LifecycleService(), ViewModelStoreOwner, SavedStateRegistryOwner {
+class ScreenMaskService : LifecycleService(), SavedStateRegistryOwner {
 
     @Inject lateinit var windowManager: WindowManager
     @Inject lateinit var instanceManager: InstanceManager
-    @Inject lateinit var viewModelFactory: ViewModelProvider.Factory // Hilt provides default factory
     @Inject lateinit var screenMaskDao: ScreenMaskDao // Inject DAO for state restoration
     @Inject @ScreenMaskPrefs lateinit var servicePrefs: SharedPreferences
-
-    override val viewModelStore: ViewModelStore
-        get() = super.getViewModelStore()
 
     // For SavedStateRegistryOwner
     private lateinit var savedStateRegistryController: SavedStateRegistryController
@@ -93,7 +86,6 @@ class ScreenMaskService : LifecycleService(), ViewModelStoreOwner, SavedStateReg
         // Define the actual string literals here
         const val PREFS_NAME_FOR_ACTIVITY = "com.example.purramid.thepurramid.screen_mask.APP_PREFERENCES"
         const val KEY_ACTIVE_COUNT = "SCREEN_MASK_ACTIVE_INSTANCE_COUNT"
-        const val KEY_LAST_INSTANCE_ID = "last_instance_id_screenmask"
     }
 
     override fun onCreate() {
@@ -108,7 +100,7 @@ class ScreenMaskService : LifecycleService(), ViewModelStoreOwner, SavedStateReg
     }
 
     private fun updateActiveInstanceCountInPrefs() {
-        servicePrefs.edit().putInt(KEY_ACTIVE_COUNT, activeMaskViewModels.size).apply()
+        servicePrefs.edit { putInt(KEY_ACTIVE_COUNT, activeMaskViewModels.size) }
         Log.d(TAG, "Updated active ScreenMask count: ${activeMaskViewModels.size}")
     }
 
@@ -137,7 +129,7 @@ class ScreenMaskService : LifecycleService(), ViewModelStoreOwner, SavedStateReg
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
-        val action = intent?.action
+        var action = intent?.action
         Log.d(TAG, "onStartCommand: Action: $action")
 
         when (action) {
@@ -158,21 +150,13 @@ class ScreenMaskService : LifecycleService(), ViewModelStoreOwner, SavedStateReg
                 stopAllInstancesAndService()
             }
             ACTION_TOGGLE_LOCK -> {
-                val instanceId = intent.getIntExtra(EXTRA_MASK_INSTANCE_ID, -1)
+                val instanceId = intent?.getIntExtra(EXTRA_MASK_INSTANCE_ID, -1)
                 if (instanceId != -1) {
-                    activeMaskViewModels[instanceId]?.let { viewModel ->
-                        val currentLockState = viewModel.isLocked()
-                        viewModel.setLocked(!currentLockState)
-
-                        // If unlocking and Lock All is active, this mask is no longer controlled by Lock All
-                        if (currentLockState && isLockAllActive) {
-                            activeMaskViews[instanceId]?.isLockedByLockAll = false
-                        }
-                    }
+                    activeMaskViewModels[instanceId]?.toggleLock()
                 }
             }
             ACTION_REQUEST_IMAGE_CHOOSER -> {
-                val instanceId = intent.getIntExtra(EXTRA_MASK_INSTANCE_ID, -1)
+                val instanceId = intent?.getIntExtra(EXTRA_MASK_INSTANCE_ID, -1)
                 if (instanceId != -1) {
                     imageChooserTargetInstanceId = instanceId
                     val activityIntent = Intent(this, ScreenMaskActivity::class.java).apply {
@@ -196,18 +180,24 @@ class ScreenMaskService : LifecycleService(), ViewModelStoreOwner, SavedStateReg
                 }
             }
             ACTION_BILLBOARD_IMAGE_SELECTED -> {
-                val uriString = intent.getStringExtra(EXTRA_IMAGE_URI)
-                val targetId = imageChooserTargetInstanceId ?: intent.getIntExtra(EXTRA_MASK_INSTANCE_ID, -1)
+                val uriString = intent?.getStringExtra(EXTRA_IMAGE_URI)
+                val targetId = imageChooserTargetInstanceId ?: intent?.getIntExtra(EXTRA_MASK_INSTANCE_ID, -1) ?: -1
 
                 if (targetId != -1) {
-                    activeMaskViewModels[targetId]?.setBillboardImageUri(uriString) // ViewModel handles null URI
+                    activeMaskViewModels[targetId]?.setBillboardImageUri(uriString)
                 } else {
                     Log.w(TAG, "Billboard image selected but no targetInstanceId found.")
                 }
-                imageChooserTargetInstanceId = null // Clear target
+                imageChooserTargetInstanceId = null
+            }
+            ACTION_HIGHLIGHT -> {
+                val instanceId = intent?.getIntExtra(EXTRA_MASK_INSTANCE_ID, -1)
+                if (instanceId != -1) {
+                    highlightMask(instanceId, true)
+                }
             }
             ACTION_REMOVE_HIGHLIGHT -> {
-                val instanceId = intent.getIntExtra(EXTRA_MASK_INSTANCE_ID, -1)
+                val instanceId = intent?.getIntExtra(EXTRA_MASK_INSTANCE_ID, -1)
                 if (instanceId != -1) {
                     highlightMask(instanceId, false)
                 }
@@ -216,7 +206,7 @@ class ScreenMaskService : LifecycleService(), ViewModelStoreOwner, SavedStateReg
         return START_STICKY
     }
 
-    override fun onSettingsRequested(id: Int) {
+    fun onSettingsRequested(id: Int) {
         // Highlight the mask that requested settings
         highlightMask(id, true)
 
@@ -254,7 +244,7 @@ class ScreenMaskService : LifecycleService(), ViewModelStoreOwner, SavedStateReg
         lifecycleScope.launch {
             // If sourceInstanceId provided, clone its state
             val initialState = if (sourceInstanceId != null) {
-                screenMaskDao.getByInstanceId(sourceInstanceId)?.let { sourceEntity ->
+                screenMaskDao.getById(sourceInstanceId)?.let { sourceEntity ->
                     // Clone the source state with new instance ID
                     sourceEntity.copy(
                         instanceId = newInstanceId,
@@ -285,7 +275,7 @@ class ScreenMaskService : LifecycleService(), ViewModelStoreOwner, SavedStateReg
         }
     }
 
-    fun highlightMask(instanceId: Int, highlight: Boolean) {
+    fun highlightMask(instanceId: Int?, highlight: Boolean) {
         lifecycleScope.launch(Dispatchers.Main) {
             activeMaskViews[instanceId]?.setHighlighted(highlight)
         }
@@ -295,13 +285,13 @@ class ScreenMaskService : LifecycleService(), ViewModelStoreOwner, SavedStateReg
         return activeMaskViewModels.computeIfAbsent(id) {
             Log.d(TAG, "Creating ScreenMaskViewModel for ID: $id")
 
-            // Create a unique key for each instance
-            val key = "screen_mask_$id"
+            // Create ViewModel manually since we're in a Service
+            val savedStateHandle = SavedStateHandle().apply {
+                set(ScreenMaskViewModel.KEY_INSTANCE_ID, id)
+            }
 
-            val viewModel = ViewModelProvider(
-                this,
-                viewModelFactory  // Use the injected factory directly
-            ).get(key, ScreenMaskViewModel::class.java)
+            // Create the ViewModel using constructor injection
+            val viewModel = ScreenMaskViewModel(screenMaskDao, savedStateHandle)
 
             // Initialize the ViewModel with the instance ID
             viewModel.initialize(id)
@@ -413,49 +403,56 @@ class ScreenMaskService : LifecycleService(), ViewModelStoreOwner, SavedStateReg
     }
 
     private fun createMaskInteractionListener(
-        instanceId: Int,
-        maskView: MaskView,
-        params: WindowManager.LayoutParams
+        @Suppress("UNUSED_PARAMETER") instanceId: Int,
+        @Suppress("UNUSED_PARAMETER") maskView: MaskView,
+        @Suppress("UNUSED_PARAMETER") params: WindowManager.LayoutParams
     ): MaskView.InteractionListener {
         return object : MaskView.InteractionListener {
-            override fun onMaskMoved(id: Int, x: Int, y: Int) {
-                activeMaskViewModels[id]?.updatePosition(x, y)
+            override fun onMaskMoved(instanceId: Int, x: Int, y: Int) {
+                activeMaskViewModels[instanceId]?.updatePosition(x, y)
             }
-            override fun onMaskResized(id: Int, width: Int, height: Int) {
-                activeMaskViewModels[id]?.updateSize(width, height)
+
+            override fun onMaskResized(instanceId: Int, width: Int, height: Int) {
+                activeMaskViewModels[instanceId]?.updateSize(width, height)
             }
-            override fun onLockToggled(id: Int) {
-                activeMaskViewModels[id]?.toggleLock()
+
+            override fun onSettingsRequested(instanceId: Int) {
+                this@ScreenMaskService.onSettingsRequested(instanceId)
             }
-            override fun onLockAllToggled(id: Int) {
+
+            override fun onLockToggled(instanceId: Int) {
+                activeMaskViewModels[instanceId]?.toggleLock()
+            }
+
+            override fun onLockAllToggled(instanceId: Int) {
                 if (!isLockAllActive) {
                     // Lock all masks
-                    activeMaskViewModels.forEach { (maskId, viewModel) ->
+                    activeMaskViewModels.forEach { (_, viewModel) ->
                         viewModel.setLocked(true, isFromLockAll = true)
-                        activeMaskViews[maskId]?.isLockedByLockAll = true
                     }
                     isLockAllActive = true
                 } else {
                     // Unlock all masks that were locked by Lock All
-                    activeMaskViewModels.forEach { (maskId, viewModel) ->
-                        activeMaskViews[maskId]?.let { view ->
-                            if (view.isLockedByLockAll) {
-                                viewModel.setLocked(false)
-                                view.isLockedByLockAll = false
-                            }
+                    activeMaskViewModels.forEach { (_, viewModel) ->
+                        if (viewModel.uiState.value.isLockedByLockAll) {
+                            viewModel.setLocked(false)
                         }
                     }
                     isLockAllActive = false
                 }
 
                 // Update all mask views to reflect new button states
-                activeMaskViews.values.forEach { it.updateLockButtonState() }
+                activeMaskViews.values.forEach { maskView ->
+                    maskView.updateLockButtonState()
+                }
             }
-            override fun onCloseRequested(id: Int) {
-                removeMaskInstance(id)
+
+            override fun onCloseRequested(instanceId: Int) {
+                removeMaskInstance(instanceId)
             }
-            override fun onBillboardTapped(id: Int) {
-                imageChooserTargetInstanceId = id
+
+            override fun onBillboardTapped(instanceId: Int) {
+                imageChooserTargetInstanceId = instanceId
                 val activityIntent = Intent(this@ScreenMaskService, ScreenMaskActivity::class.java).apply {
                     action = ScreenMaskActivity.ACTION_LAUNCH_IMAGE_CHOOSER_FROM_SERVICE
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -464,17 +461,17 @@ class ScreenMaskService : LifecycleService(), ViewModelStoreOwner, SavedStateReg
                     startActivity(activityIntent)
                 } catch (e: Exception) {
                     Log.e(TAG, "Could not start ScreenMaskActivity for image chooser", e)
-                    activeMaskViews[id]?.showMessage(getString(R.string.cannot_open_image_picker))
+                    activeMaskViews[instanceId]?.showMessage(getString(R.string.cannot_open_image_picker))
                     imageChooserTargetInstanceId = null
                 }
             }
-            override fun onColorChangeRequested(id: Int) {
-                // Color changing is removed for now, as masks are opaque black.
-                // If this is re-added, call ViewModel: activeMaskViewModels[id]?.updateColor(newColor)
-                Log.d(TAG, "Color change requested for $id (currently no-op for opaque masks)")
+
+            override fun onColorChangeRequested(instanceId: Int) {
+                Log.d(TAG, "Color change requested for $instanceId (currently no-op for opaque masks)")
             }
-            override fun onControlsToggled(id: Int) {
-                activeMaskViewModels[id]?.toggleControlsVisibility()
+
+            override fun onControlsToggled(instanceId: Int) {
+                activeMaskViewModels[instanceId]?.toggleControlsVisibility()
             }
         }
     }

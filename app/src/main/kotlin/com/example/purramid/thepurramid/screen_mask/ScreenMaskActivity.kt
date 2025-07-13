@@ -11,7 +11,6 @@ import android.os.Bundle
 import android.provider.MediaStore
 import android.transition.Explode
 import android.util.Log
-import android.view.Gravity
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
@@ -222,7 +221,8 @@ class ScreenMaskActivity : AppCompatActivity() {
 
             if (activeCount > 0) {
                 Log.d(TAG, "Screen Masks active ($activeCount), launching settings fragment.")
-                showSettingsFragment()
+                val instanceId = intent.getIntExtra(EXTRA_MASK_INSTANCE_ID, 1)
+                showSettingsFragment(instanceId)
                 // Activity remains open to host the fragment
             } else {
                 Log.d(TAG, "No active Screen Masks, requesting service to add a new one.")

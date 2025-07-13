@@ -3,20 +3,27 @@ package com.example.purramid.thepurramid.screen_mask.ui
 
 import android.content.Context
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
-// Removed unused activityViewModels and other lifecycle imports for this simpler version
 import com.example.purramid.thepurramid.R
 import com.example.purramid.thepurramid.databinding.FragmentScreenMaskSettingsBinding
 import com.example.purramid.thepurramid.screen_mask.ACTION_ADD_NEW_MASK_INSTANCE
-import com.example.purramid.thepurramid.screen_mask.ScreenMaskActivity // For PREFS_NAME, KEY_ACTIVE_COUNT
+import com.example.purramid.thepurramid.screen_mask.ACTION_REMOVE_HIGHLIGHT
+import com.example.purramid.thepurramid.screen_mask.ACTION_REQUEST_IMAGE_CHOOSER
+import com.example.purramid.thepurramid.screen_mask.ACTION_TOGGLE_LOCK
+import com.example.purramid.thepurramid.screen_mask.ACTION_TOGGLE_LOCK_ALL
+import com.example.purramid.thepurramid.screen_mask.EXTRA_MASK_INSTANCE_ID
+import com.example.purramid.thepurramid.screen_mask.ScreenMaskActivity
 import com.example.purramid.thepurramid.screen_mask.ScreenMaskService
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
+import androidx.core.graphics.toColorInt
 
 @AndroidEntryPoint
 class ScreenMaskSettingsFragment : Fragment() {
@@ -48,15 +55,27 @@ class ScreenMaskSettingsFragment : Fragment() {
         return binding.root
     }
 
+    private fun sendHighlightCommand(instanceId: Int, highlight: Boolean) {
+        val intent = Intent(requireContext(), ScreenMaskService::class.java).apply {
+            action = if (highlight) {
+                // We need to define a new action for highlighting
+                "com.example.purramid.screen_mask.ACTION_HIGHLIGHT"
+            } else {
+                ACTION_REMOVE_HIGHLIGHT
+            }
+            putExtra(EXTRA_MASK_INSTANCE_ID, instanceId)
+        }
+        requireContext().startService(intent)
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         val instanceId = arguments?.getInt(ARG_INSTANCE_ID) ?: -1
-
-        // Highlight the requesting mask with yellow border
         sendHighlightCommand(instanceId, true)
 
-        setupListeners(instanceId)
+        setupListeners()
+        updateAddAnotherButtonState() // Check initial state
     }
 
     private fun setupListeners() {
@@ -78,24 +97,44 @@ class ScreenMaskSettingsFragment : Fragment() {
         // Billboard button
         binding.billboardButton.setOnClickListener {
             val instanceId = arguments?.getInt(ARG_INSTANCE_ID) ?: return@setOnClickListener
+
+            // Apply active state color
+            applyActiveColorToButton(binding.billboardButton as MaterialButton)
+
+            // Send command to service
             sendBillboardCommand(instanceId)
         }
 
         // Add New Mask
         binding.buttonAddNewMask.setOnClickListener {
-            val prefs = requireActivity().getSharedPreferences(ScreenMaskActivity.PREFS_NAME, Context.MODE_PRIVATE)
+            val prefs = requireActivity().getSharedPreferences(
+                ScreenMaskActivity.PREFS_NAME,
+                Context.MODE_PRIVATE
+            )
             val activeCount = prefs.getInt(ScreenMaskActivity.KEY_ACTIVE_COUNT, 0)
-            val maxMasks = 4 // MAX_MASKS defined in ScreenMaskService, ideally from a shared const
+            val maxMasks = ScreenMaskService.MAX_MASKS
 
             if (activeCount < maxMasks) {
+                // Apply active state color
+                applyActiveColorToButton(binding.buttonAddNewMask as MaterialButton)
+
                 val serviceIntent = Intent(requireContext(), ScreenMaskService::class.java).apply {
                     action = ACTION_ADD_NEW_MASK_INSTANCE
+                    putExtra(EXTRA_MASK_INSTANCE_ID, arguments?.getInt(ARG_INSTANCE_ID) ?: -1)
                 }
                 ContextCompat.startForegroundService(requireContext(), serviceIntent)
-                // Optionally, you could close settings after adding, or let the user add more.
-                // For now, let's keep it open.
+
+                // Reset color after a short delay
+                binding.buttonAddNewMask.postDelayed({
+                    clearButtonColorFilter(binding.buttonAddNewMask as MaterialButton)
+                    updateAddAnotherButtonState() // Check if we need to disable it
+                }, 300)
             } else {
-                Snackbar.make(binding.root, getString(R.string.max_masks_reached_snackbar), Snackbar.LENGTH_LONG).show()
+                Snackbar.make(
+                    binding.root,
+                    getString(R.string.max_masks_reached_snackbar),
+                    Snackbar.LENGTH_LONG
+                ).show()
             }
         }
     }
@@ -122,6 +161,48 @@ class ScreenMaskSettingsFragment : Fragment() {
             putExtra(EXTRA_MASK_INSTANCE_ID, instanceId)
         }
         requireContext().startService(intent)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Reset button colors when returning to settings
+        clearButtonColorFilter(binding.billboardButton as MaterialButton)
+        clearButtonColorFilter(binding.buttonAddNewMask as MaterialButton)
+    }
+
+    // Helper method to apply active color to Material Button
+    private fun applyActiveColorToButton(button: MaterialButton) {
+        button.iconTint = ColorStateList.valueOf("#808080".toColorInt())
+    }
+
+    // Helper method to clear color filter from Material Button
+    private fun clearButtonColorFilter(button: MaterialButton) {
+        button.iconTint = null
+    }
+
+    private fun updateAddAnotherButtonState() {
+        val prefs = requireActivity().getSharedPreferences(
+            ScreenMaskActivity.PREFS_NAME,
+            Context.MODE_PRIVATE
+        )
+        val activeCount = prefs.getInt(ScreenMaskActivity.KEY_ACTIVE_COUNT, 0)
+
+        // Cast binding button to MaterialButton
+        val addButton = binding.buttonAddNewMask as MaterialButton
+
+        if (activeCount >= ScreenMaskService.MAX_MASKS) {
+            // Disable and apply inactive appearance
+            addButton.isEnabled = false
+            addButton.alpha = 0.5f
+            // Apply gray tint for disabled state
+            addButton.iconTint = ColorStateList.valueOf("#CCCCCC".toColorInt())
+        } else {
+            // Enable and restore normal appearance
+            addButton.isEnabled = true
+            addButton.alpha = 1.0f
+            // Clear any color filter using the helper method
+            clearButtonColorFilter(addButton)
+        }
     }
 
     override fun onDestroyView() {

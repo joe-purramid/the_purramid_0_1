@@ -11,21 +11,15 @@ interface ScreenMaskDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOrUpdate(state: ScreenMaskStateEntity)
 
-    @Query("SELECT * FROM screen_mask_state WHERE instanceId = :id")
+    @Query("SELECT * FROM screen_mask_states WHERE instanceId = :id")
     suspend fun getById(id: Int): ScreenMaskStateEntity?
 
-    @Query("SELECT * FROM screen_mask_state")
+    @Query("SELECT * FROM screen_mask_states")
     suspend fun getAllStates(): List<ScreenMaskStateEntity>
 
-    @Query("DELETE FROM screen_mask_state WHERE instanceId = :id")
+    @Query("DELETE FROM screen_mask_states WHERE instanceId = :id")
     suspend fun deleteById(id: Int)
 
-    @Query("SELECT COUNT(*) FROM screen_mask_state")
-    suspend fun getCount(): Int
-
-    @Query("SELECT MAX(instanceId) FROM screen_mask_state") // To help with new ID generation
-    suspend fun getMaxInstanceId(): Int?
-
-    @Query("DELETE FROM screen_mask_state")
+    @Query("DELETE FROM screen_mask_states")
     suspend fun clearAll()
 }

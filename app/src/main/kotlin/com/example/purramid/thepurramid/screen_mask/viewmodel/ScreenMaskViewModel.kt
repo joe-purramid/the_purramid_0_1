@@ -1,7 +1,6 @@
 // ScreenMaskViewModel.kt
 package com.example.purramid.thepurramid.screen_mask.viewmodel
 
-import android.graphics.Color
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -30,7 +29,7 @@ class ScreenMaskViewModel @Inject constructor(
         private const val TAG = "ScreenMaskViewModel"
     }
 
-    private val instanceId: Int = 0
+    private var instanceId: Int = 0
 
     fun initialize(id: Int) {
         if (instanceId != 0) {
@@ -68,42 +67,71 @@ class ScreenMaskViewModel @Inject constructor(
     }
 
     fun updatePosition(x: Int, y: Int) {
+        if (instanceId == 0) {
+            Log.e(TAG, "updatePosition called with uninitialized instanceId")
+            return
+        }
         if (_uiState.value.x == x && _uiState.value.y == y) return
         _uiState.update { it.copy(x = x, y = y) }
         saveState(_uiState.value)
     }
 
     fun updateSize(width: Int, height: Int) {
+        if (instanceId == 0) {
+            Log.e(TAG, "updateSize called with uninitialized instanceId")
+            return
+        }
         if (_uiState.value.width == width && _uiState.value.height == height) return
         _uiState.update { it.copy(width = width, height = height) }
         saveState(_uiState.value)
     }
 
     fun toggleLock() {
+        if (instanceId == 0) {
+            Log.e(TAG, "toggleLock called with uninitialized instanceId")
+            return
+        }
         _uiState.update { it.copy(isLocked = !it.isLocked) }
         saveState(_uiState.value)
     }
 
     fun setLocked(locked: Boolean, isFromLockAll: Boolean = false) {
-        _uiState.update { it.copy(isLocked = locked) }
+        if (instanceId == 0) {
+            Log.e(TAG, "setLocked called with uninitialized instanceId")
+            return
+        }
+        _uiState.update {
+            it.copy(
+                isLocked = locked,
+                isLockedByLockAll = if (locked && isFromLockAll) true else if (!locked) false else it.isLockedByLockAll
+            )
+        }
         saveState(_uiState.value)
     }
 
-    fun isLocked(): Boolean = _uiState.value.isLocked
+    fun isLocked(): Boolean {
+        if (instanceId == 0) {
+            Log.w(TAG, "isLocked called with uninitialized instanceId, returning false")
+            return false
+        }
+        return _uiState.value.isLocked
+    }
 
     fun setBillboardImageUri(uriString: String?) {
+        if (instanceId == 0) {
+            Log.e(TAG, "setBillboardImageUri called with uninitialized instanceId")
+            return
+        }
         if (_uiState.value.billboardImageUri == uriString) return
         _uiState.update { it.copy(billboardImageUri = uriString, isBillboardVisible = uriString != null) }
         saveState(_uiState.value)
     }
 
-    fun toggleBillboardVisibility() {
-        if (_uiState.value.billboardImageUri == null && !_uiState.value.isBillboardVisible) return // Can't make visible if no URI
-        _uiState.update { it.copy(isBillboardVisible = !it.isBillboardVisible) }
-        saveState(_uiState.value)
-    }
-
     fun toggleControlsVisibility() {
+        if (instanceId == 0) {
+            Log.e(TAG, "toggleControlsVisibility called with uninitialized instanceId")
+            return
+        }
         _uiState.update { it.copy(isControlsVisible = !it.isControlsVisible) }
         saveState(_uiState.value)
     }
@@ -125,7 +153,10 @@ class ScreenMaskViewModel @Inject constructor(
     }
 
     fun deleteState() {
-        if (instanceId <= 0) return
+        if (instanceId <= 0) {
+            Log.w(TAG, "deleteState called with invalid instanceId: $instanceId")
+            return
+        }
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 screenMaskDao.deleteById(instanceId)
@@ -144,6 +175,7 @@ class ScreenMaskViewModel @Inject constructor(
             width = entity.width,
             height = entity.height,
             isLocked = entity.isLocked,
+            isLockedByLockAll = entity.isLockedByLockAll,
             billboardImageUri = entity.billboardImageUri,
             isBillboardVisible = entity.isBillboardVisible,
             isControlsVisible = entity.isControlsVisible
@@ -158,6 +190,7 @@ class ScreenMaskViewModel @Inject constructor(
             width = state.width,
             height = state.height,
             isLocked = state.isLocked,
+            isLockedByLockAll = state.isLockedByLockAll,
             billboardImageUri = state.billboardImageUri,
             isBillboardVisible = state.isBillboardVisible,
             isControlsVisible = state.isControlsVisible

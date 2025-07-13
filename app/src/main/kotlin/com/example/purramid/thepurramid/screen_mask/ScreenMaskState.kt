@@ -8,6 +8,7 @@ data class ScreenMaskState(
     var width: Int = -1, // -1 for default/match_parent initially
     var height: Int = -1, // -1 for default/match_parent initially
     var isLocked: Boolean = false,
+    var isLockedByLockAll: Boolean = false,
     var billboardImageUri: String? = null, // Store URI as String
     var isBillboardVisible: Boolean = false,
     var isControlsVisible: Boolean = true // To manage visibility of control buttons on the mask

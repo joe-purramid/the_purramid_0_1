@@ -3,6 +3,7 @@ package com.example.purramid.thepurramid.di
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.example.purramid.thepurramid.screen_mask.ScreenMaskService
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -24,9 +25,9 @@ object AppModule {
 
     @Provides
     @Singleton
-    @ScreenMaskPrefs // Use the qualifier
+    @ScreenMaskPrefs
     fun provideScreenMaskPreferences(@ApplicationContext context: Context): SharedPreferences {
-        return context.getSharedPreferences(com.example.purramid.thepurramid.screen_mask.ScreenMaskService.PREFS_NAME_FOR_ACTIVITY, Context.MODE_PRIVATE)
+        return context.getSharedPreferences(ScreenMaskService.PREFS_NAME_FOR_ACTIVITY, Context.MODE_PRIVATE)
     }
 
     @Provides

@@ -14,6 +14,7 @@ data class ScreenMaskStateEntity(
     val width: Int,
     val height: Int,
     val isLocked: Boolean,
+    var isLockedByLockAll: Boolean,
     val billboardImageUri: String?,
     val isBillboardVisible: Boolean,
     val isControlsVisible: Boolean

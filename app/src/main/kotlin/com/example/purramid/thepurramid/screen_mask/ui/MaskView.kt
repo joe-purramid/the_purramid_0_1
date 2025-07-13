@@ -5,10 +5,12 @@ import android.animation.ObjectAnimator
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Color
+import android.graphics.PorterDuff
+import android.graphics.Rect
 import android.graphics.drawable.GradientDrawable
+import android.net.Uri
 import android.util.AttributeSet
 import android.util.Log
-import android.util.TypedValue
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
@@ -17,12 +19,14 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
+import com.bumptech.glide.Glide
 import com.google.android.material.snackbar.Snackbar
 import com.example.purramid.thepurramid.R
 import com.example.purramid.thepurramid.screen_mask.ScreenMaskState
 import com.example.purramid.thepurramid.util.dpToPx
 import kotlin.math.abs
 import kotlin.math.max
+import androidx.core.graphics.toColorInt
 
 class MaskView @JvmOverloads constructor(
     context: Context,
@@ -34,13 +38,14 @@ class MaskView @JvmOverloads constructor(
     // Define the desired minimum dimension in dp
     private val minDimensionDp = 50
     // Calculate the equivalent minimum dimension in pixels, using lazy initialization
-    private val minDimensionPx: Int by lazy { dpToPx(minDimensionDp) }
+    private val minDimensionPx: Int by lazy { context.dpToPx(minDimensionDp) }
 
     interface InteractionListener {
         fun onMaskMoved(instanceId: Int, x: Int, y: Int)
         fun onMaskResized(instanceId: Int, width: Int, height: Int)
         fun onSettingsRequested(instanceId: Int)
         fun onLockToggled(instanceId: Int)
+        fun onLockAllToggled(instanceId: Int)
         fun onCloseRequested(instanceId: Int)
         fun onBillboardTapped(instanceId: Int) // To request image change
         fun onColorChangeRequested(instanceId: Int) // Placeholder for color picker
@@ -51,36 +56,79 @@ class MaskView @JvmOverloads constructor(
     private var currentState: ScreenMaskState
 
     // Control buttons
-    private var billboardImageView: ImageView
     private var closeButton: ImageView
     private val topLeftResizeHandle: ImageView = ImageView(context).apply {
         setImageDrawable(ContextCompat.getDrawable(context, R.drawable.ic_resize_left_handle))
-        val handleSize = dpToPx(48) // Make handles large enough to grab easily
+        val handleSize = context.dpToPx(48) // Make handles large enough to grab easily
         layoutParams = LayoutParams(handleSize, handleSize).apply {
             gravity = Gravity.TOP or Gravity.START
         }
     }
     private val bottomRightResizeHandle: ImageView = ImageView(context).apply {
         setImageDrawable(ContextCompat.getDrawable(context, R.drawable.ic_resize_right_handle))
-        val handleSize = dpToPx(48)
+        val handleSize = context.dpToPx(48)
         layoutParams = LayoutParams(handleSize, handleSize).apply {
             gravity = Gravity.BOTTOM or Gravity.END
         }
     }
-    private val settingsButton: ImageView = ImageView(context).apply {
+    val settingsButton: ImageView = ImageView(context).apply {
         setImageDrawable(ContextCompat.getDrawable(context, R.drawable.ic_settings))
-        val buttonSize = dpToPx(32)
-        setPadding(dpToPx(4), dpToPx(4), dpToPx(4), dpToPx(4))
+        val buttonSize = context.dpToPx(32)
+        setPadding(context.dpToPx(4), context.dpToPx(4), context.dpToPx(4), context.dpToPx(4))
         layoutParams = LayoutParams(buttonSize, buttonSize).apply {
             gravity = Gravity.BOTTOM or Gravity.START
             setMargins(dpToPx(4), dpToPx(4), dpToPx(4), dpToPx(4))
         }
     }
+    private var billboardImageView: ImageView
+
+    // Lock button for individual mask
+    private val lockButton: ImageView = ImageView(context).apply {
+        setImageDrawable(ContextCompat.getDrawable(context, R.drawable.ic_lock))
+        val buttonSize = context.dpToPx(32)
+        setPadding(context.dpToPx(4), context.dpToPx(4), context.dpToPx(4), context.dpToPx(4))
+        layoutParams = LayoutParams(buttonSize, buttonSize).apply {
+            gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+            setMargins(context.dpToPx(4), context.dpToPx(4), context.dpToPx(4), context.dpToPx(4))
+        }
+        setOnClickListener {
+            if (!currentState.isLocked || currentState.isLockedByLockAll) {
+                // Apply active state color
+                setColorFilter("#808080".toColorInt(), PorterDuff.Mode.SRC_IN)
+                interactionListener?.onLockToggled(instanceId)
+
+                // Reset color after a delay
+                postDelayed({
+                    clearColorFilter()
+                }, 300)
+            }
+        }
+    }
+
+    // Lock All button
+    private val lockAllButton: ImageView = ImageView(context).apply {
+        setImageDrawable(ContextCompat.getDrawable(context, R.drawable.ic_lock_all))
+        val buttonSize = context.dpToPx(32)
+        setPadding(context.dpToPx(4), context.dpToPx(4), context.dpToPx(4), context.dpToPx(4))
+        layoutParams = LayoutParams(buttonSize, buttonSize).apply {
+            gravity = Gravity.BOTTOM or Gravity.END
+            setMargins(context.dpToPx(4), context.dpToPx(4), context.dpToPx(4), context.dpToPx(4))
+        }
+        setOnClickListener {
+            // Apply active state color
+            setColorFilter("#808080".toColorInt(), PorterDuff.Mode.SRC_IN)
+            interactionListener?.onLockAllToggled(instanceId)
+
+            // Reset color after a delay
+            postDelayed({
+                clearColorFilter()
+            }, 300)
+        }
+    }
 
     // Border styling
-    private var yellowBorder: GradientDrawable
+    private lateinit var yellowBorder: GradientDrawable
     private var lockBorder: GradientDrawable
-    private var isLockedByLockAll = false
     private var borderFadeAnimator: ObjectAnimator? = null
 
     // Touch handling for move and resize
@@ -92,7 +140,7 @@ class MaskView @JvmOverloads constructor(
     private var initialMaskHeight: Int = 0
     private var isMoving = false
     private var isResizing = false // More sophisticated resize later
-    private val touchSlop = dpToPx(10)
+    private val touchSlop = context.dpToPx(10)
     private enum class ResizeDirection { NONE, MOVE, LEFT, TOP, RIGHT, BOTTOM, TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT }
     private var currentResizeDirection = ResizeDirection.NONE
     private val resizeHandleSize = context.dpToPx(24) // Increased for easier touch
@@ -136,7 +184,7 @@ class MaskView @JvmOverloads constructor(
         settingsButton.setOnClickListener {
             if (!currentState.isLocked) {
                 // Apply active state color
-                settingsButton.setColorFilter(Color.parseColor("#808080"), PorterDuff.Mode.SRC_IN)
+                settingsButton.setColorFilter("#808080".toColorInt(), PorterDuff.Mode.SRC_IN)
                 interactionListener?.onSettingsRequested(instanceId)
 
                 // Reset color after a delay (will be reset anyway when activity closes)
@@ -165,6 +213,10 @@ class MaskView @JvmOverloads constructor(
         }
         addView(billboardImageView)
 
+        // Add lock buttons
+        addView(lockButton)
+        addView(lockAllButton)
+
         // Close Button
         closeButton = ImageView(context).apply {
             setImageDrawable(ContextCompat.getDrawable(context, R.drawable.ic_close))
@@ -176,7 +228,10 @@ class MaskView @JvmOverloads constructor(
             }
             setOnClickListener {
                 if (!currentState.isLocked) {
+                    // Apply active state color
+                    closeButton.setColorFilter("#808080".toColorInt(), PorterDuff.Mode.SRC_IN)
                     interactionListener?.onCloseRequested(instanceId)
+                    // Note: Color will be reset when view is removed
                 } else {
                     showMessage(context.getString(R.string.unlock_mask_to_close))
                 }
@@ -186,7 +241,7 @@ class MaskView @JvmOverloads constructor(
 
         // Red border for locked state
         lockBorder = GradientDrawable().apply {
-            setStroke(dpToPx(3), Color.RED)  // Change to RED as specified
+            setStroke(context.dpToPx(3), Color.RED)  // Change to RED as specified
             setColor(Color.TRANSPARENT)
         }
 
@@ -208,8 +263,30 @@ class MaskView @JvmOverloads constructor(
         topLeftResizeHandle.visibility = handleVisibility
         bottomRightResizeHandle.visibility = handleVisibility
 
-        // Hide mask stamp when billboard is visible
-        maskStampImageView.visibility = if (newState.isBillboardVisible) GONE else VISIBLE
+        // Handle billboard image display
+        if (newState.isBillboardVisible && !newState.billboardImageUri.isNullOrEmpty()) {
+            // Load and display the image
+            billboardImageView.visibility = VISIBLE
+            maskStampImageView.visibility = GONE
+
+            try {
+                Glide.with(context)
+                    .load(Uri.parse(newState.billboardImageUri))
+                    .fitCenter() // Maintains aspect ratio as per spec 13.3.3
+                    .into(billboardImageView)
+            } catch (e: Exception) {
+                Log.e("MaskView", "Error loading billboard image", e)
+                // Hide billboard on error
+                billboardImageView.visibility = GONE
+                maskStampImageView.visibility = VISIBLE
+            }
+        } else {
+            // No billboard image - hide billboard, show mask stamp
+            billboardImageView.visibility = GONE
+            maskStampImageView.visibility = VISIBLE
+            // Clear any previously loaded image
+            Glide.with(context).clear(billboardImageView)
+        }
 
         // Update border visibility based on lock state
         if (newState.isLocked) {
@@ -227,6 +304,14 @@ class MaskView @JvmOverloads constructor(
             borderFadeAnimator?.cancel()
             foreground = null // Remove border
         }
+
+        // Show/hide controls based on state
+        val controlsVisibility = if (newState.isControlsVisible) VISIBLE else GONE
+        closeButton.visibility = controlsVisibility
+        settingsButton.visibility = controlsVisibility
+        lockButton.visibility = controlsVisibility
+        lockAllButton.visibility = controlsVisibility
+
         invalidate() // Redraw view
         // Show/hide controls based on state
         closeButton.visibility = if (newState.isControlsVisible) VISIBLE else GONE
@@ -279,13 +364,15 @@ class MaskView @JvmOverloads constructor(
                     // Update handle visual state
                     when (currentResizeDirection) {
                         ResizeDirection.TOP_LEFT -> {
-                            topLeftResizeHandle.setImageDrawable(
-                                ContextCompat.getDrawable(context, R.drawable.ic_resize_left_handle_active)
+                            topLeftResizeHandle.setColorFilter(
+                                "#808080".toColorInt(),
+                                PorterDuff.Mode.SRC_IN
                             )
                         }
                         ResizeDirection.BOTTOM_RIGHT -> {
-                            bottomRightResizeHandle.setImageDrawable(
-                                ContextCompat.getDrawable(context, R.drawable.ic_resize_right_handle_active)
+                            bottomRightResizeHandle.setColorFilter(
+                                "#808080".toColorInt(),
+                                PorterDuff.Mode.SRC_IN
                             )
                         }
                         else -> { /* No visual change for move */ }
@@ -349,8 +436,9 @@ class MaskView @JvmOverloads constructor(
                     }
                     // --- End Check for click ---
 
-                        // If it wasn't a click, it was the end of move/resize/etc.
-                    // Final state reported continuously, so nothing specific needed here usually.
+                    topLeftResizeHandle.clearColorFilter()
+                    bottomRightResizeHandle.clearColorFilter()
+
                     return@setOnTouchListener true // Consume UP if we consumed DOWN
                 }
 
@@ -363,13 +451,8 @@ class MaskView @JvmOverloads constructor(
                     return@setOnTouchListener true
 
                     // Reset handle visuals to default
-                    topLeftResizeHandle.setImageDrawable(
-                        ContextCompat.getDrawable(context, R.drawable.ic_resize_left_handle)
-                    )
-                    bottomRightResizeHandle.setImageDrawable(
-                        ContextCompat.getDrawable(context, R.drawable.ic_resize_right_handle)
-                    )
-                }
+                    topLeftResizeHandle.clearColorFilter()
+                    bottomRightResizeHandle.clearColorFilter()                }
             }
             // Default fallback (shouldn't be reached often if DOWN is consumed)
             return@setOnTouchListener false
@@ -380,7 +463,7 @@ class MaskView @JvmOverloads constructor(
     private fun isEventConsumedByChild(event: MotionEvent): Boolean {
         val x = event.x.toInt()
         val y = event.y.toInt()
-        val hitRect = android.graphics.Rect()
+        val hitRect = Rect()
 
         // Check close button
         closeButton.getHitRect(hitRect)
@@ -400,7 +483,7 @@ class MaskView @JvmOverloads constructor(
 
     private fun getResizeDirection(localX: Float, localY: Float): ResizeDirection {
         // Check if touching a resize handle specifically
-        val hitRect = android.graphics.Rect()
+        val hitRect = Rect()
 
         topLeftResizeHandle.getHitRect(hitRect)
         if (topLeftResizeHandle.isVisible && hitRect.contains(localX.toInt(), localY.toInt())) {
@@ -419,8 +502,8 @@ class MaskView @JvmOverloads constructor(
     private fun handleResize(rawDeltaX: Float, rawDeltaY: Float) {
         var newX = currentState.x
         var newY = currentState.y
-        var newWidth = currentState.width
-        var newHeight = currentState.height
+        var newWidth: Int
+        var newHeight: Int
 
         when (currentResizeDirection) {
             ResizeDirection.TOP_LEFT -> {
@@ -439,8 +522,8 @@ class MaskView @JvmOverloads constructor(
         }
 
         // Apply min size constraints
-        newWidth = max(newWidth, minDimensionPx.toInt())
-        newHeight = max(newHeight, minDimensionPx.toInt())
+        newWidth = max(newWidth, minDimensionPx)
+        newHeight = max(newHeight, minDimensionPx)
 
         // To maintain position correctly during edge drags, adjust X/Y only if size changed
         if (newWidth != currentState.width) currentState.x = newX
@@ -482,8 +565,8 @@ class MaskView @JvmOverloads constructor(
             var newWidth = (initialMaskWidth * scaleFactor).toInt()
             var newHeight = (initialMaskHeight * scaleFactor).toInt()
 
-            newWidth = max(newWidth, minDimensionPx.toInt())
-            newHeight = max(newHeight, minDimensionPx.toInt())
+            newWidth = max(newWidth, minDimensionPx)
+            newHeight = max(newHeight, minDimensionPx)
 
             // For visual feedback:
             interactionListener?.onMaskResized(instanceId, newWidth, newHeight)
@@ -500,8 +583,8 @@ class MaskView @JvmOverloads constructor(
                 // Final calculation for safety, though onScale should be accurate
                 var finalWidth = (initialMaskWidth * scaleFactor).toInt()
                 var finalHeight = (initialMaskHeight * scaleFactor).toInt()
-                finalWidth = max(finalWidth, minDimensionPx.toInt())
-                finalHeight = max(finalHeight, minDimensionPx.toInt())
+                finalWidth = max(finalWidth, minDimensionPx)
+                finalHeight = max(finalHeight, minDimensionPx)
 
                 interactionListener?.onMaskResized(instanceId, finalWidth, finalHeight)
             }
@@ -531,14 +614,18 @@ class MaskView @JvmOverloads constructor(
     }
 
     private fun applyImagePadding() {
-        val currentImageView = billboardImageView
-        val currentLayoutParams = currentImageView.layoutParams as? LayoutParams
+        val currentLayoutParams = billboardImageView.layoutParams as? LayoutParams
         currentLayoutParams?.let {
-            val parentWidth = this.width // MaskView width
-            val padding = (parentWidth * 0.05f).toInt().coerceAtLeast(0)
-            if (it.leftMargin != padding || it.topMargin != padding) { // Avoid redundant updates
-                it.setMargins(padding, padding, padding, padding)
-                currentImageView.layoutParams = it
+            val parentWidth = this.width
+            val parentHeight = this.height
+
+            // Calculate 5% padding as per spec 13.3.4
+            val horizontalPadding = (parentWidth * 0.05f).toInt().coerceAtLeast(0)
+            val verticalPadding = (parentHeight * 0.05f).toInt().coerceAtLeast(0)
+
+            if (it.leftMargin != horizontalPadding || it.topMargin != verticalPadding) {
+                it.setMargins(horizontalPadding, verticalPadding, horizontalPadding, verticalPadding)
+                billboardImageView.layoutParams = it
             }
         }
     }
@@ -558,16 +645,20 @@ class MaskView @JvmOverloads constructor(
     }
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
-        if (currentState.isBillboardVisible && currentState.billboardImageUri != null) {
+
+        // Apply padding if billboard is visible
+        if (currentState.isBillboardVisible && !currentState.billboardImageUri.isNullOrEmpty()) {
             applyImagePadding()
         }
+
+        // Update mask stamp size
         updateMaskStampSize()
     }
 
     fun setHighlighted(highlighted: Boolean) {
         if (highlighted) {
             foreground = GradientDrawable().apply {
-                setStroke(dpToPx(3), Color.parseColor("#FFFACD"))  // Yellow border as specified
+                setStroke(context.dpToPx(3), "#FFFACD".toColorInt())  // Yellow border as specified
                 setColor(Color.TRANSPARENT)
             }
         } else {
@@ -591,11 +682,21 @@ class MaskView @JvmOverloads constructor(
         }
         lockButton.setImageDrawable(ContextCompat.getDrawable(context, lockDrawable))
 
-        val lockAllDrawable = if (isLockedByLockAll) {
+        val lockAllDrawable = if (currentState.isLockedByLockAll) {
             R.drawable.ic_lock_all_open
         } else {
             R.drawable.ic_lock_all
         }
         lockAllButton.setImageDrawable(ContextCompat.getDrawable(context, lockAllDrawable))
+    }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+
+        // Cancel any ongoing animations
+        borderFadeAnimator?.cancel()
+
+        // Clear Glide resources
+        Glide.with(context).clear(billboardImageView)
     }
 }
