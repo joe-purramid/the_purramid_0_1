@@ -3,7 +3,6 @@ package com.example.purramid.thepurramid.traffic_light
 import android.app.Dialog
 import android.graphics.PorterDuff
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -313,9 +312,15 @@ class AdjustValuesFragment : DialogFragment() {
     }
 
     private fun showDangerousSoundInfoDialog() {
+        // Concatenate the message parts
+        val fullMessage = getString(R.string.dangerous_sound_alert_info_message_part1) +
+                getString(R.string.dangerous_sound_alert_info_message_part2) +
+                getString(R.string.dangerous_sound_alert_info_message_part3) +
+                getString(R.string.dangerous_sound_alert_info_message_part4)
+
         MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.dangerous_sound_alert_info_title)
-            .setMessage(R.string.dangerous_sound_alert_info_message)
+            .setMessage(fullMessage)
             .setPositiveButton(android.R.string.ok, null)
             .show()
     }

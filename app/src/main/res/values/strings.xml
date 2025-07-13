@@ -423,7 +423,8 @@
     <string name="flip_coins_action">Flip Coins</string>
     <string name="tails_action">Tails</string>
     <string name="heads_action">Heads</string>
-    <string name="reset_grid_action">Reset Grid</string> <string name="coin_image_desc">Image of %1$s coin, showing %2$s</string>
+    <string name="reset_grid_action">Reset Grid</string>
+    <string name="coin_image_desc">Image of %1$s coin, showing %2$s</string>
     <string name="heads">Heads</string>
     <string name="tails">Tails</string>
     <string name="coin_image_desc_in_pool">Coin in pool</string>
@@ -435,7 +436,8 @@
     <string name="add_coins_to_pool_empty_state">Add coins to your pool!</string>
     <string name="coin_flip_announce_format"><xliff:g id="heads_count">%1$d</xliff:g> Heads, <xliff:g id="tails_count">%2$d</xliff:g> Tails</string>
     <string name="grid_cell_content_desc">Grid cell displaying coin flip result</string>
-    <string name="close_dialog">Close</string> <string name="max_coin_type_reached">Max %1$s reached</string> <string name="label_1_bit" translatable="false">1b</string>
+    <string name="close_dialog">Close</string>
+    <string name="max_coin_type_reached">Max %1$s reached</string> <string name="label_1_bit" translatable="false">1b</string>
     <string name="label_5_bits" translatable="false">5b</string>
     <string name="label_10_bits" translatable="false">10b</string>
     <string name="label_25_bits" translatable="false">25b</string>
@@ -452,7 +454,8 @@
     <string name="desc_coin_announcement_on">Coin result announcement is ON</string>
     <string name="desc_coin_announcement_off">Coin result announcement is OFF</string>
     <string name="error_add_coins_to_flip">Add coins to your pool to flip!</string>
-    <string name="error_max_coins_reached">Maximum of %1$d %2$s coins reached.</string> <string name="loading_settings">Loading Settings…</string>
+    <string name="error_max_coins_reached">Maximum of %1$d %2$s coins reached.</string>
+    <string name="loading_settings">Loading Settings…</string>
 
     <!-- `` GRAPHING FOR DICE AND COIN FLIP `` -->
     <string name="graph_distribution_placeholder">Graph will appear here</string>
@@ -461,7 +464,8 @@
     <string name="plot_type_histogram">Histogram (Bar)</string>
     <string name="plot_type_line_graph">Line Graph</string>
     <string name="plot_type_qq_graph">Q-Q Scatter Plot</string>
-    <string name="setting_graph_flip_count">Number of Flips for Graph</string> <string name="graph_dist_type_off">Off</string>
+    <string name="setting_graph_flip_count">Number of Flips for Graph</string>
+    <string name="graph_dist_type_off">Off</string>
     <string name="graph_dist_type_manual">Manual</string>
     <string name="graph_dist_type_normal">Normal</string>
     <string name="graph_dist_type_uniform">Uniform</string>
@@ -551,7 +555,8 @@
     <string name="max_randomizers_general_reached_snackbar">Maximum of <xliff:g id="count">%1$d</xliff:g> Randomizer windows reached.</string>
     <string name="max_randomizers_dice_reached_snackbar">Maximum of <xliff:g id="count">%1$d</xliff:g> Dice windows reached.</string>
     <string name="error_cannot_open_settings">Cannot open settings</string>
-    <string name="error_settings_invalid_id">Cannot open settings: Invalid ID</string>    <string name="error_settings_instance_id_failed">Some naughty kitties caused an error. Please close this window and open a new one to continue.</string>
+    <string name="error_settings_invalid_id">Cannot open settings: Invalid ID</string>
+    <string name="error_settings_instance_id_failed">Some naughty kitties caused an error. Please close this window and open a new one to continue.</string>
     <string name="info_settings_defaulted_kitty">A naughty kitty has made off with your settings. Starting with default settings.</string>
     <string name="error_settings_final_save_failed">A naughty kitty has gotten underfoot. Your settings have applied to your current session, but they have not saved for later use.</string>
     <string name="no_lists_available">No lists available to select.</string>
@@ -624,7 +629,8 @@
     <string name="setting_mode_manual">Manual Change</string>
     <string name="setting_mode_responsive">Responsive Change (Requires Microphone)</string>
     <string name="setting_mode_timed">Timed Change</string>
-    <string name="setting_orientation">Horizontal Orientation</string> <string name="setting_blinking">Enable Blinking Effects</string>
+    <string name="setting_orientation">Horizontal Orientation</string>
+    <string name="setting_blinking">Enable Blinking Effects</string>
     <string name="setting_adjust_values">Adjust Responsive Values</string>
     <string name="setting_edit_messages">Add/Edit Messages</string>
     <string name="setting_add_messages">Add Message</string>
@@ -636,7 +642,8 @@
 
     <!-- `` SEQUENCE MODE `` -->
     <string name="show_sequence_list">Show sequence list</string>
-    <string name="no_sequences_created_marquee">No sequences</string>    <string name="sequence_title_hint">Sequence Title</string>
+    <string name="no_sequences_created_marquee">No sequences</string>
+    <string name="sequence_title_hint">Sequence Title</string>
     <string name="total_duration_format">Total: %1$s</string>
     <string name="add_step">Add Step</string>
     <string name="step_message_title">Step Message</string>
@@ -662,7 +669,11 @@
     <string name="dangerous_sound_alert_label">Dangerous Sound Alert</string>
     <string name="dangerous_sound_alert_info_desc">Information about dangerous sound alert</string>
     <string name="dangerous_sound_alert_info_title">Dangerous Sound Alert Information</string>
-    <string name="dangerous_sound_alert_info_message">"Check this box to display an alert that says \"Warning: Notify your instructor immediately.\" should your hardware\'s microphone report a sound of 150 decibels or higher. The US Occupational Safety and Health Organization projects the loudest classroom noise would reach 95 dB. 120 db is the sound of a car backfire. 150 dB is the sound of a gunshot. The <xliff:g id="tp" translatable="false">Purramid</xliff:g> is a software application dependent on the readings provided by your microphone. <xliff:g id="tp" translatable="false">Purramid Learning</xliff:g> makes no guarantee that the sound detected is 150 db or what made the sound is a firearm. But this is the reality that US students live in, and we are committed to providing teachers any tools possible to make their classrooms places of learning and not fear."</string>
+    <string name="dangerous_sound_alert_info_message_part1">"Check this box to display an alert that says \"Warning: Notify your instructor immediately.\" should your hardware\'s microphone report a sound of 150 decibels or higher.</string>
+    <string name="dangerous_sound_alert_info_message_part2">The US Occupational Safety and Health Organization projects the loudest classroom noise would reach 95 dB. 120 db is the sound of a car backfire. 150 dB is the sound of a gunshot.</string>
+    <string name="dangerous_sound_alert_info_message_part3">The <xliff:g id="tp" translatable="false">Purramid</xliff:g> is a software application dependent on the readings provided by your microphone.</string>
+    <string name="dangerous_sound_alert_info_message_part4"><xliff:g id="tp" translatable="false">Purramid Learning</xliff:g> makes no guarantee that the sound detected is 150 db or what made the sound is a firearm.</string>
+    <string name="dangerous_sound_alert_info_message_part5">But this is the reality that US students live in, and we are committed to providing teachers any tools possible to make their classrooms places of learning and not fear."</string>
     <string name="warning_message">Warning</string>
     <string name="notify_instructor_message">Notify your instructor immediately.</string>
     <string name="dismiss_alert_message">Double-tap green to dismiss this alert.</string>
@@ -691,8 +702,9 @@
     <string name="purramid_copyright_text">Copyright © 2025 <xliff:g id="tpl" translatable="false">Purramid Learning®, Inc.</xliff:g> All rights reserved.</string>
 
     <string name="balsamiq_sans_title"><xliff:g id="bf" translatable="false">Balsamiq</xliff:g> Sans Font</string>
-    <string name="balsamiq_sans_license_text_part1">Copyright © 2011 The <xliff:g id="bfpa" translatable="false">Balsamiq Sans Project Authors</xliff:g> (https://github.com/balsamiq/balsamiqsans)\nThis Font Software is licensed under the SIL Open Font License, Version 1.1</string>
-    <string name="balsamiq_sans_license_text_part2">This license is copied below, and is also available with a FAQ at: https://openfontlicense.org\n\nSIL OPEN FONT LICENSE Version 1.1 - 26 February 2007</string>
+    <string name="balsamiq_sans_license_text_part1">Copyright © 2011 The <xliff:g id="bfpa" translatable="false">Balsamiq Sans Project Authors</xliff:g> (https://github.com/balsamiq/balsamiqsans)</string>
+    <string name="balsamiq_sans_license_text_part2">This Font Software is licensed under the SIL Open Font License, Version 1.1</string>
+    <string name="balsamiq_sans_license_text_part3">This license is copied below, and is also available with a FAQ at: https://openfontlicense.org\n\nSIL OPEN FONT LICENSE Version 1.1 - 26 February 2007</string>
 
     <string name="sphere_title">3D Sphere</string>
     <string name="sphere_attribution_text">"sphere-gltf-example" (https://skfb.ly/6XGzq) by <xliff:g id="raw" translatable="false">rawwerks</xliff:g> is licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).</string>
@@ -701,37 +713,40 @@
     <string name="cities_database_attribution_text">"World Cities Database" (https://simplemaps.com/data/world-cities) by <xliff:g id="sm" translatable="false">simplemaps</xliff:g> is also licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).</string>
 
     <string name="data_privacy_title">Data Privacy (USA &amp; EU)</string>
-    <string name="data_privacy_statement">At <xliff:g is="tpl" translatable="false">Purramid Learning, Inc.</xliff:g>, we are committed to your privacy. This application, <xliff:g id="tp" translatable="false">Purramid</xliff:g> Class Tools, does not collect, share, or transmit any personal data away from the device on which it is installed. All data generated and used within the application remains solely on your device.</string>
+    <string name="data_privacy_statement_part1">At <xliff:g is="tpl" translatable="false">Purramid Learning, Inc.</xliff:g>, we are committed to your privacy.</string>
+    <string name="data_privacy_statement_part2">This application, <xliff:g id="tp" translatable="false">Purramid</xliff:g> Class Tools, does not collect, share, or transmit any personal data away from the device on which it is installed.</string>
+    <string name="data_privacy_statement_part3">All data generated and used within the application remains solely on your device.</string>
 
     <string name="best_practices_title">Best Practices for Responsible Use</string>
     <string name="best_practices_content_part1">While The <xliff:g id="tp1" translatable="false">Purramid</xliff:g> application is designed to operate locally and does not collect or transmit personal data, we encourage users to adopt responsible practices when using the application, especially in educational or collaborative settings. We recommend the following:</string>
     <string name="best_practices_content_part2">Avoid Storing Identifiable Information: To further safeguard privacy, we advise against directly storing personally identifiable information (PII) such as full names, specific addresses, or other sensitive details within the application\'s content or file names. Consider using anonymized labels or codes if necessary for your workflow.</string>
-        <string name="best_practices_content_part3">Mindful Sharing (If Applicable): If you choose to share files or content created with The <xliff:g id="tp2" translatable="false">Purramid</xliff:g> application, be mindful of the information contained within them and ensure they do not inadvertently include sensitive personal data.</string>
-        <string name="best_practices_content_part4">Secure Your Device: As all application data is stored locally on your device, ensure your device itself is secured with appropriate measures such as strong passwords or biometric authentication to prevent unauthorized access.</string>
-        <string name="best_practices_content_part5">Regular Backups: While not related to privacy, regularly backing up your application data is a good practice to prevent data loss.</string>
+    <string name="best_practices_content_part3">Mindful Sharing (If Applicable): If you choose to share files or content created with The <xliff:g id="tp2" translatable="false">Purramid</xliff:g> application, be mindful of the information contained within them and ensure they do not inadvertently include sensitive personal data.</string>
+    <string name="best_practices_content_part4">Secure Your Device: As all application data is stored locally on your device, ensure your device itself is secured with appropriate measures such as strong passwords or biometric authentication to prevent unauthorized access.</string>
+    <string name="best_practices_content_part5">Regular Backups: While not related to privacy, regularly backing up your application data is a good practice to prevent data loss.</string>
 
     <string name="acknowledgements_title">Acknowledgements</string>
-    <string name="acknowledgements_content_part1">The development of The <xliff:g id="tp1" translatable="false">Purramid</xliff:g> application involved the use of advanced artificial intelligence models, including <xliff:g id="gg" translatable="false">Gemini</xliff:g>, for code generation and assistance. We leveraged these tools to enhance the efficiency of our development process.</string>
-    <string name="acknowledgements_content_part2">We also want to explicitly acknowledge that all visual art and assets included within The <xliff:g id="tp2" translatable="false">Purramid</xliff:g> application were created by human artists who were fairly compensated for their work. We believe in supporting the creative community and ensuring ethical practices in the creation of our application\'s design.</string>
+    <string name="acknowledgements_content_part1">The development of The <xliff:g id="tp1" translatable="false">Purramid</xliff:g> application involved the use of advanced artificial intelligence models,</string>
+    <string name="acknowledgements_content_part2">including <xliff:g id="gg" translatable="false">Gemini</xliff:g>, for code generation and assistance. We leveraged these tools to enhance the efficiency of our development process.</string>
+    <string name="acknowledgements_content_part3">We also want to explicitly acknowledge that all visual art and assets included within The <xliff:g id="tp2" translatable="false">Purramid</xliff:g> application were created by human artists</string>
+    <string name="acknowledgements_content_part4">who were fairly compensated for their work. We believe in supporting the creative community and ensuring ethical practices in the creation of our application\'s design.</string>
 
     <string name="eula_title">End User License Agreement</string>
     <string name="eula_content_part1">IMPORTANT - READ CAREFULLY: This End User License Agreement ("EULA") is a legal agreement between you (the "User") and <xliff:g id="tpl" translatable="false">Purramid Learning, Inc.</xliff:g> ("Licensor") for The <xliff:g id="tp" translatable="false">Purramid</xliff:g> application (the "Application").</string>
     <string name="eula_content_part2">By installing, copying, or otherwise using the Application, the User agrees to be bound by the terms of this EULA. If the User does not agree to the terms of this EULA, do not install or use the Application.</string>
     <string name="eula_content_part3">1. License Grant: The Licensor grants the User a non-exclusive, non-transferable, limited license to use the Application solely for the User\'s personal, non-commercial use on a single device.</string>
     <string name="eula_content_part4">2. Ownership: The Application is owned by the Licensor and is protected by copyright laws and international treaty provisions. The Licensor retains all rights, title, and interest in and to the Application.</string>
-    <string name="eula_content_part5">3. Restrictions: The User may not:
-        \n    * Reverse engineer, decompile, or disassemble the Application, except and only to the extent that such activity is expressly permitted by applicable law notwithstanding this limitation.
-        \n    * Modify or create derivative works based upon the Application.
-        \n    * Distribute, sublicense, rent, lease, or lend the Application to any third party.
-        \n    * Remove or alter any copyright notices or other proprietary markings on or within the Application.</string>
-    <string name="eula_content_part6">4. Disclaimer of Warranty: THE APPLICATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. THE ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF THE APPLICATION IS WITH THE USER. SHOULD THE APPLICATION PROVE DEFECTIVE, THE USER ASSUMES THE ENTIRE COST OF ANY SERVICING, REPAIR, OR CORRECTION.</string>
-    <string name="eula_content_part7">5. Limitation of Liability: TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT SHALL THE LICENSOR BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES (INCLUDING WITHOUT LIMITATION DAMAGES FOR LOSS OF PROFITS, DATA, USE, GOODWILL, OR OTHER INTANGIBLE LOSSES) ARISING OUT OF OR RELATING TO THE USER\'S ACCESS TO, USE OF, OR INABILITY TO ACCESS OR USE THE APPLICATION, EVEN IF THE LICENSOR HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.</string>
-    <string name="eula_content_part8">6. Termination: This EULA is effective until terminated. The User may terminate this EULA by uninstalling the Application. This EULA will terminate automatically without notice from the Licensor if the User fails to comply with any provision of this EULA. Upon termination, the User must cease all use of the Application and destroy all copies thereof.</string>
-    <string name="eula_content_part9">7. Governing Law: This EULA shall be governed by and construed in accordance with the laws of the State of New Hampshire, without regard to its conflict of law provisions.</string>
-    <string name="eula_content_part10">n8. Entire Agreement: This EULA constitutes the entire agreement between the User and the Licensor concerning the Application and supersedes all prior or contemporaneous communications and proposals, whether oral or written, between the User and the Licensor with respect to the Application.</string>
+    <string name="eula_content_part5">3. Restrictions: The User may not:</string>
+    <string name="eula_content_part6">* Reverse engineer, decompile, or disassemble the Application, except and only to the extent that such activity is expressly permitted by applicable law notwithstanding this limitation.</string>
+    <string name="eula_content_part7">* Modify or create derivative works based upon the Application.</string>
+    <string name="eula_content_part8">* Distribute, sublicense, rent, lease, or lend the Application to any third party.</string>
+    <string name="eula_content_part9">* Remove or alter any copyright notices or other proprietary markings on or within the Application.</string>
+    <string name="eula_content_part10">4. Disclaimer of Warranty: THE APPLICATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. THE ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF THE APPLICATION IS WITH THE USER. SHOULD THE APPLICATION PROVE DEFECTIVE, THE USER ASSUMES THE ENTIRE COST OF ANY SERVICING, REPAIR, OR CORRECTION.</string>
+    <string name="eula_content_part11">5. Limitation of Liability: TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT SHALL THE LICENSOR BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES (INCLUDING WITHOUT LIMITATION DAMAGES FOR LOSS OF PROFITS, DATA, USE, GOODWILL, OR OTHER INTANGIBLE LOSSES) ARISING OUT OF OR RELATING TO THE USER\'S ACCESS TO, USE OF, OR INABILITY TO ACCESS OR USE THE APPLICATION, EVEN IF THE LICENSOR HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.</string>
+    <string name="eula_content_part12">6. Termination: This EULA is effective until terminated. The User may terminate this EULA by uninstalling the Application. This EULA will terminate automatically without notice from the Licensor if the User fails to comply with any provision of this EULA. Upon termination, the User must cease all use of the Application and destroy all copies thereof.</string>
+    <string name="eula_content_part13">7. Governing Law: This EULA shall be governed by and construed in accordance with the laws of the State of New Hampshire, without regard to its conflict of law provisions.</string>
+    <string name="eula_content_part14">8. Entire Agreement: This EULA constitutes the entire agreement between the User and the Licensor concerning the Application and supersedes all prior or contemporaneous communications and proposals, whether oral or written, between the User and the Licensor with respect to the Application.</string>
 
     <string name="contact_information_title">Contact Information</string>
     <string name="company_name"><xliff:g id="tpl" translatable="false">Purramid Learning, Inc.</xliff:g></string>
     <string name="contact_information_text">Your mailed feedback and requests are welcome at <xliff:g id="tpl" translatable="false">379&#8211;121 Amherst St., Nashua, NH 03063, USA.</xliff:g></string>
-
 </resources>
