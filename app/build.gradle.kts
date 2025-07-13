@@ -60,6 +60,7 @@ android {
 
 dependencies {
 
+    implementation(libs.androidx.animation.core.android)
     // annotationProcessor(libs.glide.compiler)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

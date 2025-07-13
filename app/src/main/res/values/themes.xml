@@ -21,8 +21,6 @@
 
         <!-- Window appearance -->
         <item name="android:windowElevation">8dp</item>
-        <!--suppress AndroidDomInspection -->
-        <item name="android:windowCornerRadius">16dp</item>
 
         <!-- Animations -->
         <item name="android:windowAnimationStyle">@style/FloatingWindowAnimation</item>

@@ -52,17 +52,6 @@
             </intent-filter>
         </service>
 
-        <activity android:name=".clock.ClockActivity"
-            android:exported="false"
-            android:label="@string/clock_settings_title"
-            android:parentActivityName=".MainActivity"
-            android:resizeableActivity="true"
-            android:windowLayoutInDisplayCutoutMode="shortEdges">
-            <layout android:defaultWidth="350dp"
-                android:defaultHeight="275dp"
-                android:gravity="center" />
-        </activity>
-
         <activity android:name=".clock.ui.TimeZoneGlobeActivity"
             android:exported="false"
             android:label="@string/set_time_zone"
