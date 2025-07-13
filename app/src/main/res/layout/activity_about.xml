@@ -60,7 +60,6 @@
             android:id="@+id/balsamiq_sans_license"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/balsamiq_sans_license_text" 
             android:layout_marginBottom="16dp" />
 
         <View
@@ -142,7 +141,6 @@
             android:id="@+id/best_practices_text"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/best_practices_content" 
             android:layout_marginBottom="16dp" />
 
         <View
@@ -162,7 +160,6 @@
             android:id="@+id/acknowledgements_text"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/acknowledgements_content" 
             android:layout_marginBottom="16dp" />
 
         <View
@@ -182,7 +179,6 @@
             android:id="@+id/eula_text"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/eula_content" 
             android:textAppearance="?android:textAppearanceSmall" />
 
         <TextView
