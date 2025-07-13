@@ -26,7 +26,11 @@ class AboutActivity : AppCompatActivity() {
                 getString(R.string.best_practices_content_part2) +
                 getString(R.string.best_practices_content_part3) +
                 getString(R.string.best_practices_content_part4) +
-                getString(R.string.best_practices_content_part5)
+                getString(R.string.best_practices_content_part5) +
+                getString(R.string.best_practices_content_part6) +
+                getString(R.string.best_practices_content_part7) +
+                getString(R.string.best_practices_content_part8) +
+                getString(R.string.best_practices_content_part9)
 
         findViewById<TextView>(R.id.best_practices_text).text = bestPracticesText
 
@@ -50,7 +54,13 @@ class AboutActivity : AppCompatActivity() {
                 getString(R.string.eula_content_part11) +
                 getString(R.string.eula_content_part12) +
                 getString(R.string.eula_content_part13) +
-                getString(R.string.eula_content_part14)
+                getString(R.string.eula_content_part14) +
+                getString(R.string.eula_content_part15) +
+                getString(R.string.eula_content_part16) +
+                getString(R.string.eula_content_part17) +
+                getString(R.string.eula_content_part18) +
+                getString(R.string.eula_content_part19) +
+                getString(R.string.eula_content_part20)
 
         findViewById<TextView>(R.id.eula_text).text = eulaText
     }
