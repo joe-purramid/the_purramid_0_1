@@ -1,15 +1,12 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="42dp"
     android:height="42dp"
     android:viewportWidth="42"
-    android:viewportHeight="42"
-    android:tint="?attr/colorControlNormal">
-  <g
-     android:id="layer1">
-    <path
-       style="fill:#000000;fill-opacity:1;stroke-width:4.51822"
-       android:d="m 104.87428,62.123536 c 0.26334,10.1638 0.26334,10.1638 0.26334,10.1638 l -31.467064,0.14556 V 104.11972 H 63.137628 l 0.1316,-42.000004 z"
-       android:id="path3" />
-  </g>
+    android:viewportHeight="42">
+
+  <!-- Top-left corner resize handle -->
+  <path
+      android:fillColor="#000000"
+      android:pathData="M 0,0 L 14,0 L 14,4 L 4,4 L 4,14 L 0,14 Z" />
 </vector>

@@ -44,7 +44,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="Add Emoji"
-            app:icon="@drawable/ic_emoji"
+            app:icon="@drawable/ic_add_emoji"
             android:layout_marginEnd="8dp"/>
 
         <Button
@@ -54,7 +54,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="Add Image"
-            app:icon="@drawable/ic_image"/>
+            app:icon="@drawable/ic_add_image"/>
     </LinearLayout>
 
     <LinearLayout

@@ -33,7 +33,7 @@
         android:id="@+id/coinFlipTitleTextView"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="@string/randomizer_mode_coin_flip"
+        android:text="@string/probability_mode_coin_flip"
         android:textAppearance="@style/TextAppearance.MaterialComponents.Headline6"
         android:gravity="center_horizontal"
         app:layout_constraintTop_toTopOf="parent"

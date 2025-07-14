@@ -19,7 +19,7 @@
     <fragment
         android:id="@+id/coinFlipFragment"
         android:name="com.example.purramid.thepurramid.probabilities.ui.CoinFlipFragment"
-        android:label="@string/randomizer_mode_coin_flip"
+        android:label="@string/probability_mode_coin_flip"
         tools:layout="@layout/fragment_coin_flip">
         <argument
             android:name="probabilities_instance_id"

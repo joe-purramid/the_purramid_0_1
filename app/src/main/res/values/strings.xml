@@ -2,8 +2,8 @@
 
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <!-- `` MAIN APP VIEW `` -->
-    <string name="app_name"><xliff:g id="tp" translatable="false">Purramid</xliff:g> Class Tools</string>
-    <string name="app_widget_description">Launch a Purramid class management tool</string>
+    <string name="app_name">Placeholder</string>
+    <string name="app_widget_description">Placeholder</string>
     <string name="clock_title">Clock</string>
     <string name="probabilities_title">Probabilities</string>
     <string name="randomizers_title">Randomizers</string>
@@ -15,31 +15,31 @@
 
     <!-- `` UNIVERSAL TERMS `` -->
     <string name="enable_overlay">Enable Overlay</string>
-    <string name="overlay_permission_denied">Overlay permission denied</string>
+    <string name="overlay_permission_denied">Placeholder</string>
     <string name="snackbar_action_ok">OK</string>
     <string name="pause">Pause Button</string>
-    <string name="pause_accessible">A Pause button to temporarily stop time.</string>
+    <string name="pause_accessible">Placeholder</string>
     <string name="play">Start</string>
-    <string name="play_accessible">A Start button to begin time</string>
+    <string name="play_accessible">Placeholder</string>
     <string name="reset">Reset Button</string>
-    <string name="reset_accessible">A Reset button to return time to its default</string>
+    <string name="reset_accessible">Placeholder</string>
     <string name="settings">Settings</string>
-    <string name="settings_accessible">A Settings button to open a customization window</string>
+    <string name="settings_accessible">Placeholder</string>
     <string name="on">On</string>
     <string name="off">Off</string>
     <string name="app_color">Color</string>
     <string name="color_white">White</string>
-    <string name="color_white_accessible">Make your clock background white</string>
+    <string name="color_white_accessible">Placeholder</string>
     <string name="color_black">Black</string>
-    <string name="color_black_accessible">Make your clock background black</string>
+    <string name="color_black_accessible">Placeholder</string>
     <string name="color_goldenrod">Goldenrod</string>
-    <string name="color_goldenrod_accessible">Make your clock background goldenrod</string>
+    <string name="color_goldenrod_accessible">Placeholder</string>
     <string name="color_teal">Teal</string>
-    <string name="color_teal_accessible">Make your clock background teal</string>
+    <string name="color_teal_accessible">Placeholder</string>
     <string name="color_lightblue">Light Blue</string>
-    <string name="color_lightblue_accessible">Make your clock background light blue</string>
+    <string name="color_lightblue_accessible">Placeholder</string>
     <string name="color_violet">Violet</string>
-    <string name="color_violet_accessible">Make your clock background violet</string>
+    <string name="color_violet_accessible">Placeholder</string>
     <string name="add_emoji">Add Emoji</string>
     <string name="add_emoji_description">Add Emoji</string>
     <string name="add_image">Add Image</string>
@@ -54,7 +54,7 @@
 
     <!-- `` CLOCK APP `` -->
     <string name="clock_settings_title">Clock Settings</string>
-    <string name="enable_floating_clock">Enable Floating Clock</string>
+    <string name="enable_floating_clock">Placeholder</string>
     <string name="clock_mode">Clock Type</string>
     <string name="analog">Analog</string>
     <string name="digital">Digital</string>
@@ -62,9 +62,9 @@
     <string name="pm_designator">PM</string>
     <string name="clock_setting_24_hour">24-Hour Clock</string>
     <string name="set_time_zone">Set Time Zone</string>
-    <string name="error_loading_model">Unable to load model: %1$s</string>
-    <string name="error_loading_texture">Unable to load texture: %1$s</string>
-    <string name="error_creating_texture">Unable to create texture: %1$s</string>
+    <string name="error_loading_model">Placeholder</string>
+    <string name="error_loading_texture">Placeholder</string>
+    <string name="error_creating_texture">Placeholder</string>
     <string name="display_seconds">Display Seconds</string>
     <string name="set_alarm">Set Alarm</string>
     <string name="nest_clock">Nest Clock</string>
@@ -269,11 +269,11 @@
     <string name="country_american_samoa">American Samoa (USA)</string>
     <string name="country_niue">Niue</string>
     <string name="country_greenland">Greenland</string>
-    <string name="country_south_georgia_islands">South Georgia Islands</string>
+    <string name="country_south_georgia_islands">Placeholder</string>
     <string name="country_brazil">Brazil</string>
     <string name="country_argentina">Argentina</string>
     <string name="country_uruguay">Uruguay</string>
-    <string name="country_falkland_islands">Falkland Islands (Contested)</string>
+    <string name="country_falkland_islands">Placeholder</string>
     <string name="country_canada">Canada</string>
     <string name="country_chile">Chile</string>
     <string name="country_venezuela">Venezuela</string>
@@ -323,7 +323,7 @@
     <string name="country_papua_new_guinea">Papua New Guinea</string>
     <string name="country_guam">Guam (USA)</string>
     <string name="country_micronesia">Micronesia</string>
-    <string name="country_new_caledonia">New Caledonia (<xliff:g id="sg" translatable="false"><i>sui generis</i></xliff:g>)</string>
+    <string name="country_new_caledonia">Placeholder</string>
     <string name="country_solomon_islands">Solomon Islands</string>
     <string name="country_vanuatu">Vanuatu</string>
     <string name="country_new_zealand">New Zealand (Aotearoa)</string>
@@ -382,8 +382,8 @@
 
     <!-- `` PROBABILITIES APP `` -->
     <string name="probabilities_settings_title">Probabilities Settings</string>
-    <string name="probabilities_description">Dice and Coin Flip randomization tools</string>
-    <string name="max_probabilities_reached_snackbar">Maximum of <xliff:g id="count">%1$d</xliff:g> Probability Pool windows reached.</string>
+    <string name="probabilities_description">Placeholder</string>
+    <string name="max_probabilities_reached_snackbar">Placeholder</string>
 
     <!-- `` DICE MODE `` -->
     <string name="randomizer_mode_dice">Dice Mode</string>
@@ -394,7 +394,7 @@
     <string name="setting_dice_use_pips">Use Pips for d6</string>
     <string name="setting_dice_percentile_mode">Percentile Dice (d%)</string>
     <string name="setting_dice_roll_animation">Roll Animation</string>
-    <string name="setting_dice_crit_celebration">Critical Celebration (d20=20)</string>
+    <string name="setting_dice_crit_celebration">Placeholder</string>
     <string name="setting_dice_configure_colors">Dice Colors</string>
     <string name="setting_dice_configure_colors_title">Configure Dice Colors</string>
     <string name="setting_dice_apply_color_all">Apply to all dice</string>
@@ -404,10 +404,11 @@
     <string name="die_face_image">Die face image</string>
     <string name="setting_dice_sum_results_label">Rolled sum</string>
     <string name="setting_dice_configure_modifiers">Dice Modifiers</string>
-    <string name="setting_dice_configure_modifiers_title">Configure Dice Modifiers</string>
+    <string name="setting_dice_configure_modifiers_title">Placeholder</string>
 
     <!-- `` COIN FLIP MODE `` -->
-    <string name="randomizer_mode_coin_flip">Coin Flip Mode</string>
+    <string name="probability_mode_coin_flip">Coin Flip Mode</string>
+    <string name="probability_mode_coin_flip_description">Select Coin Flip mode</string>
     <string name="setting_coin_color">Coin Color</string>
     <string name="setting_coin_flip_animation">Flip Animation</string>
     <string name="setting_coin_free_form">Free Form</string>
@@ -433,11 +434,11 @@
     <string name="add_coin_type">Add %1$s</string>
     <string name="remove_coin_type">Remove %1$s</string>
     <string name="count_prefix">Count: </string>
-    <string name="add_coins_to_pool_empty_state">Add coins to your pool!</string>
-    <string name="coin_flip_announce_format"><xliff:g id="heads_count">%1$d</xliff:g> Heads, <xliff:g id="tails_count">%2$d</xliff:g> Tails</string>
-    <string name="grid_cell_content_desc">Grid cell displaying coin flip result</string>
+    <string name="add_coins_to_pool_empty_state">Placeholder</string>
+    <string name="coin_flip_announce_format">Placeholder</string>
+    <string name="grid_cell_content_desc">Placeholder</string>
     <string name="close_dialog">Close</string>
-    <string name="max_coin_type_reached">Max %1$s reached</string> <string name="label_1_bit" translatable="false">1b</string>
+    <string name="max_coin_type_reached">Placeholder</string>
     <string name="label_5_bits" translatable="false">5b</string>
     <string name="label_10_bits" translatable="false">10b</string>
     <string name="label_25_bits" translatable="false">25b</string>
@@ -451,10 +452,10 @@
     <string name="desc_free_form_off">Coin free form mode is OFF</string>
     <string name="desc_probability_grid">Coin probability grid display</string>
     <string name="desc_coin_color_picker">Select coin color</string>
-    <string name="desc_coin_announcement_on">Coin result announcement is ON</string>
-    <string name="desc_coin_announcement_off">Coin result announcement is OFF</string>
-    <string name="error_add_coins_to_flip">Add coins to your pool to flip!</string>
-    <string name="error_max_coins_reached">Maximum of %1$d %2$s coins reached.</string>
+    <string name="desc_coin_announcement_on">Placeholder</string>
+    <string name="desc_coin_announcement_off">Placeholder</string>
+    <string name="error_add_coins_to_flip">Placeholder</string>
+    <string name="error_max_coins_reached">Placeholder</string>
     <string name="loading_settings">Loading Settings…</string>
 
     <!-- `` GRAPHING FOR DICE AND COIN FLIP `` -->
@@ -486,7 +487,7 @@
     <string name="list_title_hint">List Title</string>
     <string name="delete_list">Delete List</string>
     <string name="delete_list_title">Delete List?</string>
-    <string name="delete_list_confirmation">Are you sure you want to delete \'%1$s\'? This cannot be undone.</string>
+    <string name="delete_list_confirmation">Placeholder</string>
     <string name="add_item">Add New Item</string>
     <string name="pick_item_color">Pick Item Color</string>
     <string name="setting_announce">Announce Result</string>
@@ -545,56 +546,56 @@
     <string name="select_list_for_column">Select List for Column %1$d</string>
     <string name="list_selection_clear">Clear Selection</string>
     <string name="cannot_open_settings">Cannot open settings.</string>
-    <string name="item_image_content_description">Image representing list item</string>
-    <string name="item_image_content_description_secondary">Faded image representing adjacent list item</string>
+    <string name="item_image_content_description">Placeholder</string>
+    <string name="item_image_content_description_secondary">Placeholder</string>
     <string name="setting_slots_num_columns">Number of Columns</string>
     <string name="setting_slots_columns_3">3</string>
     <string name="setting_slots_columns_5">5</string>
 
     <!-- `` RANDOMIZER SNACKBARS `` -->
-    <string name="max_randomizers_general_reached_snackbar">Maximum of <xliff:g id="count">%1$d</xliff:g> Randomizer windows reached.</string>
-    <string name="max_randomizers_dice_reached_snackbar">Maximum of <xliff:g id="count">%1$d</xliff:g> Dice windows reached.</string>
+    <string name="max_randomizers_general_reached_snackbar">Placeholder</string>
+    <string name="max_randomizers_dice_reached_snackbar">Placeholder</string>
     <string name="error_cannot_open_settings">Cannot open settings</string>
-    <string name="error_settings_invalid_id">Cannot open settings: Invalid ID</string>
-    <string name="error_settings_instance_id_failed">Some naughty kitties caused an error. Please close this window and open a new one to continue.</string>
-    <string name="info_settings_defaulted_kitty">A naughty kitty has made off with your settings. Starting with default settings.</string>
-    <string name="error_settings_final_save_failed">A naughty kitty has gotten underfoot. Your settings have applied to your current session, but they have not saved for later use.</string>
+    <string name="error_settings_invalid_id">Placeholder</string>
+    <string name="error_settings_instance_id_failed">Placeholder</string>
+    <string name="info_settings_defaulted_kitty">Placeholder</string>
+    <string name="error_settings_final_save_failed">Placeholder</string>
     <string name="no_lists_available">No lists available to select.</string>
     <string name="error_list_creator_load_failed">Error loading list details</string>
-    <string name="error_list_creator_save_title_failed">Kitties are causing problems. The List title failed to save.</string>
-    <string name="error_list_creator_add_item_failed">Kitties are being naughty. Failed to add new item.</string>
-    <string name="error_list_creator_update_item_failed">A naughty kitty has gotten underfoot. Failed to update item.</string>
-    <string name="error_list_creator_delete_item_failed">A kitty says this toy belongs to them. Failed to delete item.</string>
-    <string name="error_list_creator_delete_list_failed">A kitty says this toy belongs to them. Failed to delete list.</string>
-    <string name="error_list_creator_image_size_check_failed">Could not determine image size</string>
-    <string name="error_list_creator_image_too_large">Image file is too large (Max 1MB)</string> <!-- TODO: Address MB abbreviation in other languages -->
-    <string name="list_creator_cannot_save_title">Cannot Save List</string> <!-- This is the title of list_creator_min_items_message -->
-    <string name="list_creator_min_items_message">Empty Lists cannot be saved. Please add two or more items or cancel this List creation.</string>
+    <string name="error_list_creator_save_title_failed">Placeholder</string>
+    <string name="error_list_creator_add_item_failed">Placeholder</string>
+    <string name="error_list_creator_update_item_failed">Placeholder</string>
+    <string name="error_list_creator_delete_item_failed">Placeholder</string>
+    <string name="error_list_creator_delete_list_failed">Placeholder</string>
+    <string name="error_list_creator_image_size_check_failed">Placeholder</string>
+    <string name="error_list_creator_image_too_large">Placeholder</string>
+    <string name="list_creator_cannot_save_title">Cannot Save List</string>
+    <string name="list_creator_min_items_message">Placeholder</string>
     <string name="list_creator_button_cancel_creation">Cancel Creation</string>
     <string name="list_creator_button_continue_editing">Continue Editing</string>
     <string name="delete_item_title">Delete Item?</string>
-    <string name="delete_item_confirmation">Are you sure you want to delete this item starting with \'%1$s\'?</string>
+    <string name="delete_item_confirmation">Placeholder</string>
     <string name="error_settings_load_failed">Error loading settings</string>
-    <string name="error_settings_not_loaded_cant_save">Settings not loaded, cannot save changes.</string>
+    <string name="error_settings_not_loaded_cant_save">Placeholder</string>
 
 
     <!-- `` SCREEN MASK APP `` -->
     <string name="screen_mask_settings_title">Screen Mask Settings</string>
     <string name="add_another_screen">Add another Mask</string>
-    <string name="max_masks_reached_snackbar">Maximum number of screen masks reached.</string>
+    <string name="max_masks_reached_snackbar">Placeholder</string>
     <string name="lock_unlock">Lock/Unlock</string>
     <string name="lock_unlock_all">Lock/Unlock All</string>
     <string name="billboard">Billboard</string>
     <string name="cannot_open_image_picker">Cannot open image picker</string>
     <string name="image_too_large_title">Image Too Large</string>
-    <string name="image_too_large_message">The image is too large to be uploaded. You may optimize it or select a different image.</string>
+    <string name="image_too_large_message">Placeholder</string>
     <string name="compression_failed">Failed to compress image</string>
     <string name="unlock_mask_to_close">Unlock the screen mask to close</string>
 
     <!-- `` SPOTLIGHT APP `` -->
     <string name="spotlight_settings_title">Spotlight Settings</string>
     <string name="add_another_spotlight">Add another Spotlight</string>
-    <string name="max_spotlights_reached_snackbar">Maximum number of spotlights reached.</string>
+    <string name="max_spotlights_reached_snackbar">Placeholder</string>
     <string name="change_shape_circle">Change shape to Circle</string>
     <string name="change_shape_square">Change shape to Square</string>
 
@@ -610,24 +611,32 @@
     <string name="minutes_short">Minutes</string>
     <string name="seconds_short">Seconds</string>
     <string name="hundredths">Hundredths</string>
+    <string name="set_countdown">Set Countdown</string>
+    <string name="add_1_hour">Add 1 Hour</string>
+    <string name="add_5_minutes">Add 5 Minutes</string>
+    <string name="add_30_seconds">Add 30 Seconds</string>
+    <string name="streaming_music">Streaming Music</string>
+    <string name="music_url">Music URL</string>
+    <string name="recent_urls">Resent URLs</string>
+    <string name="enter_url_hint">Enter Music Web URL here</string>
     <string name="play_music">Play music</string>
-    <string name="play_sound_on_finish">Play Sound on Finish</string>
+    <string name="play_sound_on_finish">Placeholder</string>
     <string name="nest_timer">Nest Timer</string>
     <string name="lap">Lap Times</string>
     <string name="no_laps_recorded">No laps recorded</string>
     <string name="sounds">Stopwatch sounds</string>
     <string name="setting_add_another_timer">Add Another Timer</string>
-    <string name="max_timers_reached_snackbar">Maximum number of timers reached.</string>
+    <string name="max_timers_reached_snackbar">Placeholder</string>
 
 
     <!-- `` TRAFFIC LIGHT APP `` -->
-    <string name="traffic_light_vertical_desc">A vertically oriented traffic light.</string>
-    <string name="traffic_light_horizontal_desc">A horizontally oriented traffic light.</string>
-    <string name="traffic_light_active_notification">A traffic light overlay is active.</string>
-    <string name="traffic_light_settings_title">Traffic Light Settings</string>
+    <string name="traffic_light_vertical_desc">Placeholder</string>
+    <string name="traffic_light_horizontal_desc">Placeholder</string>
+    <string name="traffic_light_active_notification">Placeholder</string>
+    <string name="traffic_light_settings_title">Placeholder</string>
     <string name="setting_mode">Mode</string>
     <string name="setting_mode_manual">Manual Change</string>
-    <string name="setting_mode_responsive">Responsive Change (Requires Microphone)</string>
+    <string name="setting_mode_responsive">Placeholder</string>
     <string name="setting_mode_timed">Timed Change</string>
     <string name="setting_orientation">Horizontal Orientation</string>
     <string name="setting_blinking">Enable Blinking Effects</string>
@@ -638,125 +647,125 @@
     <string name="clear_emojis">Clear emojis</string>
     <string name="clear_image">Clear image</string>
     <string name="select_emoji">Select Emoji</string>
-    <string name="setting_add_another_traffic_light">Add Another Traffic Light</string>
+    <string name="setting_add_another_traffic_light">Placeholder</string>
 
     <!-- `` SEQUENCE MODE `` -->
     <string name="show_sequence_list">Show sequence list</string>
     <string name="no_sequences_created_marquee">No sequences</string>
     <string name="sequence_title_hint">Sequence Title</string>
-    <string name="total_duration_format">Total: %1$s</string>
+    <string name="total_duration_format">Placeholder</string>
     <string name="add_step">Add Step</string>
-    <string name="step_message_title">Step Message</string>
-    <string name="step_count_format">%1$d steps</string>
-    <string name="setting_edit_sequence">Edit Timed Sequence</string>
+    <string name="step_message_title">Placeholder</string>
+    <string name="step_count_format">Placeholder</string>
+    <string name="setting_edit_sequence">Placeholder</string>
     <string name="setting_add_title">Add Title</string>
     <string name="select_color">Select Color</string>
     <string name="green_color_label">Green</string>
-    <string name="yellow_color_label">Yellow</string> <!-- Amber in UK -->
+    <string name="yellow_color_label">Yellow</string>
     <string name="red_color_label">Red</string>
     <string name="set_duration">Set Duration</string>
     <string name="set">Set</string>
-    <string name="setting_show_time_remaining">Show Time Remaining (Timed Mode)</string>
-    <string name="setting_show_timeline">Show Timeline (Timed Mode)</string>
+    <string name="setting_show_time_remaining">Placeholder</string>
+    <string name="setting_show_timeline">Placeholder</string>
 
     <!-- `` RESPONSIVE MODE `` -->
-    <string name="responsive_mode_no_mic">(No microphone)</string>
+    <string name="responsive_mode_no_mic">Placeholder</string>
     <string name="dialog_close">Close</string>
-    <string name="min_db_label">Min:</string> <!-- Minimum -->
-    <string name="max_db_label">Max:</string> <!-- Maximum -->
+    <string name="min_db_label">Min:</string>
+    <string name="max_db_label">Max:</string>
     <string name="db_unit">dB</string>
-    <string name="na_value">N/A</string> <!-- Not Applicable -->
-    <string name="dangerous_sound_alert_label">Dangerous Sound Alert</string>
-    <string name="dangerous_sound_alert_info_desc">Information about dangerous sound alert</string>
-    <string name="dangerous_sound_alert_info_title">Dangerous Sound Alert Information</string>
-    <string name="dangerous_sound_alert_info_message_part1">"Check this box to display an alert that says \"Warning: Notify your instructor immediately.\" should your hardware\'s microphone report a sound of 150 decibels or higher.</string>
-    <string name="dangerous_sound_alert_info_message_part2">The US Occupational Safety and Health Organization projects the loudest classroom noise would reach 95 dB. 120 db is the sound of a car backfire. 150 dB is the sound of a gunshot.</string>
-    <string name="dangerous_sound_alert_info_message_part3">The <xliff:g id="tp" translatable="false">Purramid</xliff:g> is a software application dependent on the readings provided by your microphone.</string>
-    <string name="dangerous_sound_alert_info_message_part4"><xliff:g id="tp" translatable="false">Purramid Learning</xliff:g> makes no guarantee that the sound detected is 150 db or what made the sound is a firearm.</string>
-    <string name="dangerous_sound_alert_info_message_part5">But this is the reality that US students live in, and we are committed to providing teachers any tools possible to make their classrooms places of learning and not fear."</string>
+    <string name="na_value">Placeholder</string>
+    <string name="dangerous_sound_alert_label">Placeholder</string>
+    <string name="dangerous_sound_alert_info_desc">Placeholder</string>
+    <string name="dangerous_sound_alert_info_title">Placeholder</string>
+    <string name="dangerous_sound_alert_info_message_part1">Placeholder</string>
+    <string name="dangerous_sound_alert_info_message_part2">Placeholder</string>
+    <string name="dangerous_sound_alert_info_message_part3">Placeholder</string>
+    <string name="dangerous_sound_alert_info_message_part4">Placeholder</string>
+    <string name="dangerous_sound_alert_info_message_part5">Placeholder</string>
     <string name="warning_message">Warning</string>
-    <string name="notify_instructor_message">Notify your instructor immediately.</string>
-    <string name="dismiss_alert_message">Double-tap green to dismiss this alert.</string>
+    <string name="notify_instructor_message">Placeholder</string>
+    <string name="dismiss_alert_message">Placeholder</string>
 
     <!-- `` TRAFFIC LIGHT SNACKBARS `` -->
-    <string name="max_traffic_lights_reached_snackbar">Maximum number of traffic lights reached.</string>
-    <string name="step_count_limit_format">%1$d/%2$d steps</string>
-    <string name="max_sequences_reached_snackbar">Maximum of %1$d sequences reached</string>
-    <string name="max_steps_reached_snackbar">Maximum of %1$d steps reached</string>
-    <string name="sequence_title_required">Please enter a sequence title</string>
-    <string name="sequence_step_invalid">Step %1$d: Please assign both color and duration</string>
-    <string name="sequence_empty_error">Please add at least one step to the sequence</string>
-    <string name="microphone_disconnected_snackbar">Microphone disconnected. Switched to Manual mode.</string>
-    <string name="no_microphone_detected">No microphone detected.</string>
-    <string name="value_range_error">Value must be between %1$d and %2$d</string>
-    <string name="microphone_available_snackbar">Microphone available. Tap to return to Responsive mode.</string>
+    <string name="max_traffic_lights_reached_snackbar">Placeholder</string>
+    <string name="step_count_limit_format">Placeholder</string>
+    <string name="max_sequences_reached_snackbar">Placeholder</string>
+    <string name="max_steps_reached_snackbar">Placeholder</string>
+    <string name="sequence_title_required">Placeholder</string>
+    <string name="sequence_step_invalid">Placeholder</string>
+    <string name="sequence_empty_error">Placeholder</string>
+    <string name="microphone_disconnected_snackbar">Placeholder</string>
+    <string name="no_microphone_detected">Placeholder</string>
+    <string name="value_range_error">Placeholder</string>
+    <string name="microphone_available_snackbar">Placeholder</string>
     <string name="switch_mode">Switch</string>
-    <string name="delete_sequence_title">Delete Sequence?</string>
-    <string name="delete_sequence_confirmation">Are you sure you want to delete \'%1$s\'?</string>
+    <string name="delete_sequence_title">Placeholder</string>
+    <string name="delete_sequence_confirmation">Placeholder</string>
 
 
     <!-- `` ABOUT THIS APP `` -->
-    <string name="version_number">Version 0.1</string> <!-- `` in dev `` -->
+    <string name="version_number">Placeholder</string>
 
-    <string name="purramid_copyright_title">The <xliff:g id="tp" translatable="false">Purramid</xliff:g></string>
-    <string name="purramid_copyright_text">Copyright © 2025 <xliff:g id="tpl" translatable="false">Purramid Learning®, Inc.</xliff:g> All rights reserved.</string>
+    <string name="purramid_copyright_title">Placeholder</string>
+    <string name="purramid_copyright_text">Placeholder</string>
 
-    <string name="balsamiq_sans_title"><xliff:g id="bf" translatable="false">Balsamiq</xliff:g> Sans Font</string>
-    <string name="balsamiq_sans_license_text_part1">Copyright © 2011 The <xliff:g id="bfpa" translatable="false">Balsamiq Sans Project Authors</xliff:g> (https://github.com/balsamiq/balsamiqsans)</string>
-    <string name="balsamiq_sans_license_text_part2">This Font Software is licensed under the SIL Open Font License, Version 1.1</string>
-    <string name="balsamiq_sans_license_text_part3">This license is copied below, and is also available with a FAQ at: https://openfontlicense.org\n\nSIL OPEN FONT LICENSE Version 1.1 – 26 February 2007</string>
+    <string name="balsamiq_sans_title">Placeholder</string>
+    <string name="balsamiq_sans_license_text_part1">Placeholder</string>
+    <string name="balsamiq_sans_license_text_part2">Placeholder</string>
+    <string name="balsamiq_sans_license_text_part3">Placeholder</string>
 
     <string name="sphere_title">3D Sphere</string>
-    <string name="sphere_attribution_text">"sphere-gltf-example" (https://skfb.ly/6XGzq) by <xliff:g id="raw" translatable="false">rawwerks</xliff:g> is licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).</string>
+    <string name="sphere_attribution_text">Placeholder</string>
 
-    <string name="cities_database_title">World Cities Database</string>
-    <string name="cities_database_attribution_text">"World Cities Database" (https://simplemaps.com/data/world-cities) by <xliff:g id="sm" translatable="false">simplemaps</xliff:g> is also licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).</string>
+    <string name="cities_database_title">Placeholder</string>
+    <string name="cities_database_attribution_text">Placeholder</string>
 
-    <string name="data_privacy_title">Data Privacy (USA &amp; EU)</string>
-    <string name="data_privacy_statement_part1">At <xliff:g is="tpl" translatable="false">Purramid Learning, Inc.</xliff:g>, we are committed to your privacy.</string>
-    <string name="data_privacy_statement_part2">This application, <xliff:g id="tp" translatable="false">Purramid</xliff:g> Class Tools, does not collect, share, or transmit any personal data away from the device on which it is installed.</string>
-    <string name="data_privacy_statement_part3">All data generated and used within the application remains solely on your device.</string>
+    <string name="data_privacy_title">Placeholder</string>
+    <string name="data_privacy_statement_part1">Placeholder</string>
+    <string name="data_privacy_statement_part2">Placeholder</string>
+    <string name="data_privacy_statement_part3">Placeholder</string>
 
-    <string name="best_practices_title">Best Practices for Responsible Use</string>
-    <string name="best_practices_content_part1">While The <xliff:g id="tp1" translatable="false">Purramid</xliff:g> application is designed to operate locally and does not collect or transmit personal data, </string>
-    <string name="best_practices_content_part2">we encourage users to adopt responsible practices when using the application, especially in educational or collaborative settings. We recommend the following:</string>
-    <string name="best_practices_content_part3">Avoid Storing Identifiable Information: To further safeguard privacy, we advise against directly storing personally identifiable information (PII) such as full names, </string>
-    <string name="best_practices_content_part4">specific addresses, or other sensitive details within the application\'s content or file names. Consider using anonymized labels or codes if necessary for your workflow.</string>
-    <string name="best_practices_content_part5">Mindful Sharing (If Applicable): If you choose to share files or content created with The <xliff:g id="tp2" translatable="false">Purramid</xliff:g> application, </string>
-    <string name="best_practices_content_part6">be mindful of the information contained within them and ensure they do not inadvertently include sensitive personal data.</string>
-    <string name="best_practices_content_part7">Secure Your Device: As all application data is stored locally on your device, ensure your device itself is secured with </string>
-    <string name="best_practices_content_part8">appropriate measures such as strong passwords or biometric authentication to prevent unauthorized access.</string>
-    <string name="best_practices_content_part9">Regular Backups: While not related to privacy, regularly backing up your application data is a good practice to prevent data loss.</string>
+    <string name="best_practices_title">Placeholder</string>
+    <string name="best_practices_content_part1">Placeholder</string>
+    <string name="best_practices_content_part2">Placeholder</string>
+    <string name="best_practices_content_part3">Placeholder</string>
+    <string name="best_practices_content_part4">Placeholder</string>
+    <string name="best_practices_content_part5">Placeholder</string>
+    <string name="best_practices_content_part6">Placeholder</string>
+    <string name="best_practices_content_part7">Placeholder</string>
+    <string name="best_practices_content_part8">Placeholder</string>
+    <string name="best_practices_content_part9">Placeholder</string>
 
     <string name="acknowledgements_title">Acknowledgements</string>
-    <string name="acknowledgements_content_part1">The development of The <xliff:g id="tp1" translatable="false">Purramid</xliff:g> application involved the use of advanced artificial intelligence models,</string>
-    <string name="acknowledgements_content_part2">including <xliff:g id="gg" translatable="false">Gemini</xliff:g>, for code generation and assistance. We leveraged these tools to enhance the efficiency of our development process.</string>
-    <string name="acknowledgements_content_part3">We also want to explicitly acknowledge that all visual art and assets included within The <xliff:g id="tp2" translatable="false">Purramid</xliff:g> application were created by human artists</string>
-    <string name="acknowledgements_content_part4">who were fairly compensated for their work. We believe in supporting the creative community and ensuring ethical practices in the creation of our application\'s design.</string>
+    <string name="acknowledgements_content_part1">Placeholder</string>
+    <string name="acknowledgements_content_part2">Placeholder</string>
+    <string name="acknowledgements_content_part3">Placeholder</string>
+    <string name="acknowledgements_content_part4">Placeholder</string>
 
     <string name="eula_title">End User License Agreement</string>
-    <string name="eula_content_part1">IMPORTANT - READ CAREFULLY: This End User License Agreement ("EULA") is a legal agreement between you (the "User") and <xliff:g id="tpl" translatable="false">Purramid Learning, Inc.</xliff:g> ("Licensor") for The <xliff:g id="tp" translatable="false">Purramid</xliff:g> application (the "Application").</string>
-    <string name="eula_content_part2">By installing, copying, or otherwise using the Application, the User agrees to be bound by the terms of this EULA. If the User does not agree to the terms of this EULA, do not install or use the Application.</string>
-    <string name="eula_content_part3">1. License Grant: The Licensor grants the User a non-exclusive, non-transferable, limited license to use the Application solely for the User\'s personal, non-commercial use on a single device.</string>
-    <string name="eula_content_part4">2. Ownership: The Application is owned by the Licensor and is protected by copyright laws and international treaty provisions. The Licensor retains all rights, title, and interest in and to the Application.</string>
-    <string name="eula_content_part5">3. Restrictions: The User may not:</string>
-    <string name="eula_content_part6">* Reverse engineer, decompile, or disassemble the Application, except and only to the extent that such activity is expressly permitted by applicable law notwithstanding this limitation.</string>
-    <string name="eula_content_part7">* Modify or create derivative works based upon the Application.</string>
-    <string name="eula_content_part8">* Distribute, sublicense, rent, lease, or lend the Application to any third party.</string>
-    <string name="eula_content_part9">* Remove or alter any copyright notices or other proprietary markings on or within the Application.</string>
-    <string name="eula_content_part10">4. Disclaimer of Warranty: THE APPLICATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO </string>
-    <string name="eula_content_part11">THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. THE ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF THE APPLICATION IS WITH THE USER.</string>
-    <string name="eula_content_part12">SHOULD THE APPLICATION PROVE DEFECTIVE, THE USER ASSUMES THE ENTIRE COST OF ANY SERVICING, REPAIR, OR CORRECTION.</string>
-    <string name="eula_content_part13">5. Limitation of Liability: TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT SHALL THE LICENSOR BE LIABLE FOR ANY INDIRECT, </string>
-    <string name="eula_content_part14">INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES (INCLUDING WITHOUT LIMITATION DAMAGES FOR LOSS OF PROFITS, DATA, USE, GOODWILL, OR OTHER INTANGIBLE LOSSES) ARISING OUT OF OR RELATING TO </string>
-    <string name="eula_content_part15">THE USER\'S ACCESS TO, USE OF, OR INABILITY TO ACCESS OR USE THE APPLICATION, EVEN IF THE LICENSOR HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.</string>
-    <string name="eula_content_part16">6. Termination: This EULA is effective until terminated. The User may terminate this EULA by uninstalling the Application. This EULA will terminate automatically without notice from the Licensor </string>
-    <string name="eula_content_part17">if the User fails to comply with any provision of this EULA. Upon termination, the User must cease all use of the Application and destroy all copies thereof.</string>
-    <string name="eula_content_part18">7. Governing Law: This EULA shall be governed by and construed in accordance with the laws of the State of New Hampshire, without regard to its conflict of law provisions.</string>
-    <string name="eula_content_part19">8. Entire Agreement: This EULA constitutes the entire agreement between the User and the Licensor concerning the Application and supersedes all prior or contemporaneous </string>
-    <string name="eula_content_part20">communications and proposals, whether oral or written, between the User and the Licensor with respect to the Application.</string>
+    <string name="eula_content_part1">Placeholder</string>
+    <string name="eula_content_part2">Placeholder</string>
+    <string name="eula_content_part3">Placeholder</string>
+    <string name="eula_content_part4">Placeholder</string>
+    <string name="eula_content_part5">Placeholder</string>
+    <string name="eula_content_part6">Placeholder</string>
+    <string name="eula_content_part7">Placeholder</string>
+    <string name="eula_content_part8">Placeholder</string>
+    <string name="eula_content_part9">Placeholder</string>
+    <string name="eula_content_part10">Placeholder</string>
+    <string name="eula_content_part11">Placeholder</string>
+    <string name="eula_content_part12">Placeholder</string>
+    <string name="eula_content_part13">Placeholder</string>
+    <string name="eula_content_part14">Placeholder</string>
+    <string name="eula_content_part15">Placeholder</string>
+    <string name="eula_content_part16">Placeholder</string>
+    <string name="eula_content_part17">Placeholder</string>
+    <string name="eula_content_part18">Placeholder</string>
+    <string name="eula_content_part19">Placeholder</string>
+    <string name="eula_content_part20">Placeholder</string>
 
     <string name="contact_information_title">Contact Information</string>
-    <string name="company_name"><xliff:g id="tpl" translatable="false">Purramid Learning, Inc.</xliff:g></string>
-    <string name="contact_information_text">Your mailed feedback and requests are welcome at <xliff:g id="tpl" translatable="false">379&#8211;121 Amherst St., Nashua, NH 03063, USA.</xliff:g></string>
+    <string name="company_name">Placeholder</string>
+    <string name="contact_information_text">Placeholder</string>
 </resources>

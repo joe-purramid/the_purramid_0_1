@@ -30,7 +30,7 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/buttonModeDice"
-                style="?attr.materialButtonOutlinedStyle"
+                style="attr.materialButtonOutlinedStyle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Dice"
@@ -38,11 +38,11 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/buttonModeCoinFlip"
-                style="?attr.materialButtonOutlinedStyle"
+                style="attr.materialButtonOutlinedStyle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Coin Flip"
-                android:contentDescription="Select coin flip mode" />
+                android:text="@string/probability_mode_coin_flip"
+                android:contentDescription="@string/probability_mode_coin_flip_description" />
         </com.google.android.material.button.MaterialButtonToggleGroup>
 
         <!-- Dice Settings Section -->
