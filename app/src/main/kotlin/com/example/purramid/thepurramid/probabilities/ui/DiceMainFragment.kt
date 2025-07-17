@@ -1,5 +1,8 @@
 package com.example.purramid.thepurramid.probabilities.ui
 
+import android.R.attr.x
+import android.R.attr.y
+iimport android.graphics.Color
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -24,6 +27,7 @@ import com.example.purramid.thepurramid.probabilities.viewmodel.DieType
 import com.example.purramid.thepurramid.probabilities.viewmodel.DiceSettings
 import com.example.purramid.thepurramid.probabilities.viewmodel.DiceResult
 import com.example.purramid.thepurramid.probabilities.viewmodel.ProbabilitiesPreferencesManager
+import com.example.purramid.thepurramid.util.dpToPx
 import com.github.mikephil.charting.charts.BarChart
 import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.data.BarData
@@ -260,26 +264,102 @@ class DiceMainFragment : Fragment() {
 
         val textView = TextView(requireContext())
         textView.setTextColor(ContextCompat.getColor(requireContext(), android.R.color.white))
-        textView.textSize = 18f
+        textView.textSize = if (isTens) 14f else 18f
         textView.gravity = android.view.Gravity.CENTER
 
-        val maxValue = when (type) {
-            DieType.D4 -> 4
-            DieType.D6 -> 6
-            DieType.D8 -> 8
-            DieType.D10 -> if (isTens) 90 else 10
-            DieType.D12 -> 12
-            DieType.D20 -> 20
-            DieType.PERCENTILE -> 100
+        val maxValue = when {
+            type == DieType.PERCENTILE && isTens -> "00" // Tens die shows 00-90
+            type == DieType.PERCENTILE && !isTens -> "0" // Ones die shows 0-9
+            else -> {
+                when (type) {
+                    DieType.D4 -> 4
+                    DieType.D6 -> 6
+                    DieType.D8 -> 8
+                    DieType.D10 -> if (isTens) 90 else 10
+                    DieType.D12 -> 12
+                    DieType.D20 -> 20
+                    DieType.PERCENTILE -> 100
+                }
+            }
         }
-        textView.text = maxValue.toString()
+        textView.text = displayText
         textView.tag = R.id.die_result_text
         frameLayout.addView(textView)
 
         frameLayout.setTag(R.id.die_type, type)
         frameLayout.setTag(R.id.die_is_tens, isTens)
+        frameLayout.setTag(R.id.die_is_percentile, type == DieType.PERCENTILE)
 
         return frameLayout
+    }
+
+    private fun createD6WithPips(frameLayout: FrameLayout, value: Int, color: Int) {
+        frameLayout.removeAllViews()
+
+        // Background
+        val imageView = ImageView(requireContext())
+        imageView.setImageResource(R.drawable.d6_pips_blank)
+        imageView.setColorFilter(color)
+        imageView.scaleType = ImageView.ScaleType.FIT_CENTER
+        frameLayout.addView(imageView)
+
+        // Add pips based on value
+        val pipContainer = FrameLayout(requireContext())
+        pipContainer.layoutParams = FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.MATCH_PARENT
+        )
+
+        when (value) {
+            1 -> addPip(pipContainer, 0.5f, 0.5f) // Center
+            2 -> {
+                addPip(pipContainer, 0.25f, 0.25f) // Top left
+                addPip(pipContainer, 0.75f, 0.75f) // Bottom right
+            }
+            3 -> {
+                addPip(pipContainer, 0.25f, 0.25f) // Top left
+                addPip(pipContainer, 0.5f, 0.5f)   // Center
+                addPip(pipContainer, 0.75f, 0.75f) // Bottom right
+            }
+            4 -> {
+                addPip(pipContainer, 0.25f, 0.25f) // Top left
+                addPip(pipContainer, 0.75f, 0.25f) // Top right
+                addPip(pipContainer, 0.25f, 0.75f) // Bottom left
+                addPip(pipContainer, 0.75f, 0.75f) // Bottom right
+            }
+            5 -> {
+                addPip(pipContainer, 0.25f, 0.25f) // Top left
+                addPip(pipContainer, 0.75f, 0.25f) // Top right
+                addPip(pipContainer, 0.5f, 0.5f)   // Center
+                addPip(pipContainer, 0.25f, 0.75f) // Bottom left
+                addPip(pipContainer, 0.75f, 0.75f) // Bottom right
+            }
+            6 -> {
+                addPip(pipContainer, 0.25f, 0.25f) // Top left
+                addPip(pipContainer, 0.75f, 0.25f) // Top right
+                addPip(pipContainer, 0.25f, 0.5f)  // Middle left
+                addPip(pipContainer, 0.75f, 0.5f)  // Middle right
+                addPip(pipContainer, 0.25f, 0.75f) // Bottom left
+                addPip(pipContainer, 0.75f, 0.75f) // Bottom right
+            }
+        }
+
+        frameLayout.addView(pipContainer)
+    }
+
+    private fun addPip(container: FrameLayout, xRatio: Float, yRatio: Float) {
+        val pip = View(requireContext())
+        val pipSize = dpToPx(8)
+        val params = FrameLayout.LayoutParams(pipSize, pipSize)
+
+        container.post {
+            params.leftMargin = (container.width * xRatio - pipSize / 2).toInt()
+            params.topMargin = (container.height * yRatio - pipSize / 2).toInt()
+            pip.layoutParams = params
+        }
+
+        pip.background = ContextCompat.getDrawable(requireContext(), R.drawable.pip_circle)
+        container.addView(pip)
     }
 
     private fun displayResults(result: DiceResult) {
@@ -287,15 +367,51 @@ class DiceMainFragment : Fragment() {
 
         var dieIndex = 0
         result.results.forEach { (type, rolls) ->
-            rolls.forEachIndexed { rollIndex, value ->
-                if (dieIndex < diceDisplayArea.childCount) {
-                    val dieView = diceDisplayArea.getChildAt(dieIndex) as? FrameLayout
-                    val textView = dieView?.findViewWithTag<TextView>(R.id.die_result_text)
-                    textView?.text = value.toString()
-                    dieIndex++
+            if (type == DieType.D6 && settings.dieConfigs.find { it.type == DieType.D6 }?.usePips == true) {
+                // Display pips for d6
+                rolls.forEach { value ->
+                    if (dieIndex < diceDisplayArea.childCount) {
+                        val dieView = diceDisplayArea.getChildAt(dieIndex) as? FrameLayout
+                        val color = settings.dieConfigs.find { it.type == DieType.D6 }?.color ?: Color.WHITE
+                        dieView?.let { createD6WithPips(it, value, color) }
+                        dieIndex++
+                    }
+                }
+            } else if (type == DieType.PERCENTILE && settings.usePercentile) {
+                // For percentile dice, we need to display on two separate d10s
+                rolls.forEach { percentileResult ->
+                    if (dieIndex + 1 < diceDisplayArea.childCount) {
+                        val tensValue = (percentileResult / 10) * 10
+                        val onesValue = percentileResult % 10
+
+                        // Special case for 100
+                        val tensDisplay = if (percentileResult == 100) "00" else tensValue.toString().padStart(2, '0')
+                        val onesDisplay = if (percentileResult == 100) "0" else onesValue.toString()
+
+                        // Update tens die
+                        val tensDieView = diceDisplayArea.getChildAt(dieIndex) as? FrameLayout
+                        val tensTextView = tensDieView?.findViewWithTag<TextView>(R.id.die_result_text)
+                        tensTextView?.text = tensDisplay
+
+                        // Update ones die
+                        val onesDieView = diceDisplayArea.getChildAt(dieIndex + 1) as? FrameLayout
+                        val onesTextView = onesDieView?.findViewWithTag<TextView>(R.id.die_result_text)
+                        onesTextView?.text = onesDisplay
+
+                        dieIndex += 2 // Skip both dice
+                    }
+                }
+            } else {
+                // Regular dice
+                rolls.forEachIndexed { rollIndex, value ->
+                    if (dieIndex < diceDisplayArea.childCount) {
+                        val dieView = diceDisplayArea.getChildAt(dieIndex) as? FrameLayout
+                        val textView = dieView?.findViewWithTag<TextView>(R.id.die_result_text)
+                        textView?.text = value.toString()
+                        dieIndex++
+                    }
                 }
             }
-        }
 
         if (settings.announce) {
             showAnnouncement(result, settings)

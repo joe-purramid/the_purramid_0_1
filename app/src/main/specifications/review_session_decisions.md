@@ -27,7 +27,7 @@
 - **Key Decisions**:
   - Use a single circle icon ic_circle_base
   - Change the color of that icon programmatically
-  - Do not use tint values
+  - Do not use tint values for traffic lights
   - Do not use ic_circle_*_filled where * is color
   
 - **Reviewed**: 3 July 2025
@@ -65,7 +65,18 @@
     - Preferences stored are simple key-value pairs that don't require queries or complex relationships.
 	- SharedPreferences with JSON serialization is appropriate
 
+- **Reviewed**: 10 July 2025
+- **Architecture**: Icon background color fill 808080
+- **Key Decisions**:
+  - This is a placeholder solution used in all app intents
+    - A final solution will be decided on once Probabilities is correct
+	- Leave the 808080 color fill as is for now.
   
+- **Reviewed**: 15 July 2025
+- **Architecture**: Persistence of coin position in free-form mode
+- **Key Decisions**:
+  - The position of coins moved by users should persist across restarts
+    - Store coin position in preferences along with other persisted values
   
   
   
