@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="?attr/colorControlNormal">
+    
+    <!-- Large coin (back) -->
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M5,12 A7,7 0 0,1 19,12 A7,7 0 0,1 5,12 Z
+                         M6.5,12 A5.5,5.5 0 0,0 17.5,12 A5.5,5.5 0 0,0 6.5,12 Z"/>
+    
+    <!-- Decorative center pattern for large coin -->
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M12,9 L11,11 L12,13 L13,11 Z
+                         M10,12 L12,11 L14,12 L12,13 Z"/>
+    
+    <!-- Medium coin (middle) -->
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M2,7 A5,5 0 0,1 12,7 A5,5 0 0,1 2,7 Z
+                         M3.5,7 A3.5,3.5 0 0,0 10.5,7 A3.5,3.5 0 0,0 3.5,7 Z"/>
+    
+    <!-- Center dot for medium coin -->
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M7,6.5 A0.5,0.5 0 0,1 7,7.5 A0.5,0.5 0 0,1 7,6.5 Z"/>
+    
+    <!-- Small coin (front) -->
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M14,5 A3,3 0 0,1 20,5 A3,3 0 0,1 14,5 Z
+                         M15,5 A2,2 0 0,0 19,5 A2,2 0 0,0 15,5 Z"/>
+    
+    <!-- Center marking for small coin -->
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M17,4.75 L17,5.25 M16.75,5 L17.25,5"/>
+    
+    <!-- Edge highlights to show stacking -->
+    <path
+        android:fillColor="@android:color/white"
+        android:strokeWidth="0.3"
+        android:pathData="M2,7.5 L2,8
+                         M12,7.5 L12,8
+                         M14,5.5 L14,6
+                         M20,5.5 L20,6"/>
+</vector>

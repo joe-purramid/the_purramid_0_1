@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -15,8 +16,8 @@
         android:layout_width="24dp"
         android:layout_height="24dp"
         android:src="@drawable/ic_notification_sound"
-        android:contentDescription="@string/sound_icon"
-        android:layout_marginEnd="16dp"/>
+        android:contentDescription="@string/notification_sound_icon"
+        android:layout_marginEnd="16dp" />
 
     <TextView
         android:id="@+id/textViewSoundName"
@@ -26,7 +27,7 @@
         tools:text="Default notification"
         android:textAppearance="?attr/textAppearanceBodyLarge"
         android:maxLines="1"
-        android:ellipsize="end"/>
+        android:ellipsize="end" />
 
     <ImageView
         android:id="@+id/imageViewCheck"
@@ -35,7 +36,7 @@
         android:src="@drawable/ic_check"
         android:contentDescription="@string/selected"
         android:visibility="gone"
-        tools:visibility="visible"
-        android:tint="?attr/colorPrimary"/>
+        app:tint="?attr/colorPrimary"
+        tools:visibility="visible" />
 
 </LinearLayout>

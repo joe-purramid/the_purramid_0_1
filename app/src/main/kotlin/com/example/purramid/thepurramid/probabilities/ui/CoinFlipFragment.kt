@@ -43,6 +43,9 @@ import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import android.widget.FrameLayout
 import android.widget.LinearLayout
+import com.example.purramid.thepurramid.probabilities.viewmodel.CoinFlipResult
+import com.example.purramid.thepurramid.probabilities.viewmodel.CoinFlipSettings
+import androidx.core.view.isVisible
 
 @AndroidEntryPoint
 class CoinFlipFragment : Fragment() {
@@ -59,7 +62,7 @@ class CoinFlipFragment : Fragment() {
     private lateinit var announcementTextView: TextView
     private lateinit var flipButton: Button
     private lateinit var resetButton: Button
-    private lateinit var manageCoinPoolButton: Button
+    private lateinit var coinPoolButton: Button
     private lateinit var settingsButton: ImageButton
     private lateinit var closeButton: ImageButton
     private lateinit var barChart: BarChart
@@ -106,7 +109,7 @@ class CoinFlipFragment : Fragment() {
         announcementTextView = view.findViewById(R.id.coinFlipAnnouncementTextView)
         flipButton = view.findViewById(R.id.coinFlipActionButton)
         resetButton = view.findViewById(R.id.buttonReset)
-        manageCoinPoolButton = view.findViewById(R.id.manageCoinPoolButton)
+        coinPoolButton = view.findViewById(R.id.coinPoolButton)
         settingsButton = view.findViewById(R.id.coinFlipSettingsButton)
         closeButton = view.findViewById(R.id.coinFlipCloseButton)
         barChart = view.findViewById(R.id.coinBarChart)
@@ -132,7 +135,7 @@ class CoinFlipFragment : Fragment() {
             gridAdapter?.clearResults()
         }
 
-        manageCoinPoolButton.setOnClickListener {
+        coinPoolButton.setOnClickListener {
             showCoinPoolDialog()
         }
 
@@ -675,7 +678,7 @@ class CoinFlipFragment : Fragment() {
 
     private fun findCoinViewByTypeAndIndex(coinType: CoinType, index: Int): View? {
         // Check free form container first
-        if (freeFormContainer.visibility == View.VISIBLE) {
+        if (freeFormContainer.isVisible) {
             for (i in 0 until freeFormContainer.childCount) {
                 val coinView = freeFormContainer.getChildAt(i)
                 val viewType = coinView.getTag(R.id.coin_type) as? CoinType

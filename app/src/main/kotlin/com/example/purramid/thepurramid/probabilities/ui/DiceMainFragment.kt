@@ -354,13 +354,50 @@ class DiceMainFragment : Fragment() {
     }
 
     private fun showCriticalCelebration() {
-        konfettiView.start(
-            konfettiView.emitterConfig
-                .emitting(100, 3000)
-                .spread(360)
-                .speed(0f, 10f)
-                .position(0.5, 0.5)
-        )
+        // Create confetti presets for a dramatic celebration
+        konfettiView.build()
+            .addColors(
+                Color.parseColor("#FFD700"), // Gold
+                Color.parseColor("#FF0000"), // Red
+                Color.parseColor("#00FF00"), // Green
+                Color.parseColor("#0000FF"), // Blue
+                Color.parseColor("#FF00FF"), // Magenta
+                Color.parseColor("#00FFFF"), // Cyan
+                Color.parseColor("#FFA500")  // Orange
+            )
+            .setDirection(0.0, 359.0)
+            .setSpeed(4f, 7f)
+            .setFadeOutEnabled(true)
+            .setTimeToLive(3000L)
+            .addShapes(
+                nl.dionsegijn.konfetti.core.models.Shape.Square,
+                nl.dionsegijn.konfetti.core.models.Shape.Circle
+            )
+            .addSizes(
+                nl.dionsegijn.konfetti.core.models.Size(8),
+                nl.dionsegijn.konfetti.core.models.Size(12),
+                nl.dionsegijn.konfetti.core.models.Size(16)
+            )
+            .setPosition(-50f, konfettiView.width + 50f, -50f, -50f)
+            .streamFor(200, 2000L)
+
+        // Also animate the d20 that rolled the natural 20
+        findD20WithNat20()?.let { dieView ->
+            DiceAnimationHelper.animateCriticalHit(dieView)
+        }
+    }
+
+    private fun findD20WithNat20(): View? {
+        for (i in 0 until diceDisplayArea.childCount) {
+            val dieView = diceDisplayArea.getChildAt(i) as? FrameLayout
+            val dieType = dieView?.getTag(R.id.die_type) as? DieType
+            val textView = dieView?.findViewWithTag<TextView>(R.id.die_result_text)
+
+            if (dieType == DieType.D20 && textView?.text == "20") {
+                return dieView
+            }
+        }
+        return null
     }
 
     private fun resetDiceDisplay() {

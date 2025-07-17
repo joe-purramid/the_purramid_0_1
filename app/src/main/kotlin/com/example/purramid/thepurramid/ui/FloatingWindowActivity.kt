@@ -3,18 +3,17 @@ package com.example.purramid.thepurramid.ui
 import android.graphics.Color
 import android.graphics.Point
 import android.graphics.Rect
-import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.view.Window
-import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
 import com.example.purramid.thepurramid.instance.InstanceManager
 import com.example.purramid.thepurramid.util.dpToPx
 import javax.inject.Inject
 import kotlin.math.abs
+import androidx.core.graphics.drawable.toDrawable
 
 abstract class FloatingWindowActivity : AppCompatActivity() {
 
@@ -23,50 +22,58 @@ abstract class FloatingWindowActivity : AppCompatActivity() {
     private var isResizing = false
     private var lastTouchX = 0f
     private var lastTouchY = 0f
-    private val movementThreshold = 10f // dp
+    private val movementThreshold = 10f // Will be converted to pixels
+    private var movementThresholdPx = 0f
 
     @Inject lateinit var instanceManager: InstanceManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Configure window for floating behavior
+        // Convert threshold to pixels
+        movementThresholdPx = dpToPx(movementThreshold.toInt()).toFloat()
+
+        // Configure window appearance
         requestWindowFeature(Window.FEATURE_NO_TITLE)
-        window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        window.setBackgroundDrawable(Color.TRANSPARENT.toDrawable())
 
-        // Set window flags for pass-through
-        window.addFlags(
-            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                    WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
-        )
-
-        // Apply saved window position/size if available
+        // Set up window positioning
         setupWindowPosition()
+
+        // Make window draggable and resizable
+        setupWindowInteraction()
     }
 
     private fun setupWindowPosition() {
-        val prefs = getSharedPreferences(getWindowPrefsName(), MODE_PRIVATE)
-        val savedX = prefs.getInt("window_${instanceId}_x", -1)
-        val savedY = prefs.getInt("window_${instanceId}_y", -1)
-        val savedWidth = prefs.getInt("window_${instanceId}_width", -1)
-        val savedHeight = prefs.getInt("window_${instanceId}_height", -1)
+        val initialX = intent.getIntExtra("WINDOW_X", -1)
+        val initialY = intent.getIntExtra("WINDOW_Y", -1)
+        val initialWidth = intent.getIntExtra("WINDOW_WIDTH", -1)
+        val initialHeight = intent.getIntExtra("WINDOW_HEIGHT", -1)
 
-        if (savedX != -1 && savedY != -1) {
-            window.attributes = window.attributes.apply {
-                x = savedX
-                y = savedY
+        window.attributes = window.attributes.apply {
+            if (initialX != -1 && initialY != -1) {
+                x = initialX
+                y = initialY
                 gravity = Gravity.TOP or Gravity.START
-                if (savedWidth > 0) width = savedWidth
-                if (savedHeight > 0) height = savedHeight
+            }
+            if (initialWidth > 0) width = initialWidth
+            if (initialHeight > 0) height = initialHeight
+        }
+    }
+
+    private fun setupWindowInteraction() {
+        // Set up touch handling on the root view
+        // This will be called after setContentView in the subclass
+        window.decorView.post {
+            findViewById<View>(android.R.id.content)?.setOnTouchListener { _, event ->
+                handleWindowTouch(event)
             }
         }
     }
 
-    override fun onTouchEvent(event: MotionEvent): Boolean {
-        // Don't handle if touch is on interactive element
-        if (isTouchOnInteractiveElement(event)) {
-            return super.onTouchEvent(event)
-        }
+    private fun handleWindowTouch(event: MotionEvent): Boolean {
+        // Don't handle if the touch is on an interactive element
+        if (isTouchOnInteractiveElement(event)) return false
 
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
@@ -79,7 +86,7 @@ abstract class FloatingWindowActivity : AppCompatActivity() {
                         isResizing = true
                         isDragging = false
                     }
-                    else -> {
+                    isInDragZone(touchPoint) -> {
                         isDragging = true
                         isResizing = false
                     }
@@ -92,8 +99,8 @@ abstract class FloatingWindowActivity : AppCompatActivity() {
                 val deltaY = event.rawY - lastTouchY
 
                 // Apply movement threshold
-                if (abs(deltaX) < dpToPx(movementThreshold.toInt()) &&
-                    abs(deltaY) < dpToPx(movementThreshold.toInt())) {
+                if (abs(deltaX) < movementThresholdPx &&
+                    abs(deltaY) < movementThresholdPx) {
                     return true
                 }
 
@@ -115,13 +122,8 @@ abstract class FloatingWindowActivity : AppCompatActivity() {
                 isResizing = false
                 return true
             }
-
-            MotionEvent.ACTION_OUTSIDE -> {
-                // Pass through to underlying content
-                return false
-            }
         }
-        return super.onTouchEvent(event)
+        return false
     }
 
     private fun moveWindow(deltaX: Int, deltaY: Int) {
@@ -129,41 +131,42 @@ abstract class FloatingWindowActivity : AppCompatActivity() {
         params.x += deltaX
         params.y += deltaY
 
-        // Constrain to screen bounds
-        val displayMetrics = resources.displayMetrics
-        params.x = params.x.coerceIn(0, displayMetrics.widthPixels - window.decorView.width)
-        params.y = params.y.coerceIn(0, displayMetrics.heightPixels - window.decorView.height)
+        // Constrain to screen bounds per Universal Requirements 12.2.1
+        val decorView = window.decorView
+        val screenWidth = resources.displayMetrics.widthPixels
+        val screenHeight = resources.displayMetrics.heightPixels
+
+        params.x = params.x.coerceIn(0, screenWidth - decorView.width)
+        params.y = params.y.coerceIn(0, screenHeight - decorView.height)
 
         window.attributes = params
     }
 
     private fun resizeWindow(deltaX: Int, deltaY: Int) {
         val params = window.attributes
-        params.width = (params.width + deltaX).coerceAtLeast(getMinWidth())
-        params.height = (params.height + deltaY).coerceAtLeast(getMinHeight())
+        val newWidth = (params.width + deltaX).coerceAtLeast(getMinWidth())
+        val newHeight = (params.height + deltaY).coerceAtLeast(getMinHeight())
+
+        // Apply equal scaling per Universal Requirements 12.1.1
+        val scaleFactor = minOf(
+            newWidth.toFloat() / params.width,
+            newHeight.toFloat() / params.height
+        )
+
+        params.width = (params.width * scaleFactor).toInt()
+        params.height = (params.height * scaleFactor).toInt()
+
         window.attributes = params
     }
 
-    private fun saveWindowState() {
-        val prefs = getSharedPreferences(getWindowPrefsName(), MODE_PRIVATE)
-        val params = window.attributes
-        prefs.edit().apply {
-            putInt("window_${instanceId}_x", params.x)
-            putInt("window_${instanceId}_y", params.y)
-            putInt("window_${instanceId}_width", params.width)
-            putInt("window_${instanceId}_height", params.height)
-            apply()
-        }
-    }
+    abstract fun getMinWidth(): Int
+    abstract fun getMinHeight(): Int
+    abstract fun isTouchOnInteractiveElement(event: MotionEvent): Boolean
+    abstract fun isInResizeZone(point: Point): Boolean
+    abstract fun isInDragZone(point: Point): Boolean
+    abstract fun saveWindowState()
 
-    private fun isInResizeZone(point: Point): Boolean {
-        val decorView = window.decorView
-        val edgeThreshold = dpToPx(20)
-        return point.x > decorView.width - edgeThreshold ||
-                point.y > decorView.height - edgeThreshold
-    }
-
-    protected fun getCurrentWindowBounds(): Rect {
+    fun getCurrentWindowBounds(): Rect {
         val location = IntArray(2)
         window.decorView.getLocationOnScreen(location)
         return Rect(
@@ -173,9 +176,4 @@ abstract class FloatingWindowActivity : AppCompatActivity() {
             location[1] + window.decorView.height
         )
     }
-
-    abstract fun getMinWidth(): Int
-    abstract fun getMinHeight(): Int
-    abstract fun isTouchOnInteractiveElement(event: MotionEvent): Boolean
-    abstract fun getWindowPrefsName(): String
 }

@@ -285,5 +285,24 @@
             android:layout_marginTop="24dp"
             android:contentDescription="Additional settings content container" />
 
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="16dp"
+            android:background="?android:attr/listDivider" />
+
+        <Button
+            android:id="@+id/buttonAddAnother"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/add_another_randomizer"
+            android:gravity="start|center_vertical"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            app:icon="@drawable/ic_add_circle"
+            app:iconGravity="end"
+            app:iconTint="?attr/colorControlNormal" />
     </LinearLayout>
 </ScrollView> 

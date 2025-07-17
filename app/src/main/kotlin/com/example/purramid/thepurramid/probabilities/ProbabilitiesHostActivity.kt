@@ -6,7 +6,9 @@ import android.graphics.Point
 import android.graphics.Rect
 import android.util.Log
 import android.view.MotionEvent
+import android.view.View
 import androidx.activity.viewModels
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
@@ -176,7 +178,7 @@ class ProbabilitiesHostActivity : FloatingWindowActivity() {
                         fragmentView.findViewById<View>(R.id.diceSettingsButton),
                         fragmentView.findViewById<View>(R.id.diceCloseButton),
                         fragmentView.findViewById<View>(R.id.coinFlipActionButton),
-                        fragmentView.findViewById<View>(R.id.manageCoinPoolButton),
+                        fragmentView.findViewById<View>(R.id.coinPoolButton),
                         fragmentView.findViewById<View>(R.id.coinFlipSettingsButton),
                         fragmentView.findViewById<View>(R.id.coinFlipCloseButton)
                     )

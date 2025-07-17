@@ -42,7 +42,7 @@
         android:id="@+id/button_add_sequence"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:src="@drawable/ic_add"
+        android:src="@drawable/ic_add_circle"
         android:contentDescription="Add sequence"
         app:layout_constraintBottom_toTopOf="@id/button_close"
         app:layout_constraintEnd_toEndOf="parent"

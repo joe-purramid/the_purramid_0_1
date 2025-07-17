@@ -383,6 +383,7 @@
     <!-- `` PROBABILITIES APP `` -->
     <string name="probabilities_settings_title">Probabilities Settings</string>
     <string name="probabilities_description">Placeholder</string>
+    <string name="probabilities">Add another Probability Pool</string>
     <string name="max_probabilities_reached_snackbar">Placeholder</string>
 
     <!-- `` DICE MODE `` -->
@@ -407,6 +408,7 @@
     <string name="setting_dice_configure_modifiers_title">Placeholder</string>
 
     <!-- `` COIN FLIP MODE `` -->
+    <string name="coin_pool">Coin Pool</string>
     <string name="probability_mode_coin_flip">Coin Flip Mode</string>
     <string name="probability_mode_coin_flip_description">Select Coin Flip mode</string>
     <string name="setting_coin_color">Coin Color</string>
@@ -429,7 +431,6 @@
     <string name="heads">Heads</string>
     <string name="tails">Tails</string>
     <string name="coin_image_desc_in_pool">Coin in pool</string>
-    <string name="manage_coin_pool">Manage Pool</string>
     <string name="coin_pool_dialog_title">Manage Coin Pool</string>
     <string name="add_coin_type">Add %1$s</string>
     <string name="remove_coin_type">Remove %1$s</string>
@@ -647,6 +648,7 @@
     <string name="clear_emojis">Clear emojis</string>
     <string name="clear_image">Clear image</string>
     <string name="select_emoji">Select Emoji</string>
+    <string name="notification_sound_icon">Notification Sound</string>
     <string name="setting_add_another_traffic_light">Placeholder</string>
 
     <!-- `` SEQUENCE MODE `` -->

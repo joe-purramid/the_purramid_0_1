@@ -1,5 +1,6 @@
 package com.example.purramid.thepurramid.probabilities.ui
 
+import android.graphics.Color
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -19,6 +20,7 @@ import com.example.purramid.thepurramid.probabilities.viewmodel.*
 import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.snackbar.Snackbar
 import javax.inject.Inject
+import androidx.core.graphics.toColorInt
 
 class ProbabilitiesSettingsFragment : Fragment() {
     private val settingsViewModel: ProbabilitiesSettingsViewModel by activityViewModels()
@@ -26,7 +28,6 @@ class ProbabilitiesSettingsFragment : Fragment() {
     private val coinFlipViewModel: CoinFlipViewModel by activityViewModels()
 
     @Inject lateinit var instanceManager: InstanceManager
-    private val settingsViewModel: ProbabilitiesSettingsViewModel by activityViewModels()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -55,6 +56,7 @@ class ProbabilitiesSettingsFragment : Fragment() {
         val spinnerDiceDistribution = view.findViewById<Spinner>(R.id.spinnerDiceDistribution)
         val buttonEditDicePool = view.findViewById<Button>(R.id.buttonEditDicePool)
         val buttonEditDiceColors = view.findViewById<Button>(R.id.buttonEditDiceColors)
+        val buttonAddAnother = view.findViewById<Button>(R.id.buttonAddAnother)
 
         // Coin settings elements
         val switchProbabilityMode = view.findViewById<Switch>(R.id.switchProbabilityMode)
@@ -349,6 +351,8 @@ class ProbabilitiesSettingsFragment : Fragment() {
         
         // Initialize UI state based on current settings
         initializeUIState()
+
+        setupAddAnotherButton(buttonAddAnother)
     }
     
     private fun validateCriticalSuccessCompatibility(): Boolean {
@@ -366,10 +370,28 @@ class ProbabilitiesSettingsFragment : Fragment() {
         Snackbar.make(requireView(), message, Snackbar.LENGTH_LONG).show()
     }
 
-    private fun setupAddAnotherButton() {
-        val addAnotherButton = view?.findViewById<Button>(R.id.buttonAddAnother)
-        addAnotherButton?.setOnClickListener {
-            (activity as? ProbabilitiesHostActivity)?.launchNewInstance()
+    private fun setupAddAnotherButton(button: Button) {
+        // Check current instance count
+        val activeCount = instanceManager.getActiveInstanceCount(InstanceManager.PROBABILITIES)
+
+        if (activeCount >= 7) {
+            // Disable button per spec 11.3.1
+            button.isEnabled = false
+            button.alpha = 0.5f // Visual indication it's disabled
+            // TODO: Define inactive icon colors per spec 11.3.2
+        } else {
+            button.setOnClickListener {
+                // Active state icon change per spec 11.2.1
+                button.setColorFilter("#808080".toColorInt())
+
+                // Launch new instance
+                (activity as? ProbabilitiesHostActivity)?.launchNewInstance()
+
+                // Reset icon color after click
+                button.postDelayed({
+                    button.clearColorFilter()
+                }, 100)
+            }
         }
     }
 
