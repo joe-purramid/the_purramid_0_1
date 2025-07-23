@@ -55,8 +55,8 @@ class CoinAnimationHelper {
                 CoinType.B5 -> if (isHeads) R.drawable.b5_coin_flip_heads else R.drawable.b5_coin_flip_tails
                 CoinType.B10 -> if (isHeads) R.drawable.b10_coin_flip_heads else R.drawable.b10_coin_flip_tails
                 CoinType.B25 -> if (isHeads) R.drawable.b25_coin_flip_heads else R.drawable.b25_coin_flip_tails
-                CoinType.MB1 -> if (isHeads) R.drawable.mb1_coin_flip_heads else R.drawable.mb1_coin_flip_tails
-                CoinType.MB2 -> if (isHeads) R.drawable.mb2_coin_flip_heads else R.drawable.mb2_coin_flip_tails
+                CoinType.MB1 -> if (isHeads) R.drawable.m1_coin_flip_heads else R.drawable.m1_coin_flip_tails
+                CoinType.MB2 -> if (isHeads) R.drawable.m2_coin_flip_heads else R.drawable.m2_coin_flip_tails
             }
             coinView.setImageResource(drawableRes)
         }

@@ -78,7 +78,14 @@
   - The position of coins moved by users should persist across restarts
     - Store coin position in preferences along with other persisted values
   
-  
+- **Reviewed**: 18 July 2025
+- **Architecture**: Button Activation for all app-intents (fragment/layout files)
+- **Key Decisions**:
+- Button icons will be 757575 when inactive (default state)
+- Button icons will be 2196F3 when active (active state)
+- Button background will be E3F2FD when active
+- A ripple effect will occur with the onTouch event that activates the button.
+- Use isActivated property for boolean on/off states  
   
   
 

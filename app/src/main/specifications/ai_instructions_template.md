@@ -6,6 +6,7 @@ Review the provided code files for the [SPECIFIC APP-INTENT] app-intent against:
 2. The Code Style Guide (naming/organization)  
 3. The Universal Requirements (shared behavior)
 4. The specific app-intent specification
+5. The review_session_decisions (deviations from the stated specifications)
 
 ## Review Process
 1. **Architecture Compliance**: Verify Hilt, Room, ViewModel usage matches decisions
