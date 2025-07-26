@@ -52,6 +52,13 @@ android {
         }
     }
 
+    sourceSets {
+        getByName("main") {
+            java.srcDirs("src/main/kotlin")
+            kotlin.srcDirs("src/main/kotlin")
+        }
+    }
+
     // If using Room with KSP, you might need to configure sourcesets
    sourceSets.configureEach { // <- Potentially needed for KSP + Room
         kotlin.srcDir("build/generated/ksp/$name/kotlin")
