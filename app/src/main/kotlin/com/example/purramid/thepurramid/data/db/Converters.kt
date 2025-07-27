@@ -13,6 +13,7 @@ import com.example.purramid.thepurramid.randomizers.RandomizerMode
 import com.example.purramid.thepurramid.randomizers.SlotsColumnState
 import com.example.purramid.thepurramid.spotlight.SpotlightOpening
 import com.example.purramid.thepurramid.traffic_light.viewmodel.LightColor
+import com.example.purramid.thepurramid.traffic_light.viewmodel.MessageData
 import com.example.purramid.thepurramid.traffic_light.viewmodel.Orientation
 import com.example.purramid.thepurramid.traffic_light.viewmodel.ResponsiveModeSettings
 import com.example.purramid.thepurramid.traffic_light.viewmodel.TimedSequence

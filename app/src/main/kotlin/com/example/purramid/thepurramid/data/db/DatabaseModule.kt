@@ -25,6 +25,12 @@ object DatabaseModule {
 
     @Provides
     @Singleton
+    fun provideClockAlarmDao(database: PurramidDatabase): ClockAlarmDao {
+        return database.clockAlarmDao()
+    }
+
+    @Provides
+    @Singleton
     fun provideClockDao(database: PurramidDatabase): ClockDao {
         return database.clockDao()
     }

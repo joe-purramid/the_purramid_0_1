@@ -171,7 +171,7 @@ class RandomizerRepositoryImpl @Inject constructor(
     override suspend fun initializePreloadedLists() {
         withContext(Dispatchers.IO) {
             // Check if preloaded lists already exist
-            val existingLists = randomizerDao.getAllSpinListsNonLiveData() ?: emptyList()
+            val existingLists = randomizerDao.getAllSpinListsNonLiveData()
             val existingTitles = existingLists.map { it.title }.toSet()
 
             // Create preloaded lists if they don't exist

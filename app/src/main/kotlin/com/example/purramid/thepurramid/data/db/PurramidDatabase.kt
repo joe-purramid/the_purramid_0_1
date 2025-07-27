@@ -18,10 +18,9 @@ import java.util.UUID
 @Database(
     entities = [
         // List all your entity classes here
-        ClockStateEntity::class,
-        TimeZoneBoundaryEntity::class,
         CityEntity::class,
-        TimerStateEntity::class,
+        ClockAlarmEntity::class,
+        ClockStateEntity::class,
         RandomizerInstanceEntity::class,
         ScreenMaskStateEntity::class,
         SpinItemEntity::class,
@@ -29,7 +28,9 @@ import java.util.UUID
         SpinSettingsEntity::class,
         SpotlightInstanceEntity::class,
         SpotlightOpeningEntity::class,
+        SpotlightStateEntity::class,
         TimerStateEntity::class,
+        TimeZoneBoundaryEntity::class,
         TrafficLightStateEntity::class
     ],
     version = 2, // Release to production
@@ -42,13 +43,14 @@ abstract class PurramidDatabase : RoomDatabase() {
      * Abstract function to get the Data Access Objects
      * Room will generate the implementation.
      */
-    abstract fun clockDao(): ClockDao
-    abstract fun timeZoneDao(): TimeZoneDao
     abstract fun cityDao(): CityDao
+    abstract fun clockAlarmDao(): ClockAlarmDao
+    abstract fun clockDao(): ClockDao
     abstract fun randomizerDao(): RandomizerDao
     abstract fun screenMaskDao(): ScreenMaskDao
     abstract fun spotlightDao(): SpotlightDao
     abstract fun timerDao(): TimerDao
+    abstract fun timeZoneDao(): TimeZoneDao
     abstract fun trafficLightDao(): TrafficLightDao
 
     companion object {

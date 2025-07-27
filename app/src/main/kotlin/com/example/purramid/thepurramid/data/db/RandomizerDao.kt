@@ -98,7 +98,7 @@ interface RandomizerDao {
 
     /** Gets all lists ordered alphabetically by title (non-LiveData version). */
     @Query("SELECT * FROM spin_lists ORDER BY title ASC")
-    suspend fun getAllSpinListsNonLiveData(): List<SpinListEntity>? // Nullable in case of DB error
+    suspend fun getAllSpinListsNonLiveData(): List<SpinListEntity>
 
     /** Inserts or replaces a record of an open randomizer instance. */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -115,24 +115,6 @@ interface RandomizerDao {
     /** Deletes all randomizer instance records. Use with caution. */
     @Query("DELETE FROM randomizer_instances")
     suspend fun deleteAllInstances()
-
-    // --- Combined Operations (Optional Examples - Requires Relations setup) ---
-    /*
-    // Requires defining a data class like data class SpinListWithItems(
-    //    @Embedded val list: SpinListEntity,
-    //    @Relation(parentColumn = "id", entityColumn = "listId")
-    //    val items: List<SpinItemEntity>
-    // )
-    @Transaction // Ensures atomic operation
-    @Query("SELECT * FROM spin_lists WHERE id = :listId")
-    suspend fun getListWithItems(listId: UUID): SpinListWithItems?
-
-    @Transaction
-    @Query("SELECT * FROM spin_lists ORDER BY title ASC")
-    fun getAllListsWithItems(): LiveData<List<SpinListWithItems>>
-    */
-
-    // Add other specific queries as needed for your application logic
 
     /** Gets a specific randomizer instance by integer ID. */
     @Query("SELECT * FROM randomizer_instances WHERE instanceId = :instanceId")
