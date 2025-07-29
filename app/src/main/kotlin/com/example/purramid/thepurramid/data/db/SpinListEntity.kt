@@ -10,5 +10,4 @@ data class SpinListEntity(
     @PrimaryKey
     val id: UUID = UUID.randomUUID(), // Unique ID for each list
     var title: String,
-    val items: MutableList<SpinItemEntity> = mutableListOf()
 )

@@ -5,13 +5,15 @@ import android.util.Log
 import androidx.room.TypeConverter
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import com.example.purramid.thepurramid.probabilities.DiceSumResultType // Import new Enums
+import com.example.purramid.thepurramid.probabilities.DiceSumResultType
 import com.example.purramid.thepurramid.probabilities.GraphDistributionType
 import com.example.purramid.thepurramid.probabilities.GraphPlotType
 import com.example.purramid.thepurramid.probabilities.CoinProbabilityMode
 import com.example.purramid.thepurramid.randomizers.RandomizerMode
+import com.example.purramid.thepurramid.randomizers.SpinItemType
 import com.example.purramid.thepurramid.randomizers.SlotsColumnState
 import com.example.purramid.thepurramid.spotlight.SpotlightOpening
+import com.example.purramid.thepurramid.timers.TimerType
 import com.example.purramid.thepurramid.traffic_light.viewmodel.LightColor
 import com.example.purramid.thepurramid.traffic_light.viewmodel.MessageData
 import com.example.purramid.thepurramid.traffic_light.viewmodel.Orientation
@@ -94,6 +96,7 @@ class Converters {
         }
     }
 
+    // --- CLOCK ---
     /**
      * Converts a LocalTime to seconds of day (Long) for storage.
      * Returns null if the LocalTime is null.
@@ -119,6 +122,7 @@ class Converters {
         }
     }
 
+    // --- PROBABILITIES ---
     // Converter for DiceSumResultType Enum
     @TypeConverter
     fun fromDiceSumResultType(value: DiceSumResultType?): String? {
@@ -183,6 +187,7 @@ class Converters {
         }
     }
 
+    // --- RANDOMIZERS ---
     @TypeConverter
     fun fromSlotsColumnStateList(value: List<SlotsColumnState>?): String? {
         // Use let for null safety
@@ -238,6 +243,21 @@ class Converters {
         }
     }
 
+    @TypeConverter
+    fun fromSpinItemType(value: SpinItemType?): String? {
+        return value?.name
+    }
+
+    @TypeConverter
+    fun toSpinItemType(value: String?): SpinItemType? {
+        return try {
+            value?.let { SpinItemType.valueOf(it) }
+        } catch (e: IllegalArgumentException) {
+            Log.e("Converters", "Invalid SpinItemType string: $value", e)
+            null
+        }
+    }
+
     // Converter for SPIN Enum
     @TypeConverter
     fun fromRandomizerMode(value: RandomizerMode?): String? {
@@ -251,21 +271,6 @@ class Converters {
         } catch (e: IllegalArgumentException) {
             Log.e("Converters", "Invalid RandomizerMode string: $value", e)
             RandomizerMode.SPIN // Default on error
-        }
-    }
-
-    @TypeConverter
-    fun fromSpotlightShape(shape: SpotlightOpening.Shape?): String? {
-        return shape?.name
-    }
-
-    @TypeConverter
-    fun toSpotlightShape(shapeName: String?): SpotlightOpening.Shape? {
-        return try {
-            shapeName?.let { SpotlightOpening.Shape.valueOf(it) }
-        } catch (e: IllegalArgumentException) {
-            Log.e("Converters", "Invalid Spotlight.Shape string: $shapeName", e)
-            null // Return null if the string doesn't match an enum constant
         }
     }
 
@@ -288,6 +293,39 @@ class Converters {
         }
     }
 
+    // --- SPOTLIGHT ---
+    @TypeConverter
+    fun fromSpotlightShape(shape: SpotlightOpening.Shape?): String? {
+        return shape?.name
+    }
+
+    @TypeConverter
+    fun toSpotlightShape(shapeName: String?): SpotlightOpening.Shape? {
+        return try {
+            shapeName?.let { SpotlightOpening.Shape.valueOf(it) }
+        } catch (e: IllegalArgumentException) {
+            Log.e("Converters", "Invalid Spotlight.Shape string: $shapeName", e)
+            null // Return null if the string doesn't match an enum constant
+        }
+    }
+
+    // --- TIMERS ---
+    @TypeConverter
+    fun fromTimerType(value: TimerType?): String? {
+        return value?.name
+    }
+
+    @TypeConverter
+    fun toTimerType(value: String?): TimerType? {
+        return try {
+            value?.let { TimerType.valueOf(it) }
+        } catch (e: IllegalArgumentException) {
+            Log.e("Converters", "Invalid TimerType string: $value", e)
+            null
+        }
+    }
+
+    // --- TRAFFIC LIGHT ---
     @TypeConverter
     fun fromTrafficLightMode(mode: TrafficLightMode?): String? {
         return mode?.name ?: TrafficLightMode.MANUAL_CHANGE.name // Default if null
