@@ -60,7 +60,7 @@ import java.lang.ref.WeakReference
 import java.util.Collections
 
 @AndroidEntryPoint
-class ClockOverlayService : LifecycleService(), ViewModelStoreOwner {
+class ClockOverlayService(override val viewModelStore: ViewModelStore) : LifecycleService(), ViewModelStoreOwner {
 
     @Inject lateinit var windowManager: WindowManager
     @Inject lateinit var instanceManager: InstanceManager
@@ -68,7 +68,7 @@ class ClockOverlayService : LifecycleService(), ViewModelStoreOwner {
     @Inject @ClockPrefs lateinit var servicePrefs: SharedPreferences
 
     private val _viewModelStore = ViewModelStore()
-    override fun getViewModelStore(): ViewModelStore = _viewModelStore
+    fun getViewModelStore(): ViewModelStore = _viewModelStore
 
     private val clockViewModels = ConcurrentHashMap<Int, ClockViewModel>()
     private val activeClockViews = ConcurrentHashMap<Int, ViewGroup>() // Root ViewGroup of the clock layout
@@ -439,11 +439,11 @@ class ClockOverlayService : LifecycleService(), ViewModelStoreOwner {
     }
 
     // Listener Implementation
-    override fun onTimeManuallySet(instanceId: Int, newTime: LocalTime) {
+    fun onTimeManuallySet(instanceId: Int, newTime: LocalTime) {
         clockViewModels[instanceId]?.setManuallySetTime(newTime)
     }
 
-    override fun onDragStateChanged(instanceId: Int, isDragging: Boolean) {
+    fun onDragStateChanged(instanceId: Int, isDragging: Boolean) {
         // This might be used to temporarily disable window dragging if hand dragging starts, etc.
         Log.d(TAG, "Clock $instanceId drag state changed: $isDragging")
         // The overlay itself also needs a touch listener for window dragging.
@@ -999,7 +999,7 @@ class ClockOverlayService : LifecycleService(), ViewModelStoreOwner {
 
     // Object pooling methods
     private fun getLayoutParamsFromPool(): WindowManager.LayoutParams {
-        return layoutParamsPool.synchronized {
+        return (layoutParamsPool.synchronized {
             if (isNotEmpty()) {
                 removeAt(0)
             } else {
@@ -1012,7 +1012,7 @@ class ClockOverlayService : LifecycleService(), ViewModelStoreOwner {
                     WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                     WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
             gravity = Gravity.TOP or Gravity.START
-        }
+        }) as WindowManager.LayoutParams
     }
 
     private fun returnLayoutParamsToPool(params: WindowManager.LayoutParams) {

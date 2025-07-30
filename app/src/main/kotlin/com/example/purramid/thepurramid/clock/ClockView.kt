@@ -511,6 +511,7 @@ class ClockView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
 
                 else -> false
             }
+            return TODO("Provide the return value")
         }
     }
 

@@ -12,6 +12,14 @@ import android.widget.LinearLayout
 import android.widget.RemoteViews
 import android.widget.Toast
 import androidx.core.view.setPadding
+import com.example.purramid.thepurramid.clock.ClockActivity
+import com.example.purramid.thepurramid.probabilities.ProbabilitiesHostActivity
+import com.example.purramid.thepurramid.randomizers.RandomizersHostActivity
+import com.example.purramid.thepurramid.screen_mask.ScreenMaskActivity
+import com.example.purramid.thepurramid.spotlight.SpotlightActivity
+import com.example.purramid.thepurramid.timers.TimersActivity
+import com.example.purramid.thepurramid.traffic_light.TrafficLightActivity
+import com.example.purramid.thepurramid.WidgetConfigData
 
 class WidgetConfigActivity : Activity() {
 
@@ -46,7 +54,8 @@ class WidgetConfigActivity : Activity() {
 
         val options = listOf(
             WidgetConfigData("Clock", R.mipmap.tp_clock_launcher, Intent(this, ClockActivity::class.java)),
-            WidgetConfigData("Randomizers", R.mipmap.tp_randomizers_launcher, Intent(this, RandomizersActivity::class.java)),
+            WidgetConfigData("Probabilities", R.mipmap.tp_probabilities_launcher, Intent(this, ProbabilitiesHostActivity::class.java)),
+            WidgetConfigData("Randomizers", R.mipmap.tp_randomizers_launcher, Intent(this, RandomizersHostActivity::class.java)),
             WidgetConfigData("Screen Mask", R.mipmap.tp_screen_mask_launcher, Intent(this, ScreenMaskActivity::class.java)),
             WidgetConfigData("Spotlight", R.mipmap.tp_spotlight_launcher, Intent(this, SpotlightActivity::class.java)),
             WidgetConfigData("Timers", R.mipmap.tp_timers_launcher, Intent(this, TimersActivity::class.java)),

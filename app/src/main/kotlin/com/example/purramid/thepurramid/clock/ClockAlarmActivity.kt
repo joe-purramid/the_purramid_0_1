@@ -27,6 +27,7 @@ import com.example.purramid.thepurramid.data.db.ClockAlarmDao
 import com.example.purramid.thepurramid.data.db.ClockAlarmEntity
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.LocalTime
