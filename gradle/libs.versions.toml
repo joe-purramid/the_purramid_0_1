@@ -1,7 +1,7 @@
 [versions]
 activityCompose = "1.9.3"
 activityktx = "1.9.2"
-agp = "8.11.1"
+agp = "8.12.0"
 android-core-ktx = "1.15.0"
 androidsvg = "1.4"
 androidxNavigation = "2.8.9"
